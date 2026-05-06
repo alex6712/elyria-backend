@@ -52,10 +52,11 @@ async def get_partner(
     PartnerResponse
         Ответ с вложенным DTO партнёра.
     """
-    partner = await services.couple.get_partner(payload.sub)
+    partner, couple_id = await services.couple.get_partner(payload.sub)
 
     return PartnerResponse(
         partner=partner,
+        couple_id=couple_id,
         detail="Current access token user partner's data."
         if partner
         else "Partner not found.",

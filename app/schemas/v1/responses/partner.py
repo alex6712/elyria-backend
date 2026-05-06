@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import Field
 
 from app.schemas.dto.user import PartnerDTO
@@ -11,8 +13,11 @@ class PartnerResponse(StandardResponse):
     ----------
     partner : PartnerDTO | None
         DTO партнёра пользователя, или None если партнёр не найден.
+    couple_id : UUID | None
+        Идентификатор пары между пользователя.
     """
 
     partner: PartnerDTO | None = Field(
-        description="DTO партнёра пользователя, или None если партнёр не найден.",
+        description="DTO партнёра пользователя, или None если партнёр не найден."
     )
+    couple_id: UUID | None = Field(description="Идентификатор пары между пользователя.")

@@ -54,7 +54,9 @@ class CoupleService:
         self._couple_repo = unit_of_work.get_repository(CoupleRepository)
         self._couple_request_repo = unit_of_work.get_repository(CoupleRequestRepository)
 
-    async def get_partner(self, user_id: UUID) -> PartnerDTO | None:
+    async def get_partner(
+        self, user_id: UUID
+    ) -> tuple[PartnerDTO, UUID] | tuple[None, None]:
         """Получение информации о партнёре пользователя.
 
         Возвращает DTO пользователя-партнёра по UUID текущего
@@ -67,20 +69,20 @@ class CoupleService:
 
         Returns
         -------
-        PartnerDTO | None
-            Информация о партнёре пользователя.
+        tuple[PartnerDTO, UUID] | tuple[None, None]
+            Информация о партнёре пользователя и UUID пары.
         """
         couple = await self._couple_repo.get_one_filtered(
             FilterCoupleDTO(user_id=user_id)
         )
         if couple is None:
-            return None
+            return None, None
 
         return (
             couple.first_user
             if couple.second_user.id == user_id
             else couple.second_user
-        )
+        ), couple.id
 
     async def create_couple_request(
         self, initiator_id: UUID, recipient_username: str
