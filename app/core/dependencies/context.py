@@ -34,7 +34,7 @@ async def get_partner_id(
     UUID | None
         Идентификатор партнёра, или None если пользователь не состоит в паре.
     """
-    partner = await services.couple.get_partner(payload.sub)
+    partner, _ = await services.couple.get_partner(payload.sub)
 
     return partner.id if partner else None
 
