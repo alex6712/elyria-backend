@@ -8,8 +8,7 @@ from app.core.dependencies.services import ServiceManagerDependency
 from app.core.docs import AUTHORIZATION_ERROR_REF
 from app.schemas.dto.couple import UpdateCoupleDTO
 from app.schemas.v1.requests.couples import CreateCoupleRequest, PatchCoupleRequest
-from app.schemas.v1.responses.couple import CoupleRequestsResponse
-from app.schemas.v1.responses.partner import PartnerResponse
+from app.schemas.v1.responses.couple import CoupleRequestsResponse, CoupleResponse
 from app.schemas.v1.responses.standard import StandardResponse
 
 router = APIRouter(
@@ -20,20 +19,20 @@ router = APIRouter(
 
 
 @router.get(
-    "/partner",
-    response_model=PartnerResponse,
+    "",
+    response_model=CoupleResponse,
     status_code=status.HTTP_200_OK,
-    summary="Получение информации о партнёре пользователя.",
-    response_description="Информация о партнёре текущего пользователя",
+    summary="Получение информации о паре пользователя.",
+    response_description="Информация о паре текущего пользователя",
 )
-async def get_partner(
+async def get_couple(
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
-) -> PartnerResponse:
-    """Запрос на получение информации о партнёре пользователя.
+) -> CoupleResponse:
+    """Запрос на получение информации о паре текущего пользователя.
 
-    Проверяет наличие пары у пользователя и при нахождении возвращает
-    информацию о партнёре.
+    Возвращает данные о паре, в которой состоит текущий пользователь,
+    включая информацию о партнёре и дате начала отношений.
 
     Parameters
     ----------
@@ -49,17 +48,16 @@ async def get_partner(
 
     Returns
     -------
-    PartnerResponse
-        Ответ с вложенным DTO партнёра.
+    CoupleResponse
+        Ответ с вложенным DTO пары.
     """
-    partner, couple_id = await services.couple.get_partner(payload.sub)
+    couple = await services.couple.get_couple(payload.sub)
 
-    return PartnerResponse(
-        partner=partner,
-        couple_id=couple_id,
-        detail="Current access token user partner's data."
-        if partner
-        else "Partner not found.",
+    return CoupleResponse(
+        couple=couple,
+        detail="Current access token user's couple data."
+        if couple
+        else "Couple not found.",
     )
 
 

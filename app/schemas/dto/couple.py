@@ -52,6 +52,21 @@ class CoupleDTO(BaseSQLCoreDTO):
     relationship_started_on: date | None
 
 
+class UserCoupleDTO(BaseSQLCoreDTO):
+    """DTO пары с точки зрения одного из её участников.
+
+    Attributes
+    ----------
+    partner : PartnerDTO
+        DTO партнёра текущего пользователя.
+    relationship_started_on : date | None
+        Реальная дата начала отношений.
+    """
+
+    partner: PartnerDTO
+    relationship_started_on: date | None
+
+
 class FilterCoupleRequestDTO(BaseFilterDTO):
     """DTO для фильтрации заявок на пару.
 

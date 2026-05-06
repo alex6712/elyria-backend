@@ -22,8 +22,9 @@ from app.schemas.dto.couple import (
     FilterCoupleRequestDTO,
     UpdateCoupleDTO,
     UpdateCoupleRequestDTO,
+    UserCoupleDTO,
 )
-from app.schemas.dto.user import FilterUserDTO, PartnerDTO
+from app.schemas.dto.user import FilterUserDTO
 
 
 class CoupleService:
@@ -43,10 +44,18 @@ class CoupleService:
 
     Methods
     -------
-    get_partner(user_id)
-        Получение информации о партнёре пользователя.
-    create_couple_request(user_id, partner_username)
-        Регистрация пары между пользователями.
+    get_couple(user_id)
+        Получение информации о паре пользователя.
+    create_couple_request(initiator_id, recipient_username)
+        Создание запроса на создание пары между пользователями.
+    accept_couple_request(couple_request_id, user_id)
+        Подтверждение запроса на создание пары.
+    decline_couple_request(couple_request_id, user_id)
+        Отклонение запроса на создание пары.
+    get_couple_requests(user_id)
+        Получение списка запросов на создание пары.
+    update_couple(couple_id, update_dto, user_id)
+        Обновление атрибутов пары.
     """
 
     def __init__(self, unit_of_work: UnitOfWork):
@@ -54,13 +63,11 @@ class CoupleService:
         self._couple_repo = unit_of_work.get_repository(CoupleRepository)
         self._couple_request_repo = unit_of_work.get_repository(CoupleRequestRepository)
 
-    async def get_partner(
-        self, user_id: UUID
-    ) -> tuple[PartnerDTO, UUID] | tuple[None, None]:
-        """Получение информации о партнёре пользователя.
+    async def get_couple(self, user_id: UUID) -> UserCoupleDTO | None:
+        """Получение информации о паре пользователя.
 
-        Возвращает DTO пользователя-партнёра по UUID текущего
-        пользователя.
+        Выполняет поиск пары, в которой состоит пользователь с переданным UUID.
+        Возвращает DTO пары с информацией о партнёре текущего пользователя.
 
         Parameters
         ----------
@@ -69,20 +76,23 @@ class CoupleService:
 
         Returns
         -------
-        tuple[PartnerDTO, UUID] | tuple[None, None]
-            Информация о партнёре пользователя и UUID пары.
+        UserCoupleDTO | None
+            DTO пары с информацией о партнёре. None, если пользователь не состоит в паре.
         """
         couple = await self._couple_repo.get_one_filtered(
             FilterCoupleDTO(user_id=user_id)
         )
         if couple is None:
-            return None, None
+            return None
 
-        return (
-            couple.first_user
-            if couple.second_user.id == user_id
-            else couple.second_user
-        ), couple.id
+        return UserCoupleDTO.model_validate(
+            {
+                **couple.model_dump(),
+                "partner": couple.first_user
+                if couple.second_user.id == user_id
+                else couple.second_user,
+            }
+        )
 
     async def create_couple_request(
         self, initiator_id: UUID, recipient_username: str

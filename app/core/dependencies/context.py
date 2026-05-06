@@ -34,9 +34,9 @@ async def get_partner_id(
     UUID | None
         Идентификатор партнёра, или None если пользователь не состоит в паре.
     """
-    partner, _ = await services.couple.get_partner(payload.sub)
+    couple = await services.couple.get_couple(payload.sub)
 
-    return partner.id if partner else None
+    return couple.partner.id if couple else None
 
 
 PartnerIdDependency = Annotated[UUID | None, Depends(get_partner_id)]
