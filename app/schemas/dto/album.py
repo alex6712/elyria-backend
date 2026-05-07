@@ -60,17 +60,57 @@ class AlbumWithItemsDTO(AlbumDTO):
 
 
 class FilterOneAlbumDTO(BaseFilterOneDTO):
+    """DTO для поиска одного альбома по идентификатору.
+
+    Требует передачи уникального поля `id` для однозначного
+    нахождения записи.
+
+    Attributes
+    ----------
+    id : Maybe[UUID]
+        Идентификатор альбома. Является уникальным полем - достаточно
+        передать только его для однозначного нахождения записи.
+    is_private : Maybe[bool]
+        Признак приватности альбома. Используется как дополнительный
+        фильтр при поиске.
+    """
+
     id: Annotated[Maybe[UUID], UNIQUE] = UNSET
 
     is_private: Maybe[bool] = UNSET
 
 
 class FilterManyAlbumsDTO(BaseFilterManyDTO):
+    """DTO для фильтрации множества альбомов.
+
+    Все поля опциональны - пустой DTO возвращает все записи.
+    При передаче нескольких полей условия комбинируются через AND.
+
+    Attributes
+    ----------
+    ids : Maybe[list[UUID]]
+        Список идентификаторов альбомов.
+    is_private : Maybe[bool]
+        Признак приватности альбома.
+    """
+
     ids: Annotated[Maybe[list[UUID]], ColumnAlias("id")] = UNSET
     is_private: Maybe[bool] = UNSET
 
 
 class SearchAlbumDTO(BaseSearchDTO):
+    """DTO для полнотекстового поиска альбомов.
+
+    Расширяет `BaseSearchDTO` порогом релевантности, позволяя
+    отсекать результаты с низким совпадением.
+
+    Attributes
+    ----------
+    threshold : float
+        Минимальный порог релевантности результата. Записи с оценкой
+        ниже порога исключаются из выборки.
+    """
+
     threshold: float
 
 

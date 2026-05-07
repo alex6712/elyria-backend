@@ -549,7 +549,7 @@ class AlbumRepository(
                 select(
                     files_table,
                     *self._label_columns(
-                        files_table, USER_PROJECTION_FIELDS, "creator"
+                        users_table, USER_PROJECTION_FIELDS, "creator"
                     ),
                 )
                 .join(users_table, users_table.c.id == files_table.c.created_by)
