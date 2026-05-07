@@ -68,7 +68,7 @@ async def get_couple(
     summary="Запрос на регистрацию новой пары между пользователями.",
     response_description="Запрос успешно отправлен",
 )
-async def create_couple_request(
+async def post_request(
     body: Annotated[
         CreateCoupleRequest,
         Body(description="Схема запроса на создание приглашения в пару."),
@@ -112,7 +112,7 @@ async def create_couple_request(
     summary="Подтверждение регистрации новой пары между пользователями.",
     response_description="Регистрация пары подтверждена",
 )
-async def accept_couple_request(
+async def accept_request(
     couple_request_id: Annotated[
         UUID, Path(description="UUID принимаемого приглашения в пару.")
     ],
@@ -155,7 +155,7 @@ async def accept_couple_request(
     summary="Отказ регистрации новой пары между пользователями.",
     response_description="В регистрации пары отказано",
 )
-async def decline_couple_request(
+async def decline_request(
     couple_request_id: Annotated[
         UUID, Path(description="UUID отклоняемого приглашения в пару.")
     ],
@@ -198,7 +198,7 @@ async def decline_couple_request(
     summary="Получение списка текущих приглашений.",
     response_description="Список текущих приглашений в пару",
 )
-async def get_couple_requests(
+async def get_requests(
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
 ) -> CoupleRequestsResponse:
