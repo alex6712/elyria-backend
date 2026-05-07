@@ -85,15 +85,13 @@ class AuthService:
         Проверяет валидность access-токена.
     """
 
-    def __init__(
-        self, unit_of_work: UnitOfWork, redis_client: RedisClient, settings: Settings
-    ):
+    def __init__(self, uow: UnitOfWork, redis_client: RedisClient, settings: Settings):
         self._redis_client = redis_client
         self._settings = settings
 
-        self._couple_repo = unit_of_work.get_repository(CoupleRepository)
-        self._user_repo = unit_of_work.get_repository(UserRepository)
-        self._user_session_repo = unit_of_work.get_repository(UserSessionRepository)
+        self._couple_repo = uow.get_repository(CoupleRepository)
+        self._user_repo = uow.get_repository(UserRepository)
+        self._user_session_repo = uow.get_repository(UserSessionRepository)
 
     async def register(self, username: str, password: str) -> None:
         """Регистрирует пользователя в системе.

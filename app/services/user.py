@@ -26,8 +26,8 @@ class UserService:
         Частичное обновление атрибутов профиля пользователя по его UUID.
     """
 
-    def __init__(self, unit_of_work: UnitOfWork):
-        self._user_repo = unit_of_work.get_repository(UserRepository)
+    def __init__(self, uow: UnitOfWork):
+        self._user_repo = uow.get_repository(UserRepository)
 
     async def get_me(self, user_id: UUID) -> UserDTO:
         """Получение информации о пользователе.

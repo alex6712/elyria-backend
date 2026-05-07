@@ -130,7 +130,7 @@ class FileService:
 
     def __init__(
         self,
-        unit_of_work: UnitOfWork,
+        uow: UnitOfWork,
         redis_client: RedisClient,
         s3_client: "S3Client",
         settings: Settings,
@@ -139,8 +139,8 @@ class FileService:
         self._s3_client = s3_client
         self._settings = settings
 
-        self._couple_repo = unit_of_work.get_repository(CoupleRepository)
-        self._file_repo = unit_of_work.get_repository(FileRepository)
+        self._couple_repo = uow.get_repository(CoupleRepository)
+        self._file_repo = uow.get_repository(FileRepository)
 
     @staticmethod
     def _generate_object_key(user_id: UUID, batch_id: UUID) -> str:

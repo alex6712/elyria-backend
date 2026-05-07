@@ -41,10 +41,10 @@ class NoteService:
     _COUNT_CACHE_TTL = 3600
     """Время в секундах, которое живёт кэш счётчика записей."""
 
-    def __init__(self, unit_of_work: UnitOfWork, redis_client: RedisClient):
+    def __init__(self, uow: UnitOfWork, redis_client: RedisClient):
         self._redis_client = redis_client
 
-        self._note_repo = unit_of_work.get_repository(NoteRepository)
+        self._note_repo = uow.get_repository(NoteRepository)
 
     async def create_note(self, create_dto: CreateNoteDTO, user_id: UUID) -> None:
         """Создание новой пользовательской заметки.

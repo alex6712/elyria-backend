@@ -52,10 +52,10 @@ class AlbumService:
         Открепляет медиа-файлы от альбома.
     """
 
-    def __init__(self, unit_of_work: UnitOfWork):
-        self._album_repo = unit_of_work.get_repository(AlbumRepository)
-        self._file_repo = unit_of_work.get_repository(FileRepository)
-        self._couple_repo = unit_of_work.get_repository(CoupleRepository)
+    def __init__(self, uow: UnitOfWork):
+        self._album_repo = uow.get_repository(AlbumRepository)
+        self._file_repo = uow.get_repository(FileRepository)
+        self._couple_repo = uow.get_repository(CoupleRepository)
 
     async def create_album(self, create_dto: CreateAlbumDTO, created_by: UUID) -> None:
         """Создание нового медиа альбома.

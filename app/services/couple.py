@@ -24,8 +24,9 @@ from app.schemas.dto.couple import (
     FilterOneCoupleRequestDTO,
     UpdateCoupleDTO,
     UpdateCoupleRequestDTO,
+    UserCoupleDTO,
 )
-from app.schemas.dto.user import FilterUserDTO, PartnerDTO
+from app.schemas.dto.user import FilterUserDTO
 
 
 class CoupleService:
@@ -45,22 +46,30 @@ class CoupleService:
 
     Methods
     -------
-    get_partner(user_id)
-        Получение информации о партнёре пользователя.
-    create_couple_request(user_id, partner_username)
-        Регистрация пары между пользователями.
+    get_couple(user_id)
+        Получение информации о паре пользователя.
+    create_couple_request(initiator_id, recipient_username)
+        Создание запроса на создание пары между пользователями.
+    accept_couple_request(couple_request_id, user_id)
+        Подтверждение запроса на создание пары.
+    decline_couple_request(couple_request_id, user_id)
+        Отклонение запроса на создание пары.
+    get_couple_requests(user_id)
+        Получение списка запросов на создание пары.
+    update_couple(couple_id, update_dto, user_id)
+        Обновление атрибутов пары.
     """
 
-    def __init__(self, unit_of_work: UnitOfWork):
-        self._user_repo = unit_of_work.get_repository(UserRepository)
-        self._couple_repo = unit_of_work.get_repository(CoupleRepository)
-        self._couple_request_repo = unit_of_work.get_repository(CoupleRequestRepository)
+    def __init__(self, uow: UnitOfWork):
+        self._user_repo = uow.get_repository(UserRepository)
+        self._couple_repo = uow.get_repository(CoupleRepository)
+        self._couple_request_repo = uow.get_repository(CoupleRequestRepository)
 
-    async def get_partner(self, user_id: UUID) -> PartnerDTO | None:
-        """Получение информации о партнёре пользователя.
+    async def get_couple(self, user_id: UUID) -> UserCoupleDTO | None:
+        """Получение информации о паре пользователя.
 
-        Возвращает DTO пользователя-партнёра по UUID текущего
-        пользователя.
+        Выполняет поиск пары, в которой состоит пользователь с переданным UUID.
+        Возвращает DTO пары с информацией о партнёре текущего пользователя.
 
         Parameters
         ----------
@@ -69,8 +78,8 @@ class CoupleService:
 
         Returns
         -------
-        PartnerDTO | None
-            Информация о партнёре пользователя.
+        UserCoupleDTO | None
+            DTO пары с информацией о партнёре. None, если пользователь не состоит в паре.
         """
         couple = await self._couple_repo.read_one(
             FilterOneCoupleDTO(user_id=user_id), PublicAccessContext()
@@ -78,10 +87,13 @@ class CoupleService:
         if couple is None:
             return None
 
-        return (
-            couple.first_user
-            if couple.second_user.id == user_id
-            else couple.second_user
+        return UserCoupleDTO.model_validate(
+            {
+                **couple.model_dump(),
+                "partner": couple.first_user
+                if couple.second_user.id == user_id
+                else couple.second_user,
+            }
         )
 
     async def create_couple_request(

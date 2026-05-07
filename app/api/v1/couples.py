@@ -8,8 +8,7 @@ from app.core.dependencies.services import ServiceManagerDependency
 from app.core.docs import AUTHORIZATION_ERROR_REF
 from app.schemas.dto.couple import UpdateCoupleDTO
 from app.schemas.v1.requests.couples import CreateCoupleRequest, PatchCoupleRequest
-from app.schemas.v1.responses.couple import CoupleRequestsResponse
-from app.schemas.v1.responses.partner import PartnerResponse
+from app.schemas.v1.responses.couple import CoupleRequestsResponse, CoupleResponse
 from app.schemas.v1.responses.standard import StandardResponse
 
 router = APIRouter(
@@ -20,20 +19,20 @@ router = APIRouter(
 
 
 @router.get(
-    "/partner",
-    response_model=PartnerResponse,
+    "",
+    response_model=CoupleResponse,
     status_code=status.HTTP_200_OK,
-    summary="Получение информации о партнёре пользователя.",
-    response_description="Информация о партнёре текущего пользователя",
+    summary="Получение информации о паре пользователя.",
+    response_description="Информация о паре текущего пользователя",
 )
-async def get_partner(
+async def get_couple(
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
-) -> PartnerResponse:
-    """Запрос на получение информации о партнёре пользователя.
+) -> CoupleResponse:
+    """Запрос на получение информации о паре текущего пользователя.
 
-    Проверяет наличие пары у пользователя и при нахождении возвращает
-    информацию о партнёре.
+    Возвращает данные о паре, в которой состоит текущий пользователь,
+    включая информацию о партнёре и дате начала отношений.
 
     Parameters
     ----------
@@ -49,16 +48,16 @@ async def get_partner(
 
     Returns
     -------
-    PartnerResponse
-        Ответ с вложенным DTO партнёра.
+    CoupleResponse
+        Ответ с вложенным DTO пары.
     """
-    partner = await services.couple.get_partner(payload.sub)
+    couple = await services.couple.get_couple(payload.sub)
 
-    return PartnerResponse(
-        partner=partner,
-        detail="Current access token user partner's data."
-        if partner
-        else "Partner not found.",
+    return CoupleResponse(
+        couple=couple,
+        detail="Current access token user's couple data."
+        if couple
+        else "Couple not found.",
     )
 
 
@@ -69,7 +68,7 @@ async def get_partner(
     summary="Запрос на регистрацию новой пары между пользователями.",
     response_description="Запрос успешно отправлен",
 )
-async def create_couple_request(
+async def post_request(
     body: Annotated[
         CreateCoupleRequest,
         Body(description="Схема запроса на создание приглашения в пару."),
@@ -113,7 +112,7 @@ async def create_couple_request(
     summary="Подтверждение регистрации новой пары между пользователями.",
     response_description="Регистрация пары подтверждена",
 )
-async def accept_couple_request(
+async def accept_request(
     couple_request_id: Annotated[
         UUID, Path(description="UUID принимаемого приглашения в пару.")
     ],
@@ -156,7 +155,7 @@ async def accept_couple_request(
     summary="Отказ регистрации новой пары между пользователями.",
     response_description="В регистрации пары отказано",
 )
-async def decline_couple_request(
+async def decline_request(
     couple_request_id: Annotated[
         UUID, Path(description="UUID отклоняемого приглашения в пару.")
     ],
@@ -199,7 +198,7 @@ async def decline_couple_request(
     summary="Получение списка текущих приглашений.",
     response_description="Список текущих приглашений в пару",
 )
-async def get_couple_requests(
+async def get_requests(
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
 ) -> CoupleRequestsResponse:
