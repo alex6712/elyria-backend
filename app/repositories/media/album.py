@@ -137,10 +137,10 @@ class AlbumRepository(
         """
         return (
             select(
-                files_table,
+                albums_table,
                 *cls._label_columns(users_table, USER_PROJECTION_FIELDS, "creator"),
             )
-            .join(users_table, users_table.c.id == files_table.c.created_by)
+            .join(users_table, users_table.c.id == albums_table.c.created_by)
             .where(*where_clauses)
         )
 
@@ -163,8 +163,8 @@ class AlbumRepository(
         """
         result = await self.connection.execute(
             self._build_read_statement(
-                *self._build_filter_clauses(filter_dto, files_table),
-                access_ctx.as_where_clause(files_table),
+                *self._build_filter_clauses(filter_dto, albums_table),
+                access_ctx.as_where_clause(albums_table),
             )
         )
 
@@ -204,8 +204,8 @@ class AlbumRepository(
         """
         result = await self.connection.execute(
             self._build_read_statement(
-                *self._build_filter_clauses(filter_dto, files_table),
-                access_ctx.as_where_clause(files_table),
+                *self._build_filter_clauses(filter_dto, albums_table),
+                access_ctx.as_where_clause(albums_table),
             )
         )
 

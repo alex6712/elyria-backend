@@ -398,7 +398,11 @@ class RepositoryInterface(ABC):
             Если передан неизвестный подкласс `FilterOp`.
         """
         if op is None:
-            op = IN if isinstance(value, Collection) else EQ
+            op = (
+                IN
+                if isinstance(value, Collection) and not isinstance(value, str)
+                else EQ
+            )
 
         match op:
             case EqOp():

@@ -205,3 +205,18 @@ class UserRepository(
         )
 
         return result.rowcount == 1
+
+    async def update_many(
+        self,
+        filter_dto: Any,
+        update_dto: UpdateUserDTO,
+        access_ctx: AccessContext,
+    ) -> int:
+        """Не поддерживается для данной сущности.
+
+        Не предусмотрено обновление множества пользователей за одну транзакцию,
+        т.к. такой пользовательский сценарий не существует.
+        """
+        raise NotImplementedError(
+            "Method 'update_many' is not implemented in UserRepository"
+        )
