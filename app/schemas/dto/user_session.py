@@ -63,7 +63,7 @@ class FilterOneUserSessionDTO(BaseFilterOneDTO):
 class FilterManyUserSessionsDTO(BaseFilterManyDTO):
     """DTO для фильтрации множества сессий пользователей.
 
-    Все поля опциональны — пустой DTO возвращает все записи.
+    Все поля опциональны - пустой DTO возвращает все записи.
     При передаче нескольких полей условия комбинируются через AND.
 
     Attributes

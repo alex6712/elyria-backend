@@ -38,24 +38,24 @@ class FileRepository(
 
     Methods
     -------
-    create(create_dto, created_by)
-        Создаёт запись о медиа-файле со статусом `FileStatus.PENDING`.
-    create_batch(create_dtos, created_by)
-        Массово создаёт записи о медиа-файлах со статусом `FileStatus.PENDING`.
-    count(access_ctx)
-        Возвращает количество медиа-файлов, доступных в рамках контекста доступа.
-    get_all(access_ctx, offset, limit, sort_order)
-        Возвращает постраничный список медиа-файлов и их общее количество.
-    get_one(record_id, access_ctx)
-        Получает медиа-файл по его UUID с учётом прав доступа.
-    get_by_ids(record_ids, access_ctx)
-        Получает список медиа-файлов по UUID с учётом прав доступа.
-    update(record_id, update_dto, access_ctx)
-        Обновляет атрибуты медиа-файла по его UUID.
-    delete(record_id, access_ctx)
-        Удаляет медиа-файл по его UUID.
-    delete_batch(record_ids, access_ctx)
-        Массово удаляет медиа-файлы по списку UUID.
+    create_one(create_dto)
+        Создаёт новую запись о медиа-файле.
+    create_many(create_dtos)
+        Массово создаёт записи о медиа-файлах.
+    read_one(filter_dto, access_ctx)
+        Возвращает один медиа-файл по фильтрам.
+    read_one_for_update(filter_dto, access_ctx)
+        Возвращает медиа-файл с блокировкой строки (`FOR UPDATE`).
+    read_many(filter_dto, access_ctx, offset, limit, sort_order)
+        Возвращает список медиа-файлов с пагинацией.
+    update_one(filter_dto, update_dto, access_ctx)
+        Обновляет один медиа-файл по фильтрам.
+    delete_one(filter_dto, access_ctx)
+        Удаляет один медиа-файл по фильтрам.
+    delete_many(filter_dto, access_ctx)
+        Удаляет множество медиа-файлов по фильтрам.
+    count(filter_dto, access_ctx)
+        Возвращает количество медиа-файлов, удовлетворяющих фильтрам.
     """
 
     async def create_one(self, create_dto: CreateFileDTO) -> bool:
@@ -63,7 +63,7 @@ class FileRepository(
 
         Parameters
         ----------
-        create_dto : CreateNoteDTO
+        create_dto : CreateFileDTO
             Данные для создания записи медиа-файла.
 
         Returns
@@ -181,7 +181,7 @@ class FileRepository(
 
         Returns
         -------
-        NoteDTO | None
+        FileDTO | None
             Найденная запись о медиа-файле с вложенным DTO создателя
             или None, если ни одна запись не соответствует фильтрам.
         """
@@ -219,7 +219,7 @@ class FileRepository(
 
         Parameters
         ----------
-        filter_dto : FilterNoteDTO
+        filter_dto : FilterManyFilesDTO
             Параметры фильтрации. Пустой DTO возвращает все записи.
         access_ctx : AccessContext
             Контекст доступа.
@@ -233,7 +233,7 @@ class FileRepository(
 
         Returns
         -------
-        list[NoteDTO]
+        list[FileDTO]
             Список DTO найденных записей медиа-файлов, удовлетворяющих фильтру.
         """
         where_clauses = [
@@ -268,13 +268,14 @@ class FileRepository(
         """Обновление атрибутов файла в базе данных.
 
         Выполняет SQL-запрос UPDATE для изменения атрибутов файла,
-        фильтруя записи по идентификатору файла и правам доступа.
+        фильтруя записи по переданному DTO и правам доступа
+        через `access_ctx.as_where_clause`.
 
         Parameters
         ----------
         filter_dto : FilterOneFileDTO
             Параметры фильтрации.
-        update_dto : UpdateNoteDTO
+        update_dto : UpdateFileDTO
             DTO с полями для обновления.
         access_ctx : AccessContext
             Контекст доступа.
@@ -307,7 +308,7 @@ class FileRepository(
         т.к. такой пользовательский сценарий не существует.
         """
         raise NotImplementedError(
-            "Method 'update_many' is not implemented in FileREpository"
+            "Method 'update_many' is not implemented in FileRepository"
         )
 
     async def delete_one(
@@ -322,7 +323,7 @@ class FileRepository(
         access_ctx : AccessContext
             Контекст доступа.
 
-        NoteDTO
+        Returns
         -------
         bool
             True если запись о медиа-файле найдена и успешно удалена.
@@ -365,17 +366,21 @@ class FileRepository(
     async def count(
         self, filter_dto: FilterManyFilesDTO, access_ctx: AccessContext
     ) -> int:
-        """Возвращает количество медиа-файлов по id их создателя.
+        """Возвращает количество медиа-файлов по фильтру и контексту доступа.
 
         Parameters
         ----------
+        filter_dto : FilterManyFilesDTO
+            Параметры фильтрации. Пустой DTO инициирует подсчёт
+            всей таблицы.
         access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
+            Контекст доступа.
 
         Returns
         -------
         int
-            Количество доступных пользователю медиа-файлов.
+            Количество медиа-файлов, удовлетворяющих параметрам фильтрации
+            и контексту доступа.
         """
         return (
             await self.connection.scalar(

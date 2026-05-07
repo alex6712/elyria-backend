@@ -38,6 +38,7 @@ from app.schemas.dto.base import (
     BaseFilterDTO,
     BaseFilterManyDTO,
     BaseFilterOneDTO,
+    BaseSearchDTO,
     BaseSQLCoreDTO,
     BaseUpdateDTO,
 )
@@ -47,6 +48,7 @@ FilterOneDTO = TypeVar("FilterOneDTO", bound=BaseFilterOneDTO)
 FilterManyDTO = TypeVar("FilterManyDTO", bound=BaseFilterManyDTO)
 CreateDTO = TypeVar("CreateDTO", bound=BaseCreateDTO)
 UpdateDTO = TypeVar("UpdateDTO", bound=BaseUpdateDTO)
+SearchDTO = TypeVar("SearchDTO", bound=BaseSearchDTO)
 
 USER_PROJECTION_FIELDS = ["id", "created_at", "username", "avatar_url", "is_active"]
 
@@ -694,5 +696,51 @@ class Counter(RepositoryInterface, Generic[FilterManyDTO]):
         -------
         int
             Количество сущностей, соответствующих критериям фильтрации.
+        """
+        ...
+
+
+class Searcher(RepositoryInterface, Generic[SearchDTO, FilterManyDTO, EntityDTO]):
+    """Интерфейс для поиска сущностей.
+
+    Type Parameters
+    ---------------
+    SearchDTO : TypeVar
+        Тип DTO для поиска записей.
+    FilterManyDTO : TypeVar
+        Тип DTO для фильтрации записей.
+    EntityDTO : TypeVar
+        Тип доменного DTO возвращаемой сущности.
+    """
+
+    @abstractmethod
+    async def search(
+        self,
+        search_dto: SearchDTO,
+        filter_dto: FilterManyDTO,
+        access_ctx: AccessContext,
+        *,
+        offset: int = DEFAULT_OFFSET,
+        limit: int = DEFAULT_LIMIT,
+    ) -> tuple[list[EntityDTO], int]:
+        """Получить список сущностей по поисковому запросу.
+
+        Parameters
+        ----------
+        search_dto : SearchDTO
+            DTO с критериями поиска.
+        filter_dto : FilterManyDTO
+            DTO с критериями фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа для ограничения видимости.
+        offset : int, optional
+            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
+        limit : int, optional
+            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
+
+        Returns
+        -------
+        tuple[list[EntityDTO], int]
+            Список DTO и общее количество найденных записей.
         """
         ...

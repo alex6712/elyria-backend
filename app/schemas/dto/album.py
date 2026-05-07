@@ -1,5 +1,16 @@
-from app.core.types import UNSET, Maybe
-from app.schemas.dto.base import BaseCreateDTO, BaseSQLCoreDTO, BaseUpdateDTO
+from typing import Annotated
+from uuid import UUID
+
+from app.core.filtering import ColumnAlias
+from app.core.types import UNIQUE, UNSET, Maybe
+from app.schemas.dto.base import (
+    BaseCreateDTO,
+    BaseFilterManyDTO,
+    BaseFilterOneDTO,
+    BaseSearchDTO,
+    BaseSQLCoreDTO,
+    BaseUpdateDTO,
+)
 from app.schemas.dto.file import FileDTO
 from app.schemas.dto.user import CreatorDTO
 
@@ -46,6 +57,21 @@ class AlbumWithItemsDTO(AlbumDTO):
 
     items: list[FileDTO]
     total: int
+
+
+class FilterOneAlbumDTO(BaseFilterOneDTO):
+    id: Annotated[Maybe[UUID], UNIQUE] = UNSET
+
+    is_private: Maybe[bool] = UNSET
+
+
+class FilterManyAlbumsDTO(BaseFilterManyDTO):
+    ids: Annotated[Maybe[list[UUID]], ColumnAlias("id")] = UNSET
+    is_private: Maybe[bool] = UNSET
+
+
+class SearchAlbumDTO(BaseSearchDTO):
+    threshold: float
 
 
 class CreateAlbumDTO(BaseCreateDTO):

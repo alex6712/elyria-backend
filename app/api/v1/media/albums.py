@@ -134,8 +134,7 @@ async def post_albums(
         Успешный ответ о создании нового альбома.
     """
     await services.album.create_album(
-        CreateAlbumDTO.from_request_schema(body),
-        created_by=payload.sub,
+        CreateAlbumDTO.model_validate({**body.model_dump(), "created_by": payload.sub})
     )
 
     return StandardResponse(detail="New album created successfully.")
