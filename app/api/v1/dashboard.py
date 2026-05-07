@@ -7,9 +7,7 @@ from app.core.docs import AUTHORIZATION_ERROR_REF
 from app.schemas.v1.responses.dashboard import DashboardResponse
 
 router = APIRouter(
-    prefix="/dashboard",
-    tags=["dashboard"],
-    responses={401: AUTHORIZATION_ERROR_REF},
+    prefix="/dashboard", tags=["dashboard"], responses={401: AUTHORIZATION_ERROR_REF}
 )
 
 

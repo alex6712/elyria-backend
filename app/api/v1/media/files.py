@@ -31,9 +31,7 @@ from app.schemas.v1.responses.urls import (
 )
 
 router = APIRouter(
-    prefix="/files",
-    tags=["media-files"],
-    responses={401: AUTHORIZATION_ERROR_REF},
+    prefix="/files", tags=["media-files"], responses={401: AUTHORIZATION_ERROR_REF}
 )
 
 

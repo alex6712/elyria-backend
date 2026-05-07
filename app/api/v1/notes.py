@@ -15,9 +15,7 @@ from app.schemas.v1.responses.notes import NotesResponse
 from app.schemas.v1.responses.standard import CountResponse, StandardResponse
 
 router = APIRouter(
-    prefix="/notes",
-    tags=["notes"],
-    responses={401: AUTHORIZATION_ERROR_REF},
+    prefix="/notes", tags=["notes"], responses={401: AUTHORIZATION_ERROR_REF}
 )
 
 

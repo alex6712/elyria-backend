@@ -38,7 +38,7 @@ from app.schemas.dto.payload import (
     RefreshTokenPayload,
 )
 from app.schemas.dto.token import Tokens
-from app.schemas.dto.user import CreateUserDTO, FilterUserDTO, UpdateUserDTO
+from app.schemas.dto.user import CreateUserDTO, FilterOneUserDTO, UpdateUserDTO
 from app.schemas.dto.user_session import (
     CreateUserSessionDTO,
     FilterUserSessionDTO,
@@ -108,7 +108,7 @@ class AuthService:
         UsernameAlreadyExistsException
            Пользователь с переданным username уже существует.
         """
-        await self._user_repo.create(
+        await self._user_repo.create_one(
             CreateUserDTO(username=username, password_hash=hash_(password))
         )
 
@@ -138,7 +138,9 @@ class AuthService:
         IncorrectUsernameOrPasswordException
             Не найден пользователь или несовпадение пароля и его хеша в БД.
         """
-        user = await self._user_repo.get_one_filtered(FilterUserDTO(username=username))
+        user = await self._user_repo.read_one(
+            FilterOneUserDTO(username=username), PublicAccessContext()
+        )
 
         if user is None or not verify(password, user.password_hash):
             raise IncorrectUsernameOrPasswordException(
@@ -345,7 +347,9 @@ class AuthService:
         PasswordUpdateFailedException
             Если обновление пароля в БД не было применено.
         """
-        user = await self._user_repo.get_one(payload.sub)
+        user = await self._user_repo.read_one_for_update(
+            FilterOneUserDTO(id=payload.sub), PublicAccessContext()
+        )
 
         if user is None or not verify(current_password, user.password_hash):
             raise IncorrectPasswordException(detail="Current password is incorrect.")
@@ -355,8 +359,10 @@ class AuthService:
                 detail="New password must differ from current."
             )
 
-        if not await self._user_repo.update(
-            payload.sub, UpdateUserDTO(password_hash=hash_(new_password))
+        if not await self._user_repo.update_one(
+            FilterOneUserDTO(id=payload.sub),
+            UpdateUserDTO(password_hash=hash_(new_password)),
+            PublicAccessContext(),
         ):
             raise PasswordUpdateFailedException(
                 detail="Failed to update password: no rows were affected."

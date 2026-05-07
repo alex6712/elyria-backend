@@ -12,9 +12,7 @@ from app.schemas.v1.responses.couple import CoupleRequestsResponse, CoupleRespon
 from app.schemas.v1.responses.standard import StandardResponse
 
 router = APIRouter(
-    prefix="/couples",
-    tags=["couples"],
-    responses={401: AUTHORIZATION_ERROR_REF},
+    prefix="/couples", tags=["couples"], responses={401: AUTHORIZATION_ERROR_REF}
 )
 
 

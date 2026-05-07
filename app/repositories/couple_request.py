@@ -179,7 +179,7 @@ class CoupleRequestRepository(
         filter_dto : FilterOneCoupleRequestDTO
             DTO с полями фильтрации.
         access_ctx : AccessContext
-            Контекст доступа. Игнорируется.
+            Контекст доступа.
 
         Returns
         -------
@@ -187,11 +187,10 @@ class CoupleRequestRepository(
             Найденный запрос на пару с вложенными DTO инициатора и реципиента
             или None, если ни один запрос не соответствует фильтрам.
         """
-        _ = access_ctx
-
         result = await self.connection.execute(
             self._build_read_statement(
-                *self._build_filter_clauses(filter_dto, couple_requests_table)
+                *self._build_filter_clauses(filter_dto, couple_requests_table),
+                access_ctx.as_where_clause(couple_requests_table),
             ).with_for_update()
         )
 
@@ -229,7 +228,7 @@ class CoupleRequestRepository(
         filter_dto : FilterCoupleRequestDTO
             Параметры фильтрации. Пустой DTO возвращает все записи.
         access_ctx : AccessContext
-            Контекст доступа. Игнорируется.
+            Контекст доступа.
         offset : int, optional
             Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
         limit : int, optional
@@ -250,9 +249,10 @@ class CoupleRequestRepository(
         извлекаемые через JOIN с таблицей пользователей (под алиасами
         `initiators_table` и `recipients_table`).
         """
-        _ = access_ctx
-
-        where_clauses = self._build_filter_clauses(filter_dto, couple_requests_table)
+        where_clauses = [
+            *self._build_filter_clauses(filter_dto, couple_requests_table),
+            access_ctx.as_where_clause(couple_requests_table),
+        ]
 
         result, total = await asyncio.gather(
             self.connection.execute(
@@ -305,19 +305,20 @@ class CoupleRequestRepository(
         update_dto : UpdateCoupleRequestDTO
             DTO с обновляемыми полями.
         access_ctx : AccessContext
-            Контекст доступа. Игнорируется.
+            Контекст доступа.
 
         Returns
         -------
         bool
             True если запрос найден и успешно обновлён.
         """
-        _ = access_ctx
-
         result = await self.connection.execute(
             update(couple_requests_table)
             .values(**update_dto.to_update_values())
-            .where(*self._build_filter_clauses(filter_dto, couple_requests_table))
+            .where(
+                *self._build_filter_clauses(filter_dto, couple_requests_table),
+                access_ctx.as_where_clause(couple_requests_table),
+            )
         )
 
         return result.rowcount == 1

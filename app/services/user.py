@@ -3,8 +3,9 @@ from uuid import UUID
 from app.core.exceptions.base import NothingToUpdateException
 from app.core.exceptions.user import UserNotFoundException
 from app.infra.postgres.uow import UnitOfWork
+from app.repositories.interface import PublicAccessContext
 from app.repositories.user import UserRepository
-from app.schemas.dto.user import UpdateUserDTO, UserDTO
+from app.schemas.dto.user import FilterOneUserDTO, UpdateUserDTO, UserDTO
 
 
 class UserService:
@@ -45,7 +46,9 @@ class UserService:
         UserDTO
             Информация о текущем пользователе.
         """
-        user = await self._user_repo.get_one(user_id)
+        user = await self._user_repo.read_one(
+            FilterOneUserDTO(id=user_id), PublicAccessContext()
+        )
         if user is None:
             raise UserNotFoundException(f"User with id={user_id} not found.")
 
@@ -74,5 +77,7 @@ class UserService:
         if update_dto.is_empty():
             raise NothingToUpdateException(detail="No fields provided for update.")
 
-        if not await self._user_repo.update(user_id, update_dto):
+        if not await self._user_repo.update_one(
+            FilterOneUserDTO(id=user_id), update_dto, PublicAccessContext()
+        ):
             raise UserNotFoundException(f"User with id={user_id} not found.")

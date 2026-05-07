@@ -10,10 +10,7 @@ from app.schemas.v1.requests.users import PatchProfileRequest
 from app.schemas.v1.responses.standard import StandardResponse
 from app.schemas.v1.responses.user import UserResponse
 
-router = APIRouter(
-    prefix="/users",
-    tags=["users"],
-)
+router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get(
@@ -52,10 +49,7 @@ async def get_me(
     """
     user = await services.user.get_me(payload.sub)
 
-    return UserResponse(
-        user=user,
-        detail="Current access token user's data.",
-    )
+    return UserResponse(user=user, detail="Current access token user's data.")
 
 
 @router.get(

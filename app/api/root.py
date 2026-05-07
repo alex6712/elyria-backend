@@ -5,9 +5,7 @@ from app.core.dependencies.settings import SettingsDependency
 from app.schemas.v1.responses.app_info import AppInfoResponse
 from app.schemas.v1.responses.standard import StandardResponse
 
-api_root_router = APIRouter(
-    tags=["root"],
-)
+api_root_router = APIRouter(tags=["root"])
 
 
 @api_root_router.get(

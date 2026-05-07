@@ -26,7 +26,7 @@ from app.schemas.dto.couple import (
     UpdateCoupleRequestDTO,
     UserCoupleDTO,
 )
-from app.schemas.dto.user import FilterUserDTO
+from app.schemas.dto.user import FilterOneUserDTO
 
 
 class CoupleService:
@@ -127,8 +127,8 @@ class CoupleService:
         CoupleRequestAlreadyExistsException
             Если уже отправлен подобный запрос.
         """
-        recipient_user = await self._user_repo.get_one_filtered(
-            FilterUserDTO(username=recipient_username)
+        recipient_user = await self._user_repo.read_one(
+            FilterOneUserDTO(username=recipient_username), PublicAccessContext()
         )
         if recipient_user is None:
             raise UserNotFoundException(

@@ -1,31 +1,30 @@
-from uuid import UUID
+from typing import Any, Sequence
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError
 
+from app.core.consts import DEFAULT_LIMIT, DEFAULT_OFFSET
+from app.core.enums import SortOrder
 from app.core.exceptions.user import UsernameAlreadyExistsException
 from app.infra.postgres.tables.users import users_table
 from app.repositories.interface import (
-    CreateMixin,
-    FilteredReadOneMixin,
-    ReadOneMixin,
-    RepositoryInterface,
-    UpdateMixin,
+    AccessContext,
+    Creator,
+    Reader,
+    Updater,
 )
 from app.schemas.dto.user import (
     CreateUserDTO,
-    FilterUserDTO,
+    FilterOneUserDTO,
     UpdateUserDTO,
     UserWithCredentialsDTO,
 )
 
 
 class UserRepository(
-    RepositoryInterface,
-    ReadOneMixin[UserWithCredentialsDTO],
-    FilteredReadOneMixin[FilterUserDTO, UserWithCredentialsDTO],
-    CreateMixin[CreateUserDTO, UserWithCredentialsDTO],
-    UpdateMixin[UpdateUserDTO, UserWithCredentialsDTO],
+    Creator[CreateUserDTO],
+    Reader[FilterOneUserDTO, Any, UserWithCredentialsDTO],
+    Updater[FilterOneUserDTO, Any, UpdateUserDTO],
 ):
     """Репозиторий пользователя.
 
@@ -39,17 +38,17 @@ class UserRepository(
 
     Methods
     -------
-    create(create_dto)
+    create_one(create_dto)
         Добавляет в базу данных новую запись о пользователе.
-    get_one(record_id)
-        Возвращает DTO пользователя по его id.
-    get_one_filtered(filter_do)
-        Возвращает DTO пользователя по фильтру.
-    update(record_id, update_dto)
-        Обновляет данные пользователя по его идентификатору.
+    read_one(filter_dto, access_ctx)
+        Возвращает DTO пользователя с учётными данными.
+    read_one_for_update(filter_dto, access_ctx)
+        Возвращает пользователя с блокировкой строки для последующего изменения.
+    update_one(filter_dto, update_dto, access_ctx)
+        Обновляет данные пользователя.
     """
 
-    async def create(self, create_dto: CreateUserDTO) -> UserWithCredentialsDTO:
+    async def create_one(self, create_dto: CreateUserDTO) -> bool:
         """Добавляет в базу данных новую запись о пользователе.
 
         Parameters
@@ -59,8 +58,8 @@ class UserRepository(
 
         Returns
         -------
-        UserWithCredentialsDTO
-            Доменное DTO пользователя с чувствительными данными.
+        bool
+            True если пользователь успешно создан.
 
         Raises
         ------
@@ -69,9 +68,7 @@ class UserRepository(
         """
         try:
             result = await self.connection.execute(
-                insert(users_table)
-                .values(**create_dto.to_create_values())
-                .returning(users_table)
+                insert(users_table).values(**create_dto.to_create_values())
             )
         except IntegrityError as e:
             if "uq_users_username" in str(e):
@@ -81,15 +78,29 @@ class UserRepository(
 
             raise
 
-        return UserWithCredentialsDTO.model_validate(result.mappings().one())
+        return result.rowcount == 1
 
-    async def get_one(self, record_id: UUID) -> UserWithCredentialsDTO | None:
-        """Возвращает DTO пользователя по его id.
+    async def create_many(self, create_dtos: Sequence[CreateUserDTO]) -> int:
+        """Не поддерживается для данной сущности.
+
+        Не предусмотрено создание множества пользователей за одну транзакцию,
+        т.к. пользователь за один запрос может создать только одну учётную запись.
+        """
+        raise NotImplementedError(
+            "Method 'create_many' is not implemented in UserRepository"
+        )
+
+    async def read_one(
+        self, filter_dto: FilterOneUserDTO, access_ctx: AccessContext
+    ) -> UserWithCredentialsDTO | None:
+        """Возвращает DTO пользователя с учётными данными.
 
         Parameters
         ----------
-        record_id : UUID
-            UUID пользователя.
+        filter_dto : FilterOneUserDTO
+            Параметры фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа.
 
         Returns
         -------
@@ -97,35 +108,9 @@ class UserRepository(
             DTO записи пользователя, None - если пользователь с таким UUID не найден.
         """
         result = await self.connection.execute(
-            select(users_table).where(users_table.c.id == record_id)
-        )
-
-        if not (row := result.mappings().first()):
-            return None
-
-        return UserWithCredentialsDTO.model_validate(row)
-
-    async def get_one_filtered(
-        self, filter_dto: FilterUserDTO
-    ) -> UserWithCredentialsDTO | None:
-        """Возвращает DTO пользователя по переданному фильтру.
-
-        Parameters
-        ----------
-        filter_dto : FilterUserDTO
-            Параметры фильтрации.
-
-        Returns
-        -------
-        UserWithCredentialsDTO | None
-            DTO записи пользователя, None - если пользователь не найден.
-        """
-        result = await self.connection.execute(
             select(users_table).where(
-                *[
-                    getattr(users_table.c, field) == value
-                    for field, value in filter_dto.to_filter_values().items()
-                ]
+                *self._build_filter_clauses(filter_dto, users_table),
+                access_ctx.as_where_clause(users_table),
             )
         )
 
@@ -134,31 +119,88 @@ class UserRepository(
 
         return UserWithCredentialsDTO.model_validate(row)
 
-    async def update(
-        self, record_id: UUID, update_dto: UpdateUserDTO
+    async def read_one_for_update(
+        self, filter_dto: FilterOneUserDTO, access_ctx: AccessContext
     ) -> UserWithCredentialsDTO | None:
-        """Обновляет данные пользователя по его идентификатору.
+        """Возвращает пользователя с блокировкой строки для последующего изменения.
+
+        Устанавливает `SELECT ... FOR UPDATE` - строка блокируется
+        до завершения транзакции. Должен вызываться внутри транзакции.
 
         Parameters
         ----------
-        record_id : UUID
-            Идентификатор обновляемого пользователя.
-        update_dto : UpdateUserDTO
-            Новые данные пользователя.
+        filter_dto : FilterOneNoteDTO
+            DTO с полями фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа.
 
         Returns
         -------
         UserWithCredentialsDTO | None
-            DTO обновлённого пользователя или None, если пользователь не найден.
+            Найденный пользователь или None, если ни один пользователь
+            не соответствует фильтрам.
         """
         result = await self.connection.execute(
-            update(users_table)
-            .where(users_table.c.id == record_id)
-            .values(**update_dto.to_update_values())
-            .returning(users_table)
+            select(users_table)
+            .where(
+                *self._build_filter_clauses(filter_dto, users_table),
+                access_ctx.as_where_clause(users_table),
+            )
+            .with_for_update()
         )
 
         if not (row := result.mappings().first()):
             return None
 
         return UserWithCredentialsDTO.model_validate(row)
+
+    async def read_many(
+        self,
+        filter_dto: Any,
+        access_ctx: AccessContext,
+        *,
+        offset: int = DEFAULT_OFFSET,
+        limit: int = DEFAULT_LIMIT,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> tuple[list[UserWithCredentialsDTO], int]:
+        """Не поддерживается для данной сущности.
+
+        Не предусмотрено чтение данных множества пользователей,
+        т.к. не существует возможности просматривать списка пользователей.
+        """
+        raise NotImplementedError(
+            "Method 'read_many' is not implemented in UserRepository"
+        )
+
+    async def update_one(
+        self,
+        filter_dto: FilterOneUserDTO,
+        update_dto: UpdateUserDTO,
+        access_ctx: AccessContext,
+    ) -> bool:
+        """Обновляет данные пользователя.
+
+        Parameters
+        ----------
+        filter_dto : FilterOneUserDTO
+            Параметры фильтрации.
+        update_dto : UpdateUserDTO
+            Новые данные пользователя.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        bool
+            True если пользователь найден и успешно обновлён.
+        """
+        result = await self.connection.execute(
+            update(users_table)
+            .values(**update_dto.to_update_values())
+            .where(
+                *self._build_filter_clauses(filter_dto, users_table),
+                access_ctx.as_where_clause(users_table),
+            )
+        )
+
+        return result.rowcount == 1

@@ -18,9 +18,7 @@ from app.schemas.v1.responses.albums import AlbumResponse, AlbumsResponse
 from app.schemas.v1.responses.standard import StandardResponse
 
 router = APIRouter(
-    prefix="/albums",
-    tags=["media-albums"],
-    responses={401: AUTHORIZATION_ERROR_REF},
+    prefix="/albums", tags=["media-albums"], responses={401: AUTHORIZATION_ERROR_REF}
 )
 
 

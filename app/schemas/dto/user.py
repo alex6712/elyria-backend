@@ -1,9 +1,10 @@
+from typing import Annotated
 from uuid import UUID
 
-from app.core.types import UNSET, Maybe
+from app.core.types import UNIQUE, UNSET, Maybe
 from app.schemas.dto.base import (
     BaseCreateDTO,
-    BaseFilterDTO,
+    BaseFilterOneDTO,
     BaseSQLCoreDTO,
     BaseUpdateDTO,
 )
@@ -68,19 +69,9 @@ class PartnerDTO(UserDTO):
     pass
 
 
-class FilterUserDTO(BaseFilterDTO):
-    """DTO для фильтрации пользователей.
-
-    Attributes
-    ----------
-    id : Maybe[UUID]
-        Идентификатор пользователя.
-    username : Maybe[str]
-        Имя пользователя.
-    """
-
-    id: Maybe[UUID] = UNSET
-    username: Maybe[str] = UNSET
+class FilterOneUserDTO(BaseFilterOneDTO):
+    id: Annotated[Maybe[UUID], UNIQUE] = UNSET
+    username: Annotated[Maybe[str], UNIQUE] = UNSET
 
 
 class CreateUserDTO(BaseCreateDTO):
