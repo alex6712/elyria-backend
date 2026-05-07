@@ -1,29 +1,152 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Sequence, TypeVar
+from collections.abc import Collection
+from typing import Any, Generic, Iterable, Sequence, TypeVar, cast
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, FromClause, Label, RowMapping, Select, func, select
+from pydantic import BaseModel
+from sqlalchemy import (
+    Column,
+    FromClause,
+    Label,
+    RowMapping,
+    Select,
+    Table,
+    func,
+    select,
+    true,
+)
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql.elements import ColumnElement, UnaryExpression
 
 from app.core.consts import DEFAULT_LIMIT, DEFAULT_OFFSET
 from app.core.enums import SortOrder
-from app.infra.postgres.tables.users import users_table
+from app.core.filtering import (
+    EQ,
+    IN,
+    ColumnAlias,
+    EqOp,
+    FilterOp,
+    GteOp,
+    InOp,
+    IsNullOp,
+    LikeOp,
+    LteOp,
+)
+from app.core.types import is_set
 from app.schemas.dto.base import (
     BaseCreateDTO,
     BaseFilterDTO,
+    BaseFilterManyDTO,
+    BaseFilterOneDTO,
+    BaseSearchDTO,
     BaseSQLCoreDTO,
     BaseUpdateDTO,
 )
 
 EntityDTO = TypeVar("EntityDTO", bound=BaseSQLCoreDTO)
-FilterDTO = TypeVar("FilterDTO", bound=BaseFilterDTO)
+FilterOneDTO = TypeVar("FilterOneDTO", bound=BaseFilterOneDTO)
+FilterManyDTO = TypeVar("FilterManyDTO", bound=BaseFilterManyDTO)
 CreateDTO = TypeVar("CreateDTO", bound=BaseCreateDTO)
 UpdateDTO = TypeVar("UpdateDTO", bound=BaseUpdateDTO)
+SearchDTO = TypeVar("SearchDTO", bound=BaseSearchDTO)
+
+USER_PROJECTION_FIELDS = ["id", "created_at", "username", "avatar_url", "is_active"]
 
 
-class AccessContext(BaseModel):
+class AccessContext(ABC, BaseModel):
+    """Абстрактный контекст доступа для формирования SQL-ограничений.
+
+    Контекст доступа инкапсулирует правила видимости записей и
+    используется для построения WHERE-условий на уровне запроса.
+
+    Реализации должны возвращать корректное SQLAlchemy-выражение,
+    которое ограничивает доступ к данным в соответствии с
+    текущим контекстом пользователя.
+    """
+
+    @abstractmethod
+    def as_where_clause(self, table: Table) -> ColumnElement[bool]:
+        """Сформировать WHERE-условие для ограничения доступа.
+
+        Parameters
+        ----------
+        table : Table
+            SQLAlchemy Core-таблица. Реализации сами извлекают
+            необходимые колонки через `table.c`.
+
+        Returns
+        -------
+        ColumnElement[bool]
+            SQLAlchemy-выражение, которое может быть передано в `.where()`.
+
+        Notes
+        -----
+        - Метод не должен выполнять запросы - только строить выражение.
+        - Возвращаемое выражение должно быть детерминированным.
+        - Не должно происходить побочных эффектов.
+        """
+        ...
+
+    @staticmethod
+    def _require_col(table: Table, name: str) -> Column[Any]:
+        """Вернуть колонку таблицы по имени или выбросить исключение.
+
+        Вспомогательный метод для реализаций `as_where_clause`.
+        Используется вместо прямого обращения к `table.c[name]`,
+        чтобы заменить неинформативный `KeyError` на явное сообщение.
+
+        Parameters
+        ----------
+        table : Table
+            SQLAlchemy Core-таблица, из которой извлекается колонка.
+        name : str
+            Имя колонки.
+
+        Returns
+        -------
+        Column[Any]
+            Колонка таблицы с указанным именем.
+
+        Raises
+        ------
+        ValueError
+            Если колонка с указанным именем отсутствует в таблице.
+        """
+        if name not in table.c:
+            raise ValueError(
+                f"Table {table.name!r} doesn't contain column named '{name!r}'. "
+                f"There're columns: {list(table.c.keys())}"
+            )
+
+        return table.c[name]
+
+
+class PublicAccessContext(AccessContext):
+    """Контекст доступа без ограничений видимости.
+
+    Используется для публичных ресурсов, где проверка
+    прав владения не требуется. WHERE-условие всегда
+    допускает все записи.
+    """
+
+    def as_where_clause(self, table: Table) -> ColumnElement[bool]:
+        """Сформировать WHERE-условие без ограничений доступа.
+
+        Parameters
+        ----------
+        table : Table
+            SQLAlchemy Core-таблица. Не используется.
+
+        Returns
+        -------
+        ColumnElement[bool]
+            SQLAlchemy-выражение, эквивалентное `true()`,
+            не накладывающее ограничений на выборку.
+        """
+        return true()
+
+
+class CoupleAccessContext(AccessContext):
     """Контекст доступа к записи с ограниченной видимостью.
 
     Используется для атомарной проверки прав владения при мутациях
@@ -42,25 +165,30 @@ class AccessContext(BaseModel):
     user_id: UUID
     partner_id: UUID | None = None
 
-    def as_where_clause(self, created_by_col: Column[UUID]) -> ColumnElement[bool]:
+    def as_where_clause(self, table: Table) -> ColumnElement[bool]:
         """Строит WHERE-условие для фильтрации записей по правам доступа.
 
         Parameters
         ----------
-        created_by_col : Column[UUID]
-            Колонка таблицы, содержащая идентификатор создателя записи.
+        table : Table
+            SQLAlchemy Core-таблица. Ожидается наличие колонки `created_by`.
 
         Returns
         -------
         ColumnElement[bool]
             SQLAlchemy-выражение, готовое к использованию в `.where()`.
+
+        Raises
+        ------
+        ValueError
+            Если в таблице отсутствует колонка `created_by`.
         """
+        col = self._require_col(table, "created_by")
+
         if self.partner_id is not None:
-            return created_by_col.in_([self.user_id, self.partner_id])
+            return col.in_([self.user_id, self.partner_id])
 
-        return created_by_col == self.user_id
-
-    model_config = ConfigDict(frozen=True)
+        return col == self.user_id
 
 
 class RepositoryInterface(ABC):
@@ -125,694 +253,498 @@ class RepositoryInterface(ABC):
         """
         return column.desc() if order == SortOrder.DESC else column.asc()
 
-
-class OwnedRepositoryInterface(RepositoryInterface):
-    """Интерфейс репозитория для сущностей с ограниченным доступом.
-
-    Предназначен для сущностей, видимых только владельцу и его партнёру.
-    Объединяет полный набор CRUD-операций с атомарной проверкой
-    принадлежности через AccessContext.
-    """
-
     @staticmethod
-    def _creator_columns() -> list[Label[Any]]:
-        """Возвращает лейблированные колонки пользователя для JOIN-запросов.
+    def _label_columns(
+        table: FromClause, column_names: Iterable[str], prefix: str
+    ) -> list[Label[Any]]:
+        """Применяет префиксные лейблы к колонкам для SELECT.
 
-        Используется для избежания конфликта имён при джойне с таблицами,
-        содержащими аналогичные базовые колонки (id, created_at).
+        Используется при JOIN нескольких алиасов одной таблицы
+        во избежание коллизий имён колонок в результирующей строке.
+        Лейбл формируется как `_{prefix}_{column.key}`.
+
+        Parameters
+        ----------
+        table : FromClause
+            Таблица (или выражение), колонки которой лейблируются.
+        column_names : Iterable[str]
+            Наименования колонок для лейблирования.
+        prefix : str
+            Префикс, добавляемый к имени каждой колонки.
 
         Returns
         -------
         list[Label[Any]]
-            Список лейблированных колонок users_table.
+            Список лейблированных колонок.
         """
-        return [
-            users_table.c.id.label("_creator_id"),
-            users_table.c.created_at.label("_creator_created_at"),
-            users_table.c.username.label("_creator_username"),
-            users_table.c.avatar_url.label("_creator_avatar_url"),
-            users_table.c.is_active.label("_creator_is_active"),
-        ]
+        return [table.c[name].label(f"_{prefix}_{name}") for name in column_names]
 
     @staticmethod
-    def _extract_creator(row: RowMapping) -> dict[str, Any]:
-        """Извлекает данные создателя из плоской строки JOIN-результата.
+    def _extract_prefixed(
+        row: RowMapping, prefix: str, fields: Iterable[str]
+    ) -> dict[str, Any]:
+        """Извлекает префиксированные поля из плоской строки запроса.
+
+        Парный метод к `_label_columns` - читает из `RowMapping`
+        поля, ранее лейблированные через `_{prefix}_{field}`,
+        и возвращает словарь без префикса для последующей валидации в DTO.
 
         Parameters
         ----------
         row : RowMapping
-            Плоская строка результата запроса с лейблированными
-            колонками пользователя.
+            Плоская строка результата запроса.
+        prefix : str
+            Префикс, под которым были лейблированы колонки.
+        fields : Iterable[str]
+            Имена полей без префикса.
 
         Returns
         -------
         dict[str, Any]
-            Словарь с данными создателя, готовый для вложенной валидации DTO.
+            Словарь вида `{field: value}`.
         """
-        return {
-            "id": row["_creator_id"],
-            "created_at": row["_creator_created_at"],
-            "username": row["_creator_username"],
-            "avatar_url": row["_creator_avatar_url"],
-            "is_active": row["_creator_is_active"],
-        }
+        return {field: row[f"_{prefix}_{field}"] for field in fields}
+
+    @staticmethod
+    def _build_filter_clauses(
+        filter_dto: BaseFilterDTO, table: Table
+    ) -> list[ColumnElement[bool]]:
+        """Преобразует filter DTO в список WHERE-условий SQLAlchemy.
+
+        Читает метаданные полей DTO из `Annotated`-аннотаций и строит
+        соответствующие выражения SQLAlchemy Core. Поля со значением `UNSET`
+        пропускаются. Оператор определяется маркером `FilterOp` в метаданных;
+        если маркер отсутствует - выбирается дефолтный по типу значения:
+        `IN` для списков, `EQ` для скаляров.
+
+        Parameters
+        ----------
+        filter_dto : BaseFilterDTO
+            DTO с критериями фильтрации. Поддерживает `BaseFilterOneDTO`
+            и `BaseFilterManyDTO`.
+        table : Table
+            Таблица SQLAlchemy Core, по которой строятся условия.
+            Колонки разрешаются через `table.c`.
+
+        Returns
+        -------
+        list[ColumnElement[bool]]
+            Список WHERE-условий для передачи в `.where(*clauses)`.
+            Пустой список означает отсутствие фильтров.
+
+        Raises
+        ------
+        AttributeError
+            Если имя поля DTO (или псевдоним из `ColumnAlias`) не соответствует
+            ни одной колонке в переданной таблице.
+        NotImplementedError
+            Если в метаданных поля обнаружен неизвестный подкласс `FilterOp`.
+
+        Notes
+        -----
+        Маркеры читаются из `field_info.metadata` в порядке объявления.
+        Берётся первый найденный экземпляр `FilterOp` и первый `ColumnAlias`.
+
+        Examples
+        --------
+        >>> clauses = self._build_filter_clauses(filter_dto, users_table)
+        >>> query = select(users_table).where(*clauses)
+        """
+        clauses: list[ColumnElement[bool]] = []
+
+        for field_name, field_info in type(filter_dto).model_fields.items():
+            if not is_set(value := getattr(filter_dto, field_name)):
+                continue
+
+            metadata = field_info.metadata
+
+            alias = next(
+                (m.name for m in metadata if isinstance(m, ColumnAlias)), field_name
+            )
+            op = next((m for m in metadata if isinstance(m, FilterOp)), None)
+
+            column = table.c[alias]
+            clause = RepositoryInterface.__resolve_clause(column, op, value)
+            clauses.append(clause)
+
+        return clauses
+
+    @staticmethod
+    def __resolve_clause(
+        column: ColumnElement[Any],
+        op: FilterOp | None,
+        value: Any,
+    ) -> ColumnElement[bool]:
+        """Строит одно WHERE-условие по колонке, оператору и значению.
+
+        Parameters
+        ----------
+        column : ColumnElement[Any]
+            Колонка SQLAlchemy, по которой строится условие.
+        op : FilterOp | None
+            Маркер оператора из метаданных поля.
+            Если `None` - оператор выбирается по типу `value`.
+        value : Any
+            Значение фильтра. Не может быть `Unset`.
+
+        Returns
+        -------
+        ColumnElement[bool]
+            Готовое выражение для WHERE.
+
+        Raises
+        ------
+        NotImplementedError
+            Если передан неизвестный подкласс `FilterOp`.
+        """
+        if op is None:
+            op = (
+                IN
+                if isinstance(value, Collection) and not isinstance(value, str)
+                else EQ
+            )
+
+        match op:
+            case EqOp():
+                return column == value
+            case InOp():
+                return column.in_(
+                    cast(
+                        Collection[Any],
+                        value if isinstance(value, Collection) else [value],
+                    )
+                )
+            case LikeOp():
+                return column.ilike(f"%{value}%")
+            case GteOp():
+                return column >= value
+            case LteOp():
+                return column <= value
+            case IsNullOp():
+                return column.is_(None) if value else column.is_not(None)
+            case _:
+                raise NotImplementedError(
+                    f"Unknown filter operator: {type(op).__name__}"
+                )
 
 
-class CreateMixin(ABC, Generic[CreateDTO, EntityDTO]):
-    """Миксин операции создания записи.
+class Creator(RepositoryInterface, Generic[CreateDTO]):
+    """Интерфейс для создания сущностей.
 
     Type Parameters
     ---------------
     CreateDTO : TypeVar
         Тип DTO для создания записи.
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
     """
 
     @abstractmethod
-    async def create(self, create_dto: CreateDTO) -> EntityDTO:
-        """Создаёт новую запись.
+    async def create_one(self, create_dto: CreateDTO) -> bool:
+        """Создать одну сущность.
 
         Parameters
         ----------
         create_dto : CreateDTO
-            Данные для создания записи.
+            DTO с данными для создания.
 
         Returns
         -------
-        EntityDTO
-            Доменное DTO созданной записи.
+        bool
+            True, если сущность была успешно создана, иначе False.
         """
         ...
 
-
-class OwnedCreateMixin(ABC, Generic[CreateDTO, EntityDTO]):
-    """Миксин операции создания записи с явной привязкой к владельцу.
-
-    Предназначен для сущностей с ограниченной видимостью, у которых
-    поле created_by не входит в схему запроса и извлекается отдельно
-    из payload токена на уровне сервиса.
-
-    Type Parameters
-    ---------------
-    CreateDTO : TypeVar
-        Тип DTO для создания записи.
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
     @abstractmethod
-    async def create(self, create_dto: CreateDTO, created_by: UUID) -> EntityDTO:
-        """Создаёт новую запись с привязкой к владельцу.
-
-        Parameters
-        ----------
-        create_dto : CreateDTO
-            Данные для создания записи.
-        created_by : UUID
-            Идентификатор пользователя, создающего запись.
-            Передаётся явно, так как извлекается из payload токена,
-            а не из схемы запроса.
-
-        Returns
-        -------
-        EntityDTO
-            Доменное DTO созданной записи.
-        """
-        ...
-
-
-class OwnedBatchCreateMixin(ABC, Generic[CreateDTO, EntityDTO]):
-    """Миксин операции пакетного создания записей с явной привязкой к владельцу.
-
-    Предназначен для сущностей с ограниченной видимостью, у которых
-    поле created_by не входит в схему запроса и извлекается отдельно
-    из payload токена на уровне сервиса.
-
-    Type Parameters
-    ---------------
-    CreateDTO : TypeVar
-        Тип DTO для создания записи.
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def create_batch(
-        self, create_dtos: Sequence[CreateDTO], created_by: UUID
-    ) -> list[EntityDTO]:
-        """Создаёт несколько записей с привязкой к владельцу.
+    async def create_many(self, create_dtos: Sequence[CreateDTO]) -> int:
+        """Создать несколько сущностей.
 
         Parameters
         ----------
         create_dtos : Sequence[CreateDTO]
-            Данные для создания записей.
-        created_by : UUID
-            Идентификатор пользователя, создающего записи.
-            Передаётся явно, так как извлекается из payload токена,
-            а не из схемы запроса.
+            Последовательность DTO для создания.
 
         Returns
         -------
-        list[EntityDTO]
-            Список доменных DTO созданных записей.
-            Порядок соответствует порядку create_dtos.
+        int
+            Количество успешно созданных сущностей.
         """
         ...
 
 
-class ReadOneMixin(ABC, Generic[EntityDTO]):
-    """Миксин для операции получения одной записи по идентификатору.
+class Reader(RepositoryInterface, Generic[FilterOneDTO, FilterManyDTO, EntityDTO]):
+    """Интерфейс для чтения сущностей.
 
     Type Parameters
     ---------------
+    FilterOneDTO : TypeVar
+        Тип DTO для фильтрации записей (с гарантией одной сущности).
+    FilterManyDTO : TypeVar
+        Тип DTO для фильтрации записей.
     EntityDTO : TypeVar
         Тип доменного DTO возвращаемой сущности.
     """
 
     @abstractmethod
-    async def get_one(self, record_id: UUID) -> EntityDTO | None:
-        """Возвращает запись по идентификатору.
-
-        Parameters
-        ----------
-        record_id : UUID
-            Идентификатор записи для получения.
-
-        Returns
-        -------
-        EntityDTO | None
-            Доменное DTO найденной записи или None, если запись не найдена.
-        """
-        ...
-
-
-class FilteredReadOneMixin(ABC, Generic[FilterDTO, EntityDTO]):
-    """Миксин для получения одной сущности по фильтрам.
-
-    Type Parameters
-    ---------------
-    FilterDTO
-        DTO с полями фильтрации.
-    EntityDTO
-        DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def get_one_filtered(self, filter_dto: FilterDTO) -> EntityDTO | None:
-        """Возвращает одну сущность, соответствующую переданным фильтрам.
-
-        Parameters
-        ----------
-        filter_dto : FilterDTO
-            DTO с полями фильтрации.
-
-        Returns
-        -------
-        EntityDTO
-            Найденная сущность.
-        None
-            Если ни одна запись не соответствует фильтрам.
-        """
-        ...
-
-
-class ReadMixin(ReadOneMixin[EntityDTO]):
-    """Миксин для полного набора read-операций: по идентификатору и списком.
-
-    Расширяет :class:`ReadOneMixin`, добавляя постраничную выборку всех записей.
-
-    Type Parameters
-    ---------------
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def get_all(
-        self,
-        *,
-        offset: int = 0,
-        limit: int = 50,
-        sort_order: SortOrder = SortOrder.DESC,
-    ) -> tuple[list[EntityDTO], int]:
-        """Возвращает постраничный список всех записей и их общее количество.
-
-        Parameters
-        ----------
-        offset : int, optional
-            Количество пропускаемых записей, по умолчанию 0.
-        limit : int, optional
-            Максимальное количество возвращаемых записей, по умолчанию 50.
-        sort_order : SortOrder, optional
-            Направление сортировки по полю `created_at`,
-            по умолчанию SortOrder.DESC.
-
-        Returns
-        -------
-        tuple[list[EntityDTO], int]
-            Список DTO и общее количество записей без учёта пагинации.
-        """
-        ...
-
-
-class FilteredReadMixin(ABC, Generic[FilterDTO, EntityDTO]):
-    """Миксин операции фильтрованного чтения с подсчётом записей.
-
-    Предназначен для публичных сущностей, не имеющих ограничений доступа
-    по принадлежности, но поддерживающих доменно-специфичную фильтрацию.
-    Возвращает результат совместно с общим количеством записей
-    для пагинации на клиенте.
-
-    В отличие от :class:`OwnedFilteredReadMixin`, не требует
-    :class:`AccessContext` - фильтрация определяется исключительно
-    параметрами -filter_dto-.
-
-    Type Parameters
-    ---------------
-    FilterDTO : TypeVar
-        Тип DTO с параметрами фильтрации. Специфичен для домена -
-        определяется в конкретном интерфейсе репозитория.
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def get_filtered(
-        self,
-        filter_dto: FilterDTO,
-        *,
-        offset: int = DEFAULT_OFFSET,
-        limit: int = DEFAULT_LIMIT,
-        sort_order: SortOrder = SortOrder.DESC,
-    ) -> tuple[list[EntityDTO], int]:
-        """Возвращает отфильтрованный список записей и общее их количество.
-
-        Parameters
-        ----------
-        filter_dto : FilterDTO
-            Доменно-специфичные параметры фильтрации.
-        offset : int, optional
-            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
-        limit : int, optional
-            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
-        sort_order : SortOrder, optional
-            Направление сортировки по полю `created_at`,
-            по умолчанию `SortOrder.DESC`.
-
-        Returns
-        -------
-        tuple[list[EntityDTO], int]
-            Список DTO и общее количество записей без учёта пагинации.
-        """
-        ...
-
-
-class OwnedReadMixin(ABC, Generic[EntityDTO]):
-    """Миксин операции чтения записи с проверкой прав доступа.
-
-    Предназначен для сущностей с ограниченной видимостью. Условие доступа
-    из AccessContext включается непосредственно в WHERE-clause запроса,
-    исключая TOCTOU.
-
-    Type Parameters
-    ---------------
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def get_all(
-        self,
-        access_ctx: AccessContext,
-        *,
-        offset: int = DEFAULT_OFFSET,
-        limit: int = DEFAULT_LIMIT,
-        sort_order: SortOrder = SortOrder.DESC,
-    ) -> tuple[list[EntityDTO], int]:
-        """Возвращает постраничный список записей, доступных в рамках контекста.
-
-        Условие доступа применяется на уровне запроса - результат содержит
-        только записи, видимые для указанного владельца и партнёра.
-
-        Parameters
-        ----------
-        access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
-        offset : int, optional
-            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
-        limit : int, optional
-            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
-        sort_order : SortOrder, optional
-            Направление сортировки по полю `created_at`,
-            по умолчанию SortOrder.DESC.
-
-        Returns
-        -------
-        tuple[list[EntityDTO], int]
-            Список DTO и общее количество записей без учёта пагинации.
-        """
-        ...
-
-    @abstractmethod
-    async def get_one(
-        self, record_id: UUID, access_ctx: AccessContext
+    async def read_one(
+        self, filter_dto: FilterOneDTO, access_ctx: AccessContext
     ) -> EntityDTO | None:
-        """Возвращает запись по идентификатору при наличии прав доступа.
-
-        Намеренно не разграничивает отсутствие записи и отказ в доступе -
-        это предотвращает раскрытие факта существования чужих записей.
+        """Получить одну сущность.
 
         Parameters
         ----------
-        record_id : UUID
-            Идентификатор запрашиваемой записи.
+        filter_dto : FilterOneDTO
+            DTO с критериями фильтрации.
         access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
+            Контекст доступа для ограничения видимости.
 
         Returns
         -------
         EntityDTO | None
-            Доменное DTO найденной записи или None, если запись
-            не найдена либо доступ запрещён.
+            Найденная сущность или None, если запись отсутствует
+            или недоступна.
         """
         ...
 
+    @abstractmethod
+    async def read_one_for_update(
+        self, filter_dto: FilterOneDTO, access_ctx: AccessContext
+    ) -> EntityDTO | None:
+        """Получить одну сущность с блокировкой.
 
-class OwnedFilteredReadMixin(ABC, Generic[FilterDTO, EntityDTO]):
-    """Миксин операции фильтрованного чтения с подсчётом записей.
+        Parameters
+        ----------
+        filter_dto : FilterOneDTO
+            DTO с критериями фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа для ограничения видимости.
 
-    Предназначен для сущностей с ограниченным доступом, поддерживающих
-    доменно-специфичную фильтрацию. Возвращает результат совместно
-    с общим количеством записей для пагинации на клиенте.
+        Returns
+        -------
+        EntityDTO | None
+            Найденная сущность или None.
 
-    Type Parameters
-    ---------------
-    FilterDTO : TypeVar
-        Тип DTO с параметрами фильтрации. Специфичен для домена -
-        определяется в конкретном интерфейсе репозитория.
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
+        Notes
+        -----
+        - Реализация должна использовать блокировку строки (например, SELECT ... FOR UPDATE).
+        - Используется для безопасных мутаций без TOCTOU.
+        """
+        ...
 
     @abstractmethod
-    async def get_filtered(
+    async def read_many(
         self,
-        filter_dto: FilterDTO,
+        filter_dto: FilterManyDTO,
         access_ctx: AccessContext,
         *,
         offset: int = DEFAULT_OFFSET,
         limit: int = DEFAULT_LIMIT,
         sort_order: SortOrder = SortOrder.DESC,
-    ) -> tuple[list[EntityDTO], int]:
-        """Возвращает отфильтрованный список записей и общее их количество.
-
-        Parameters
-        ----------
-        filter_dto : FilterDTO
-            Доменно-специфичные параметры фильтрации.
-        access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
-        offset : int, optional
-            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
-        limit : int, optional
-            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
-        sort_order : SortOrder, optional
-            Направление сортировки по полю `created_at`,
-            по умолчанию SortOrder.DESC.
-
-        Returns
-        -------
-        tuple[list[EntityDTO], int]
-            Список DTO и общее количество записей без учёта пагинации.
-        """
-        ...
-
-
-class OwnedBatchReadMixin(ABC, Generic[EntityDTO]):
-    """Миксин операции пакетного чтения записей с проверкой прав доступа.
-
-    Предназначен для сущностей с ограниченной видимостью. Условие доступа
-    из AccessContext включается непосредственно в WHERE-clause запроса,
-    исключая TOCTOU.
-
-    Type Parameters
-    ---------------
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def get_by_ids(
-        self, record_ids: Sequence[UUID], access_ctx: AccessContext
     ) -> list[EntityDTO]:
-        """Возвращает записи по списку идентификаторов при наличии прав доступа.
-
-        Намеренно не разграничивает отсутствие записи и отказ в доступе -
-        недоступные и несуществующие записи молча исключаются из результата.
-        Это предотвращает раскрытие факта существования чужих записей.
+        """Получить список сущностей.
 
         Parameters
         ----------
-        record_ids : Sequence[UUID]
-            Идентификаторы запрашиваемых записей.
+        filter_dto : FilterManyDTO
+            DTO с критериями фильтрации.
         access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
+            Контекст доступа для ограничения видимости.
+        offset : int, optional
+            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
+        limit : int, optional
+            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
+        sort_order : SortOrder, optional
+            Направление сортировки по полю `created_at`,
+            по умолчанию SortOrder.DESC.
 
         Returns
         -------
         list[EntityDTO]
-            Список DTO записей, доступных в рамках контекста.
-            Порядок не гарантирован. Размер списка может быть меньше
-            len(record_ids), если часть записей недоступна или не существует.
+            Список DTO.
         """
         ...
 
 
-class UpdateMixin(ABC, Generic[UpdateDTO, EntityDTO]):
-    """Миксин операции обновления записи без проверки прав доступа.
-
-    Предназначен для публичных сущностей, не имеющих ограничений
-    на изменение по принадлежности.
+class Updater(RepositoryInterface, Generic[FilterOneDTO, FilterManyDTO, UpdateDTO]):
+    """Интерфейс для обновления сущностей.
 
     Type Parameters
     ---------------
+    FilterOneDTO : TypeVar
+        Тип DTO для фильтрации записей (с гарантией одной сущности).
+    FilterManyDTO : TypeVar
+        Тип DTO для фильтрации записей.
     UpdateDTO : TypeVar
-        Тип DTO для обновления записи.
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
+        Тип DTO для обновления записей.
     """
 
     @abstractmethod
-    async def update(self, record_id: UUID, update_dto: UpdateDTO) -> EntityDTO | None:
-        """Обновляет запись по идентификатору.
+    async def update_one(
+        self, filter_dto: FilterOneDTO, update_dto: UpdateDTO, access_ctx: AccessContext
+    ) -> bool:
+        """Обновить одну сущность.
 
         Parameters
         ----------
-        record_id : UUID
-            Идентификатор обновляемой записи.
+        filter_dto : FilterOneDTO
+            DTO с критериями выбора сущности.
         update_dto : UpdateDTO
-            Новые данные для записи.
+            DTO с изменяемыми полями.
+        access_ctx : AccessContext
+            Контекст доступа.
 
         Returns
         -------
-        EntityDTO | None
-            Доменное DTO обновлённой записи или None, если запись не найдена.
+        bool
+            True, если сущность была обновлена, иначе False.
         """
         ...
 
-
-class FilteredUpdateMixin(ABC, Generic[FilterDTO, UpdateDTO, EntityDTO]):
-    """Миксин операции обновления записи с фильтрацией по дополнительным критериям.
-
-    Предназначен для сущностей, обновление которых требует проверки
-    дополнительных условий помимо идентификатора записи - например,
-    принадлежности конкретному внешнему другому агрегату.
-
-    В отличие от :class:`UpdateMixin`, принимает `filter_dto` вместо
-    `record_id`, что позволяет инкапсулировать произвольный набор
-    критериев фильтрации без расширения сигнатуры базового контракта.
-
-    Type Parameters
-    ---------------
-    FilterDTO : TypeVar
-        Доменно-специфичные параметры фильтрации.
-    UpdateDTO : TypeVar
-        Тип DTO с новыми данными для записи.
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
     @abstractmethod
-    async def update_filtered(
-        self, filter_dto: FilterDTO, update_dto: UpdateDTO
-    ) -> EntityDTO | None:
-        """Обновляет запись по набору критериев фильтрации.
-
-        Parameters
-        ----------
-        filter_dto : FilterDTO
-            Критерии выборки обновляемой записи. Конкретный состав полей
-            определяется реализацией репозитория.
-        update_dto : UpdateDTO
-            Новые данные для записи.
-
-        Returns
-        -------
-        EntityDTO | None
-            Доменное DTO обновлённой записи или None, если запись,
-            удовлетворяющая критериям фильтрации, не найдена.
-        """
-        ...
-
-
-class OwnedUpdateMixin(ABC, Generic[UpdateDTO, EntityDTO]):
-    """Миксин операции обновления записи с проверкой прав доступа.
-
-    Предназначен для сущностей с ограниченной видимостью. Условие доступа
-    из AccessContext включается непосредственно в WHERE-clause запроса,
-    обеспечивая атомарность проверки и обновления (исключает TOCTOU).
-
-    Type Parameters
-    ---------------
-    UpdateDTO : TypeVar
-        Тип DTO для обновления записи.
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def update(
+    async def update_many(
         self,
-        record_id: UUID,
+        filter_dto: FilterManyDTO,
         update_dto: UpdateDTO,
         access_ctx: AccessContext,
-    ) -> EntityDTO | None:
-        """Обновляет запись при наличии прав доступа.
-
-        Намеренно не разграничивает отсутствие записи и отказ в доступе -
-        это предотвращает раскрытие факта существования чужих записей.
+    ) -> int:
+        """Обновить несколько сущностей.
 
         Parameters
         ----------
-        record_id : UUID
-            Идентификатор обновляемой записи.
+        filter_dto : FilterManyDTO
+            DTO с критериями фильтрации.
         update_dto : UpdateDTO
-            Новые данные для записи.
+            DTO с изменениями.
         access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
+            Контекст доступа.
 
         Returns
         -------
-        EntityDTO | None
-            Доменное DTO обновлённой записи или None, если запись
-            не найдена либо доступ запрещён.
+        int
+            Количество обновлённых сущностей.
         """
         ...
 
 
-class DeleteMixin(ABC, Generic[EntityDTO]):
-    """Миксин операции удаления записи без проверки прав доступа.
-
-    Предназначен для публичных сущностей или административных операций,
-    не требующих проверки принадлежности.
+class Deleter(RepositoryInterface, Generic[FilterOneDTO, FilterManyDTO]):
+    """Интерфейс для удаления сущностей.
 
     Type Parameters
     ---------------
+    FilterOneDTO : TypeVar
+        Тип DTO для фильтрации записей (с гарантией одной сущности).
+    FilterManyDTO : TypeVar
+        Тип DTO для фильтрации записей.
+    """
+
+    @abstractmethod
+    async def delete_one(
+        self, filter_dto: FilterOneDTO, access_ctx: AccessContext
+    ) -> bool:
+        """Удалить одну сущность.
+
+        Parameters
+        ----------
+        filter_dto : FilterOneDTO
+            DTO с критериями выбора сущности.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        bool
+            True, если сущность была удалена, иначе False.
+        """
+        ...
+
+    @abstractmethod
+    async def delete_many(
+        self, filter_dto: FilterManyDTO, access_ctx: AccessContext
+    ) -> int:
+        """Удалить несколько сущностей.
+
+        Parameters
+        ----------
+        filter_dto : FilterManyDTO
+            DTO с критериями фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        int
+            Количество удалённых сущностей.
+        """
+        ...
+
+
+class Counter(RepositoryInterface, Generic[FilterManyDTO]):
+    """Интерфейс для подсчёта сущностей.
+
+    Type Parameters
+    ---------------
+    FilterManyDTO : TypeVar
+        Тип DTO для фильтрации записей.
+    """
+
+    @abstractmethod
+    async def count(self, filter_dto: FilterManyDTO, access_ctx: AccessContext) -> int:
+        """Подсчитать количество сущностей по фильтру.
+
+        Parameters
+        ----------
+        filter_dto : FilterManyDTO
+            DTO с критериями фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа для ограничения видимости.
+
+        Returns
+        -------
+        int
+            Количество сущностей, соответствующих критериям фильтрации.
+        """
+        ...
+
+
+class Searcher(RepositoryInterface, Generic[SearchDTO, FilterManyDTO, EntityDTO]):
+    """Интерфейс для поиска сущностей.
+
+    Type Parameters
+    ---------------
+    SearchDTO : TypeVar
+        Тип DTO для поиска записей.
+    FilterManyDTO : TypeVar
+        Тип DTO для фильтрации записей.
     EntityDTO : TypeVar
         Тип доменного DTO возвращаемой сущности.
     """
 
     @abstractmethod
-    async def delete(self, record_id: UUID) -> EntityDTO | None:
-        """Удаляет запись по идентификатору.
+    async def search(
+        self,
+        search_dto: SearchDTO,
+        filter_dto: FilterManyDTO,
+        access_ctx: AccessContext,
+        *,
+        offset: int = DEFAULT_OFFSET,
+        limit: int = DEFAULT_LIMIT,
+    ) -> tuple[list[EntityDTO], int]:
+        """Получить список сущностей по поисковому запросу.
 
         Parameters
         ----------
-        record_id : UUID
-            Идентификатор удаляемой записи.
-
-        Returns
-        -------
-        EntityDTO | None
-            Доменное DTO удалённой записи или None, если запись
-            не найдена либо доступ запрещён.
-        """
-        ...
-
-
-class OwnedDeleteMixin(ABC, Generic[EntityDTO]):
-    """Миксин операции удаления записи с проверкой прав доступа.
-
-    Предназначен для сущностей с ограниченной видимостью. Условие доступа
-    из AccessContext включается непосредственно в WHERE-clause запроса,
-    обеспечивая атомарность проверки и удаления (исключает TOCTOU).
-
-    Type Parameters
-    ---------------
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def delete(
-        self, record_id: UUID, access_ctx: AccessContext
-    ) -> EntityDTO | None:
-        """Удаляет запись при наличии прав доступа.
-
-        Намеренно не разграничивает отсутствие записи и отказ в доступе -
-        это предотвращает раскрытие факта существования чужих записей.
-
-        Parameters
-        ----------
-        record_id : UUID
-            Идентификатор удаляемой записи.
+        search_dto : SearchDTO
+            DTO с критериями поиска.
+        filter_dto : FilterManyDTO
+            DTO с критериями фильтрации.
         access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
+            Контекст доступа для ограничения видимости.
+        offset : int, optional
+            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
+        limit : int, optional
+            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
 
         Returns
         -------
-        EntityDTO | None
-            Доменное DTO удалённой записи или None, если запись
-            не найдена либо доступ запрещён.
-        """
-        ...
-
-
-class OwnedBatchDeleteMixin(ABC, Generic[EntityDTO]):
-    """Миксин операции пакетного удаления записей с проверкой прав доступа.
-
-    Предназначен для сущностей с ограниченной видимостью. Условие доступа
-    из AccessContext включается непосредственно в WHERE-clause запроса,
-    обеспечивая атомарность проверки и удаления (исключает TOCTOU).
-
-    Type Parameters
-    ---------------
-    EntityDTO : TypeVar
-        Тип доменного DTO возвращаемой сущности.
-    """
-
-    @abstractmethod
-    async def delete_batch(
-        self, record_ids: Sequence[UUID], access_ctx: AccessContext
-    ) -> list[EntityDTO]:
-        """Удаляет записи по списку идентификаторов при наличии прав доступа.
-
-        Намеренно не разграничивает отсутствие записи и отказ в доступе -
-        недоступные и несуществующие записи молча пропускаются.
-        Это предотвращает раскрытие факта существования чужих записей.
-
-        Parameters
-        ----------
-        record_ids : Sequence[UUID]
-            Идентификаторы удаляемых записей.
-        access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
-
-        Returns
-        -------
-        list[EntityDTO]
-            Список DTO удалённых записей.
-            Пустой список, если записей нет или доступ ко всем из них запрещён.
+        tuple[list[EntityDTO], int]
+            Список DTO и общее количество найденных записей.
         """
         ...

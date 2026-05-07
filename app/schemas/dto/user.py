@@ -1,9 +1,10 @@
+from typing import Annotated
 from uuid import UUID
 
-from app.core.types import UNSET, Maybe
+from app.core.types import UNIQUE, UNSET, Maybe
 from app.schemas.dto.base import (
     BaseCreateDTO,
-    BaseFilterDTO,
+    BaseFilterOneDTO,
     BaseSQLCoreDTO,
     BaseUpdateDTO,
 )
@@ -68,19 +69,25 @@ class PartnerDTO(UserDTO):
     pass
 
 
-class FilterUserDTO(BaseFilterDTO):
-    """DTO для фильтрации пользователей.
+class FilterOneUserDTO(BaseFilterOneDTO):
+    """DTO для поиска одной записи пользователя по идентификатору или имени пользователя.
+
+    Требует передачи хотя бы одного из уникальных полей: `id` или `username`.
+    Используется в сервисах, где пользователя можно найти как по его собственному
+    идентификатору, так и по уникальному имени.
 
     Attributes
     ----------
     id : Maybe[UUID]
-        Идентификатор пользователя.
+        Идентификатор пользователя. Является уникальным полем - достаточно передать
+        только его для однозначного нахождения записи.
     username : Maybe[str]
-        Имя пользователя.
+        Имя пользователя. Является уникальным полем - достаточно передать только его
+        для однозначного нахождения записи.
     """
 
-    id: Maybe[UUID] = UNSET
-    username: Maybe[str] = UNSET
+    id: Annotated[Maybe[UUID], UNIQUE] = UNSET
+    username: Annotated[Maybe[str], UNIQUE] = UNSET
 
 
 class CreateUserDTO(BaseCreateDTO):

@@ -1,6 +1,8 @@
-from typing import Any, Literal
+from typing import Any, Literal, Self, TypeIs, TypeVar
 
 from pydantic_core import core_schema
+
+T = TypeVar("T")
 
 type Domain = Literal["application", "auth", "user", "couple", "media", "note"]
 """Допустимые домены/модули приложения для логирования и маршрутизации."""
@@ -29,7 +31,7 @@ class Unset:
 
     _instance = None
 
-    def __new__(cls) -> "Unset":
+    def __new__(cls) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
 
@@ -68,4 +70,53 @@ type Maybe[T] = T | Unset
 Отличается от `T | None` тем, что `None` считается явно переданным значением
 (например, для записи NULL в БД), тогда как `Unset` означает отсутствие намерения
 изменить поле.
+"""
+
+
+def is_set(field: T | Unset) -> TypeIs[T]:
+    """Проверяет, было ли поле явно передано (не является `Unset`).
+
+    Parameters
+    ----------
+    field : T | Unset
+        Значение поля, которое необходимо проверить.
+        Обычно используется значение атрибута DTO.
+
+    Returns
+    -------
+    TypeIs[T]
+        `True`, если значение поля не является экземпляром `Unset`,
+        то есть было явно передано (включая `None`).
+        `False`, если поле содержит `UNSET` - значение не было передано.
+    """
+    return not isinstance(field, Unset)
+
+
+class UniqueField:
+    """Маркер для полей, участвующих в идентификации записи.
+
+    Используется как метаданные в аннотациях полей DTO через `Annotated`,
+    чтобы обозначить поля, по которым можно однозначно найти запись.
+    `BaseFilterOneDTO` использует этот маркер для валидации: хотя бы одно
+    такое поле должно быть передано в запросе.
+
+    Notes
+    -----
+    Экземпляр `UNIQUE` является предпочтительным способом использования -
+    создавать отдельные экземпляры класса не требуется.
+
+    Examples
+    --------
+    >>> class FilterOneUserDTO(BaseFilterOneDTO):
+    ...     user_id: Annotated[Maybe[UUID], UNIQUE] = UNSET
+    ...     email: Annotated[Maybe[str], UNIQUE] = UNSET
+    """
+
+    pass
+
+
+UNIQUE = UniqueField()
+"""Единственный рекомендуемый экземпляр `UniqueField`.
+
+Используется как метаданные в `Annotated` для пометки идентифицирующих полей DTO.
 """

@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID
 
 from app.core.enums import SortOrder
@@ -5,12 +6,15 @@ from app.core.exceptions.base import NothingToUpdateException
 from app.core.exceptions.media import MediaNotFoundException
 from app.infra.postgres.uow import UnitOfWork
 from app.repositories.couple import CoupleRepository
-from app.repositories.interface import AccessContext
+from app.repositories.interface import CoupleAccessContext
 from app.repositories.media import AlbumRepository, FileRepository
 from app.schemas.dto.album import (
     AlbumDTO,
     AlbumWithItemsDTO,
     CreateAlbumDTO,
+    FilterManyAlbumsDTO,
+    FilterOneAlbumDTO,
+    SearchAlbumDTO,
     UpdateAlbumDTO,
 )
 
@@ -36,7 +40,7 @@ class AlbumService:
     -------
     create_album(title, description, cover_url, is_private, created_by)
         Создание нового медиа альбома.
-    get_albums(offset, limit, creator_id)
+    get_albums(offset, limit, created_by)
         Получение всех медиа альбомов по UUID создателя.
     search_albums(search_query, threshold, limit, created_by)
         Производит поиск альбомов по переданному запросу.
@@ -52,22 +56,20 @@ class AlbumService:
         Открепляет медиа-файлы от альбома.
     """
 
-    def __init__(self, unit_of_work: UnitOfWork):
-        self._album_repo = unit_of_work.get_repository(AlbumRepository)
-        self._file_repo = unit_of_work.get_repository(FileRepository)
-        self._couple_repo = unit_of_work.get_repository(CoupleRepository)
+    def __init__(self, uow: UnitOfWork):
+        self._album_repo = uow.get_repository(AlbumRepository)
+        self._file_repo = uow.get_repository(FileRepository)
+        self._couple_repo = uow.get_repository(CoupleRepository)
 
-    async def create_album(self, create_dto: CreateAlbumDTO, created_by: UUID) -> None:
+    async def create_album(self, create_dto: CreateAlbumDTO) -> None:
         """Создание нового медиа альбома.
 
         Parameters
         ----------
         create_dto : CreateAlbumDTO
             Данные для создания альбома.
-        created_by : UUID
-            UUID пользователя, создавшего альбом.
         """
-        await self._album_repo.create(create_dto, created_by)
+        await self._album_repo.create_one(create_dto)
 
     async def get_albums(
         self,
@@ -101,11 +103,20 @@ class AlbumService:
         tuple[list[AlbumDTO], int]
             Кортеж из списка альбомов и общего количества.
         """
-        return await self._album_repo.get_all(
-            AccessContext(user_id=user_id, partner_id=partner_id),
-            offset=offset,
-            limit=limit,
-            sort_order=sort_order,
+        filter_dto, access_ctx = (
+            FilterManyAlbumsDTO(),
+            CoupleAccessContext(user_id=user_id, partner_id=partner_id),
+        )
+
+        return await asyncio.gather(
+            self._album_repo.read_many(
+                filter_dto,
+                access_ctx,
+                offset=offset,
+                limit=limit,
+                sort_order=sort_order,
+            ),
+            self._album_repo.count(filter_dto, access_ctx),
         )
 
     async def search_albums(
@@ -143,10 +154,10 @@ class AlbumService:
         tuple[list[AlbumDTO], int]
             Кортеж из списка найденных альбомов и общего количества.
         """
-        return await self._album_repo.search_by_trigram(
-            AccessContext(user_id=user_id, partner_id=partner_id),
-            search_query,
-            threshold,
+        return await self._album_repo.search(
+            SearchAlbumDTO(search_query=search_query, threshold=threshold),
+            FilterManyAlbumsDTO(),
+            CoupleAccessContext(user_id=user_id, partner_id=partner_id),
             offset=offset,
             limit=limit,
         )
@@ -190,8 +201,8 @@ class AlbumService:
             текущий пользователь не имеет прав на просмотр этого альбома.
         """
         album = await self._album_repo.get_with_items(
-            album_id,
-            AccessContext(user_id=user_id, partner_id=partner_id),
+            FilterOneAlbumDTO(id=album_id),
+            CoupleAccessContext(user_id=user_id, partner_id=partner_id),
             offset=offset,
             limit=limit,
         )
@@ -237,8 +248,10 @@ class AlbumService:
         if update_dto.is_empty():
             raise NothingToUpdateException(detail="No fields provided for update.")
 
-        if not await self._album_repo.update(
-            album_id, update_dto, AccessContext(user_id=user_id, partner_id=partner_id)
+        if not await self._album_repo.update_one(
+            FilterOneAlbumDTO(id=album_id),
+            update_dto,
+            CoupleAccessContext(user_id=user_id, partner_id=partner_id),
         ):
             raise MediaNotFoundException(
                 media_type="album",
@@ -265,7 +278,9 @@ class AlbumService:
             Возникает в случае, если альбом с переданным UUID не существует
             или текущий пользователь не является создателем альбома.
         """
-        if not await self._album_repo.delete(album_id, AccessContext(user_id=user_id)):
+        if not await self._album_repo.delete_one(
+            FilterOneAlbumDTO(id=album_id), CoupleAccessContext(user_id=user_id)
+        ):
             raise MediaNotFoundException(
                 media_type="album",
                 detail=f"Album with id={album_id} not found, or you're not this album's creator.",
@@ -304,9 +319,11 @@ class AlbumService:
         if not files_ids:
             return
 
-        access_ctx = AccessContext(user_id=user_id, partner_id=partner_id)
+        access_ctx = CoupleAccessContext(user_id=user_id, partner_id=partner_id)
 
-        if not await self._album_repo.get_one(album_id, access_ctx):
+        if not await self._album_repo.read_one_for_update(
+            FilterOneAlbumDTO(id=album_id), access_ctx
+        ):
             raise MediaNotFoundException(
                 media_type="album",
                 detail=f"Album with id={album_id} not found, or you're lack of rights.",
@@ -351,9 +368,11 @@ class AlbumService:
         if not files_ids:
             return
 
-        access_ctx = AccessContext(user_id=user_id, partner_id=partner_id)
+        access_ctx = CoupleAccessContext(user_id=user_id, partner_id=partner_id)
 
-        if not await self._album_repo.get_one(album_id, access_ctx):
+        if not await self._album_repo.read_one_for_update(
+            FilterOneAlbumDTO(id=album_id), access_ctx
+        ):
             raise MediaNotFoundException(
                 media_type="album",
                 detail=f"Album with id={album_id} not found, or you're lack of rights.",

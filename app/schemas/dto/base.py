@@ -2,9 +2,9 @@ from datetime import datetime
 from typing import Any, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
-from app.core.types import Unset
+from app.core.types import UniqueField, Unset
 
 
 class BaseDTO(BaseModel):
@@ -46,82 +46,120 @@ class BaseSQLCoreDTO(BaseDTO):
 
 
 class BaseFilterDTO(BaseDTO):
-    """Базовый DTO для передачи параметров фильтрации в репозиторий.
+    """Базовый DTO для фильтрации записей.
 
-    Предназначен для query-параметров - конструируется напрямую,
-    без промежуточной схемы запроса.
+    Предоставляет вспомогательный метод `is_set` для проверки того,
+    было ли поле явно передано. Является общим предком для
+    `BaseFilterOneDTO` и `BaseFilterManyDTO`.
 
     Notes
     -----
-    Наследники должны объявлять все фильтруемые поля с типом `Maybe[T]`
-    и значением по умолчанию `UNSET`.
-
-    Examples
-    --------
-    >>> class NoteFilterDTO(BaseFilterDTO):
-    ...     note_type: Maybe[NoteType] = UNSET
-    ...
-    >>> NoteFilterDTO().is_empty()
-    True
-    >>> NoteFilterDTO(note_type=NoteType.WISHLIST).is_empty()
-    False
-    >>> NoteFilterDTO(note_type=NoteType.WISHLIST).to_filter_values()
-    {'note_type': <NoteType.WISHLIST: ...>}
+    Поля фильтра по умолчанию должны иметь значение `UNSET`, чтобы
+    отличать "поле не передано" от "поле передано как None".
     """
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self._cached_values: dict[str, Any] | None = None
+    pass
 
-    def _build_filter_values(self) -> dict[str, Any]:
-        """Формирует словарь активных параметров фильтрации.
 
-        Исключает поля, оставшиеся в значении `UNSET` - то есть явно
-        не переданные при конструировании DTO.
+class BaseFilterOneDTO(BaseFilterDTO):
+    """Базовый DTO для фильтрации одиночной записи.
 
-        Returns
-        -------
-        dict[str, Any]
-            Словарь вида `{field_name: value}` только для заданных фильтров.
-            Используется для построения WHERE-условий в репозитории.
+    Расширяет `BaseFilterDTO` валидацией: гарантирует, что в запросе
+    передано хотя бы одно поле, помеченное `UNIQUE`. Это предотвращает
+    запросы без идентификатора, которые семантически некорректны для
+    операций поиска одной записи.
 
-        Notes
-        -----
-        Предполагает, что имена полей DTO совпадают с именами колонок таблицы.
-        """
-        return {
-            field: value
-            for field, value in self.model_dump().items()
-            if not isinstance(value, Unset)
-        }
+    Notes
+    -----
+    Подклассы обязаны объявить хотя бы одно поле с метаданными `UNIQUE`
+    в `Annotated`. Если ни одного такого поля нет - при инициализации
+    будет поднято `TypeError`. Если поля есть, но ни одно не передано -
+    поднимается `ValueError`.
 
-    def to_filter_values(self) -> dict[str, Any]:
-        """Возвращает закэшированный словарь активных параметров фильтрации.
+    Raises
+    ------
+    TypeError
+        Если в классе не объявлено ни одного поля с маркером `UNIQUE`.
+    ValueError
+        Если ни одно из уникальных полей не было передано в запросе.
+    """
 
-        При первом вызове формирует словарь через `_build_filter_values`,
-        после чего повторно использует сохранённый результат.
+    @model_validator(mode="after")
+    def _validate_unique_set(self) -> Self:
+        """Валидирует наличие хотя бы одного переданного уникального поля.
 
-        Returns
-        -------
-        dict[str, Any]
-            Словарь вида `{field_name: value}` только для заданных фильтров.
-            Пустой словарь, если ни один фильтр не задан.
-        """
-        if self._cached_values is None:
-            self._cached_values = self._build_filter_values()
-
-        return self._cached_values
-
-    def is_empty(self) -> bool:
-        """Проверяет, что ни один фильтр не задан.
+        Вызывается автоматически Pydantic после инициализации модели.
+        Собирает все поля, аннотированные с метаданными `UNIQUE`, и проверяет,
+        что хотя бы одно из них было явно передано (не `UNSET`).
 
         Returns
         -------
-        bool
-            True, если все поля остались `UNSET`, False - если хотя бы
-            одно поле было явно передано.
+        Self
+            Текущий экземпляр модели, если валидация прошла успешно.
+
+        Raises
+        ------
+        TypeError
+            Если в модели нет полей с маркером `UNIQUE` - вероятно,
+            подкласс определён некорректно.
+        ValueError
+            Если все уникальные поля содержат `UNSET`.
         """
-        return not self.to_filter_values()
+        class_ = type(self)
+
+        unique_fields = [
+            name
+            for name, field_info in class_.model_fields.items()
+            if any(isinstance(m, UniqueField) for m in field_info.metadata)
+        ]
+        if not unique_fields:
+            raise TypeError(f"{class_.__name__}: no fields marked as UNIQUE")
+
+        if all(isinstance(getattr(self, name), Unset) for name in unique_fields):
+            raise ValueError(
+                f"{class_.__name__}: at least one unique field must be set: {unique_fields}"
+            )
+
+        return self
+
+
+class BaseFilterManyDTO(BaseFilterDTO):
+    """Базовый DTO для фильтрации множества записей.
+
+    Расширяет `BaseFilterDTO` без дополнительных ограничений на уникальные
+    поля - в отличие от `BaseFilterOneDTO`, запрос без идентификаторов
+    допустим и означает выборку всех записей (с учётом прочих фильтров).
+
+    Notes
+    -----
+    Конкретные подклассы могут добавлять поля пагинации, сортировки
+    и произвольные фильтры в зависимости от требований сервиса.
+    """
+
+    pass
+
+
+class BaseSearchDTO(BaseDTO):
+    """Базовый DTO для поискового запроса.
+
+    Инкапсулирует строку поискового запроса и параметры пагинации.
+    В отличие от `BaseFilterManyDTO`, не предполагает прямого
+    маппинга полей на колонки таблицы - трансляция в SQL-условие
+    делегируется миксину `Searcher` через `_build_search_clause`.
+
+    Attributes
+    ----------
+    search_query : str
+        Поисковой запрос, введённый пользователем.
+
+    Notes
+    -----
+    Конкретные подклассы могут расширять этот класс дополнительными
+    параметрами, специфичными для домена: языком полнотекстового поиска,
+    порогом релевантности, весами колонок и т.д.
+    """
+
+    search_query: str
 
 
 class BaseRequestDTO(BaseDTO):

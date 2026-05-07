@@ -1,11 +1,14 @@
 from datetime import date, datetime
+from typing import Annotated
 from uuid import UUID
 
 from app.core.enums import CoupleRequestStatus
-from app.core.types import UNSET, Maybe
+from app.core.filtering import ColumnAlias
+from app.core.types import UNIQUE, UNSET, Maybe
 from app.schemas.dto.base import (
     BaseCreateDTO,
-    BaseFilterDTO,
+    BaseFilterManyDTO,
+    BaseFilterOneDTO,
     BaseSQLCoreDTO,
     BaseUpdateDTO,
 )
@@ -22,8 +25,8 @@ class CoupleRequestDTO(BaseSQLCoreDTO):
         DTO пользователя-инициатора.
     recipient : PartnerDTO
         DTO пользователя-реципиента.
-    status : CoupleStatus
-        Текущий статус пары.
+    status : CoupleRequestStatus
+        Текущий статус запроса на пару.
     accepted_at : datetime | None
         Дата и время принятия приглашения в пару.
     """
@@ -67,13 +70,14 @@ class UserCoupleDTO(BaseSQLCoreDTO):
     relationship_started_on: date | None
 
 
-class FilterCoupleRequestDTO(BaseFilterDTO):
+class FilterOneCoupleRequestDTO(BaseFilterOneDTO):
     """DTO для фильтрации заявок на пару.
 
     Attributes
     ----------
     id : Maybe[UUID]
-        Идентификатор запроса.
+        Идентификатор запроса. Является уникальным полем - достаточно передать
+        только его для однозначного нахождения записи.
     initiator_id : Maybe[UUID]
         Идентификатор инициатора запроса.
     recipient_id : Maybe[UUID]
@@ -82,25 +86,56 @@ class FilterCoupleRequestDTO(BaseFilterDTO):
         Статус запроса.
     """
 
-    id: Maybe[UUID] = UNSET
+    id: Annotated[Maybe[UUID], UNIQUE] = UNSET
+
     initiator_id: Maybe[UUID] = UNSET
     recipient_id: Maybe[UUID] = UNSET
-    status: Maybe[CoupleRequestStatus] = UNSET
+    statuses: Annotated[Maybe[list[CoupleRequestStatus]], ColumnAlias("status")] = UNSET
 
 
-class FilterCoupleDTO(BaseFilterDTO):
-    """DTO для фильтрации пар.
+class FilterOneCoupleDTO(BaseFilterOneDTO):
+    """DTO для поиска одной записи пары по идентификатору пары или пользователя.
+
+    Требует передачи хотя бы одного из уникальных полей: `id` или
+    `user_id`. Используется в сервисах, где пару можно найти как по её
+    собственному идентификатору, так и по идентификатору одного из участников.
 
     Attributes
     ----------
-    couple_id : Maybe[UUID]
-        Идентификатор пары.
+    id : Maybe[UUID]
+        Идентификатор пары. Является уникальным полем - достаточно передать
+        только его для однозначного нахождения записи.
     user_id : Maybe[UUID]
-        Идентификатор одного из участников пары.
+        Идентификатор пользователя, входящего в пару. Является уникальным
+        полем - достаточно передать только его для однозначного нахождения записи.
     """
 
-    couple_id: Maybe[UUID] = UNSET
-    user_id: Maybe[UUID] = UNSET
+    id: Annotated[Maybe[UUID], UNIQUE, ColumnAlias("couple_id")] = UNSET
+    user_id: Annotated[Maybe[UUID], UNIQUE] = UNSET
+
+
+class FilterManyCoupleRequestsDTO(BaseFilterManyDTO):
+    """DTO для фильтрации множества запросов на пару.
+
+    Все поля опциональны - пустой DTO возвращает все записи.
+    При передаче нескольких полей условия комбинируются через AND.
+
+    Attributes
+    ----------
+    ids : Maybe[list[UUID]]
+        Список идентификаторов запросов.
+    initiator_ids : Maybe[list[UUID]]
+        Список идентификаторов инициаторов.
+    recipient_ids : Maybe[list[UUID]]
+        Список идентификаторов получателей.
+    statuses : Maybe[list[CoupleRequestStatus]]
+        Список статусов запросов.
+    """
+
+    ids: Annotated[Maybe[list[UUID]], ColumnAlias("id")] = UNSET
+    initiator_ids: Annotated[Maybe[list[UUID]], ColumnAlias("initiator_id")] = UNSET
+    recipient_ids: Annotated[Maybe[list[UUID]], ColumnAlias("recipient_id")] = UNSET
+    statuses: Annotated[Maybe[list[CoupleRequestStatus]], ColumnAlias("status")] = UNSET
 
 
 class CreateCoupleRequestDTO(BaseCreateDTO):
@@ -127,16 +162,12 @@ class CreateCoupleRequestDTO(BaseCreateDTO):
 class CreateCoupleDTO(BaseCreateDTO):
     """DTO для создания пары.
 
-    Идентификаторы пользователей хранятся в лексикографическом порядке:
-    `user_low_id` всегда меньше `user_high_id`. Это обеспечивает
-    уникальность пары независимо от порядка передачи участников.
-
     Attributes
     ----------
     first_user_id : UUID
-        Идентификатор первого пользователя члена пары.
+        Идентификатор первого участника пары (слот 1).
     second_user_id : UUID
-        Идентификатор второго пользователя члена пары.
+        Идентификатор второго участника пары (слот 2).
     relationship_started_on : date | None
         Дата начала отношений, указанная пользователями. None, если не задана.
     """

@@ -58,12 +58,12 @@ class ServiceManager:
 
     def __init__(
         self,
-        unit_of_work: UnitOfWork,
+        uow: UnitOfWork,
         redis_client: RedisClient,
         s3_client: "S3Client",
         settings: Settings,
     ) -> None:
-        self._unit_of_work = unit_of_work
+        self._uow = uow
         self._redis_client = redis_client
         self._s3_client = s3_client
         self._settings = settings
@@ -85,7 +85,7 @@ class ServiceManager:
             Экземпляр сервиса работы с альбомами.
         """
         if self._album_service is None:
-            self._album_service = AlbumService(self._unit_of_work)
+            self._album_service = AlbumService(self._uow)
 
         return self._album_service
 
@@ -100,7 +100,7 @@ class ServiceManager:
         """
         if self._file_service is None:
             self._file_service = FileService(
-                self._unit_of_work,
+                self._uow,
                 self._redis_client,
                 self._s3_client,
                 self._settings,
@@ -119,7 +119,7 @@ class ServiceManager:
         """
         if self._auth_service is None:
             self._auth_service = AuthService(
-                self._unit_of_work,
+                self._uow,
                 self._redis_client,
                 self._settings,
             )
@@ -136,7 +136,7 @@ class ServiceManager:
             Экземпляр сервиса пользователей.
         """
         if self._user_service is None:
-            self._user_service = UserService(self._unit_of_work)
+            self._user_service = UserService(self._uow)
 
         return self._user_service
 
@@ -150,7 +150,7 @@ class ServiceManager:
             Экземпляр сервиса пар пользователей.
         """
         if self._couple_service is None:
-            self._couple_service = CoupleService(self._unit_of_work)
+            self._couple_service = CoupleService(self._uow)
 
         return self._couple_service
 
@@ -165,7 +165,7 @@ class ServiceManager:
         """
         if self._note_service is None:
             self._note_service = NoteService(
-                self._unit_of_work,
+                self._uow,
                 self._redis_client,
             )
 
@@ -173,7 +173,7 @@ class ServiceManager:
 
 
 def get_service_manager(
-    unit_of_work: UnitOfWorkDependency,
+    uow: UnitOfWorkDependency,
     redis_client: RedisClientDependency,
     s3_client: S3ClientDependency,
     settings: SettingsDependency,
@@ -185,7 +185,7 @@ def get_service_manager(
 
     Parameters
     ----------
-    unit_of_work : UnitOfWorkDependency
+    uow : UnitOfWorkDependency
         Зависимость Unit of Work.
     redis_client : RedisClientDependency
         Зависимость RedisClient.
@@ -199,7 +199,7 @@ def get_service_manager(
     ServiceManager
         Менеджер сервисов с внедренными инфраструктурными зависимостями.
     """
-    return ServiceManager(unit_of_work, redis_client, s3_client, settings)
+    return ServiceManager(uow, redis_client, s3_client, settings)
 
 
 ServiceManagerDependency = Annotated[ServiceManager, Depends(get_service_manager)]

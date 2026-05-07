@@ -15,9 +15,7 @@ from app.schemas.v1.responses.notes import NotesResponse
 from app.schemas.v1.responses.standard import CountResponse, StandardResponse
 
 router = APIRouter(
-    prefix="/notes",
-    tags=["notes"],
-    responses={401: AUTHORIZATION_ERROR_REF},
+    prefix="/notes", tags=["notes"], responses={401: AUTHORIZATION_ERROR_REF}
 )
 
 
@@ -139,7 +137,7 @@ async def post_notes(
         Успешный ответ о создании новой заметки.
     """
     await services.note.create_note(
-        CreateNoteDTO.from_request_schema(body), payload.sub
+        CreateNoteDTO.model_validate({**body.model_dump(), "created_by": payload.sub})
     )
 
     return StandardResponse(detail="New note created successfully.")

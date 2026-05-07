@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID
 
 from app.core.enums import NoteType, SortOrder
@@ -5,9 +6,15 @@ from app.core.exceptions.base import NothingToUpdateException
 from app.core.exceptions.note import NoteNotFoundException
 from app.infra.postgres.uow import UnitOfWork
 from app.infra.redis import RedisClient
-from app.repositories.interface import AccessContext
+from app.repositories.interface import CoupleAccessContext
 from app.repositories.note import NoteRepository
-from app.schemas.dto.note import CreateNoteDTO, FilterNoteDTO, NoteDTO, UpdateNoteDTO
+from app.schemas.dto.note import (
+    CreateNoteDTO,
+    FilterManyNotesDTO,
+    FilterOneNoteDTO,
+    NoteDTO,
+    UpdateNoteDTO,
+)
 
 
 class NoteService:
@@ -41,12 +48,12 @@ class NoteService:
     _COUNT_CACHE_TTL = 3600
     """Время в секундах, которое живёт кэш счётчика записей."""
 
-    def __init__(self, unit_of_work: UnitOfWork, redis_client: RedisClient):
+    def __init__(self, uow: UnitOfWork, redis_client: RedisClient):
         self._redis_client = redis_client
 
-        self._note_repo = unit_of_work.get_repository(NoteRepository)
+        self._note_repo = uow.get_repository(NoteRepository)
 
-    async def create_note(self, create_dto: CreateNoteDTO, user_id: UUID) -> None:
+    async def create_note(self, create_dto: CreateNoteDTO) -> None:
         """Создание новой пользовательской заметки.
 
         Создаёт новую заметку по переданным данным.
@@ -56,11 +63,9 @@ class NoteService:
         ----------
         create_dto : CreateNoteDTO
             Данные для создания заметки.
-        user_id : UUID
-            UUID пользователя, создающего заметку.
         """
-        await self._note_repo.create(create_dto, user_id)
-        await self._redis_client.increment_count("notes", user_id)
+        await self._note_repo.create_one(create_dto)
+        await self._redis_client.increment_count("notes", create_dto.created_by)
 
     async def get_notes(
         self,
@@ -97,12 +102,17 @@ class NoteService:
         tuple[list[NoteDTO], int]
             Кортеж из списка заметок и общего количества.
         """
-        return await self._note_repo.get_filtered(
-            FilterNoteDTO(type=note_type) if note_type else FilterNoteDTO(),
-            AccessContext(user_id=user_id, partner_id=partner_id),
-            offset=offset,
-            limit=limit,
-            sort_order=sort_order,
+        return await asyncio.gather(
+            self._note_repo.read_many(
+                FilterManyNotesDTO(types=[note_type])
+                if note_type
+                else FilterManyNotesDTO(),
+                CoupleAccessContext(user_id=user_id, partner_id=partner_id),
+                offset=offset,
+                limit=limit,
+                sort_order=sort_order,
+            ),
+            self.count_notes(user_id, partner_id),
         )
 
     async def count_notes(self, user_id: UUID, partner_id: UUID | None) -> int:
@@ -127,7 +137,8 @@ class NoteService:
             return cached
 
         count = await self._note_repo.count(
-            AccessContext(user_id=user_id, partner_id=partner_id)
+            FilterManyNotesDTO(),
+            CoupleAccessContext(user_id=user_id, partner_id=partner_id),
         )
 
         await self._redis_client.set_count(
@@ -170,8 +181,10 @@ class NoteService:
         if update_dto.is_empty():
             raise NothingToUpdateException(detail="No fields provided for update.")
 
-        if not await self._note_repo.update(
-            note_id, update_dto, AccessContext(user_id=user_id, partner_id=partner_id)
+        if not await self._note_repo.update_one(
+            FilterOneNoteDTO(id=note_id),
+            update_dto,
+            CoupleAccessContext(user_id=user_id, partner_id=partner_id),
         ):
             raise NoteNotFoundException(
                 detail=f"Note with id={note_id} not found, or you're not this note's creator.",
@@ -199,7 +212,9 @@ class NoteService:
             Возникает в случае, если заметка с переданным UUID не существует
             или текущий пользователь не является создателем заметки.
         """
-        if not await self._note_repo.delete(note_id, AccessContext(user_id=user_id)):
+        if not await self._note_repo.delete_one(
+            FilterOneNoteDTO(id=note_id), CoupleAccessContext(user_id=user_id)
+        ):
             raise NoteNotFoundException(
                 detail=f"Note with id={note_id} not found, or you're not this note's creator.",
             )

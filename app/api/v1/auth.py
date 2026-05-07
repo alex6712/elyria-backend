@@ -27,10 +27,7 @@ from app.schemas.v1.requests.auth import ChangePasswordRequest, RegisterRequest
 from app.schemas.v1.responses.standard import StandardResponse
 from app.schemas.v1.responses.tokens import TokensResponse
 
-router = APIRouter(
-    prefix="/auth",
-    tags=["authorization"],
-)
+router = APIRouter(prefix="/auth", tags=["authorization"])
 
 
 @router.post(

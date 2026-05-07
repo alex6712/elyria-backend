@@ -1,7 +1,10 @@
 import asyncio
+from typing import Any, Sequence
 from uuid import UUID
 
 from sqlalchemy import (
+    ColumnElement,
+    Select,
     and_,
     case,
     delete,
@@ -23,27 +26,33 @@ from app.infra.postgres.tables.albums import albums_table
 from app.infra.postgres.tables.files import files_table
 from app.infra.postgres.tables.users import users_table
 from app.repositories.interface import (
+    USER_PROJECTION_FIELDS,
     AccessContext,
-    OwnedCreateMixin,
-    OwnedDeleteMixin,
-    OwnedReadMixin,
-    OwnedRepositoryInterface,
-    OwnedUpdateMixin,
+    Counter,
+    Creator,
+    Deleter,
+    Reader,
+    Searcher,
+    Updater,
 )
 from app.schemas.dto.album import (
     AlbumDTO,
     AlbumWithItemsDTO,
     CreateAlbumDTO,
+    FilterManyAlbumsDTO,
+    FilterOneAlbumDTO,
+    SearchAlbumDTO,
     UpdateAlbumDTO,
 )
 
 
 class AlbumRepository(
-    OwnedRepositoryInterface,
-    OwnedReadMixin[AlbumDTO],
-    OwnedCreateMixin[CreateAlbumDTO, AlbumDTO],
-    OwnedUpdateMixin[UpdateAlbumDTO, AlbumDTO],
-    OwnedDeleteMixin[AlbumDTO],
+    Creator[CreateAlbumDTO],
+    Reader[FilterOneAlbumDTO, FilterManyAlbumsDTO, AlbumDTO],
+    Updater[FilterOneAlbumDTO, FilterManyAlbumsDTO, UpdateAlbumDTO],
+    Deleter[FilterOneAlbumDTO, FilterManyAlbumsDTO],
+    Counter[FilterManyAlbumsDTO],
+    Searcher[SearchAlbumDTO, FilterManyAlbumsDTO, AlbumDTO],
 ):
     """Репозиторий медиа-альбомов.
 
@@ -77,132 +86,321 @@ class AlbumRepository(
     _LIKE_ESCAPE_CHAR = "\\"
     """Символы экранирования для операции LIKE (и ILIKE)."""
 
-    async def create(self, create_dto: CreateAlbumDTO, created_by: UUID) -> AlbumDTO:
-        """Создаёт новый альбом с привязкой к владельцу.
+    async def create_one(self, create_dto: CreateAlbumDTO) -> bool:
+        """Создаёт новую запись о медиа-альбоме с привязкой к владельцу.
 
         Parameters
         ----------
-        create_dto : CreateFileDTO
-            Данные для создания альбома.
-        created_by : UUID
-            Идентификатор пользователя, создающего альбом.
-            Передаётся явно, так как извлекается из payload токена,
-            а не из схемы запроса.
+        create_dto : CreateAlbumDTO
+            Данные для создания записи медиа-альбома.
 
         Returns
         -------
-        AlbumDTO
-            Доменное DTO созданного альбома.
+        bool
+            True если запись медиа-альбома успешно создана.
         """
-        insert_cte = (
-            insert(albums_table)
-            .values(**create_dto.to_create_values(), created_by=created_by)
-            .returning(albums_table)
-            .cte("insert_cte")
-        )
         result = await self.connection.execute(
-            select(insert_cte, *self._creator_columns()).join(
-                users_table, users_table.c.id == insert_cte.c.created_by
-            )
+            insert(albums_table).values(**create_dto.to_create_values())
         )
-        row = result.mappings().one()
 
-        return AlbumDTO.model_validate({**row, "creator": self._extract_creator(row)})
+        return result.rowcount == 1
 
-    async def get_all(
-        self,
-        access_ctx: AccessContext,
-        *,
-        offset: int = DEFAULT_OFFSET,
-        limit: int = DEFAULT_LIMIT,
-        sort_order: SortOrder = SortOrder.ASC,
-    ) -> tuple[list[AlbumDTO], int]:
-        """Возвращает постраничный список альбомов и их общее количество.
+    async def create_many(self, create_dtos: Sequence[CreateAlbumDTO]) -> int:
+        """Не поддерживается для данной сущности.
 
-        Условие доступа и фильтры применяются на уровне запроса атомарно.
-        Общее количество возвращается без учёта пагинации - для формирования
-        метаданных ответа на клиенте.
+        Не предусмотрено создание множества медиа-альбомов за одну транзакцию,
+        т.к. такой пользовательский сценарий не существует.
+        """
+        raise NotImplementedError(
+            "Method 'create_many' is not implemented in AlbumRepository"
+        )
+
+    @classmethod
+    def _build_read_statement(cls, *where_clauses: ColumnElement[bool]) -> Select[Any]:
+        """Строит SELECT-запрос для чтения записи о медиа-альбоме.
+
+        Принимает готовые WHERE-условия и выполняет JOIN `users_table`
+        для получения DTO создателя.
+
+        Используется в `read_one`, `read_one_for_update` и `read_many`
+        во избежание дублирования логики построения запроса.
 
         Parameters
         ----------
-        access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
-        offset : int, optional
-            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
-        limit : int, optional
-            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
-        sort_order : SortOrder, optional
-            Направление сортировки по полю `created_at`,
-            по умолчанию SortOrder.ASC.
+        where_clauses : list[ColumnElement[bool]]
+            Выражения для передачи в WHERE-часть запроса.
 
         Returns
         -------
-        tuple[list[AlbumDTO], int]
-            Список DTO найденных альбомов и общее количество записей.
-            Пустой список и 0, если альбомов нет или доступ ко всем из них запрещён.
+        Select[Any]
+            Готовый SELECT-запрос без исполнения.
         """
-        where_clause = access_ctx.as_where_clause(albums_table.c.created_by)
-
-        result, total = await asyncio.gather(
-            self.connection.execute(
-                select(albums_table, *self._creator_columns())
-                .join(users_table, users_table.c.id == albums_table.c.created_by)
-                .where(where_clause)
-                .order_by(
-                    self._build_order_clause(albums_table.c.created_at, sort_order)
-                )
-                .slice(offset, offset + limit)
-            ),
-            self.connection.scalar(self._build_count_query(albums_table, where_clause)),
-        )
-
         return (
-            [
-                AlbumDTO.model_validate({**row, "creator": self._extract_creator(row)})
-                for row in result.mappings().all()
-            ],
-            total or 0,
+            select(
+                albums_table,
+                *cls._label_columns(users_table, USER_PROJECTION_FIELDS, "creator"),
+            )
+            .join(users_table, users_table.c.id == albums_table.c.created_by)
+            .where(*where_clauses)
         )
 
-    async def get_one(
-        self, record_id: UUID, access_ctx: AccessContext
+    async def read_one(
+        self, filter_dto: FilterOneAlbumDTO, access_ctx: AccessContext
     ) -> AlbumDTO | None:
-        """Получает DTO альбома по его UUID.
-
-        Возвращает DTO альбома с указанным UUID
-        и создателем (текущей пользователь или его партнёр).
+        """Возвращает DTO пользовательского медиа-альбома.
 
         Parameters
         ----------
-        record_id : UUID
-            UUID пользовательского альбома.
+        filter_dto : FilterOneAlbumDTO
+            DTO с полями фильтрации.
         access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
+            Контекст доступа.
 
         Returns
         -------
         AlbumDTO | None
-            Доменное DTO записи альбома или None, если альбом не найден.
+            DTO записи медиа-альбома или None, если запись не найдена.
         """
         result = await self.connection.execute(
-            select(albums_table, *self._creator_columns())
-            .join(users_table, users_table.c.id == albums_table.c.created_by)
-            .where(
-                albums_table.c.id == record_id,
-                access_ctx.as_where_clause(albums_table.c.created_by),
+            self._build_read_statement(
+                *self._build_filter_clauses(filter_dto, albums_table),
+                access_ctx.as_where_clause(albums_table),
             )
         )
 
         if not (row := result.mappings().first()):
             return None
 
-        return AlbumDTO.model_validate({**row, "creator": self._extract_creator(row)})
+        return AlbumDTO.model_validate(
+            {
+                **row,
+                "creator": self._extract_prefixed(
+                    row, "creator", USER_PROJECTION_FIELDS
+                ),
+            }
+        )
 
-    async def search_by_trigram(
+    async def read_one_for_update(
+        self, filter_dto: FilterOneAlbumDTO, access_ctx: AccessContext
+    ) -> AlbumDTO | None:
+        """Возвращает DTO пользовательского медиа-альбома с блокировкой строки для последующего изменения.
+
+        Делегирует построение запроса в `_build_read_statement`.
+        Устанавливает `SELECT ... FOR UPDATE` - строка блокируется
+        до завершения транзакции. Должен вызываться внутри транзакции.
+
+        Parameters
+        ----------
+        filter_dto : FilterOneAlbumDTO
+            DTO с полями фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        AlbumDTO | None
+            Найденная запись о медиа-альбоме с вложенным DTO создателя
+            или None, если ни одна запись не соответствует фильтрам.
+        """
+        result = await self.connection.execute(
+            self._build_read_statement(
+                *self._build_filter_clauses(filter_dto, albums_table),
+                access_ctx.as_where_clause(albums_table),
+            )
+        )
+
+        if not (row := result.mappings().first()):
+            return None
+
+        return AlbumDTO.model_validate(
+            {
+                **row,
+                "creator": self._extract_prefixed(
+                    row, "creator", USER_PROJECTION_FIELDS
+                ),
+            }
+        )
+
+    async def read_many(
         self,
+        filter_dto: FilterManyAlbumsDTO,
         access_ctx: AccessContext,
-        search_query: str,
-        threshold: float,
+        *,
+        offset: int = DEFAULT_OFFSET,
+        limit: int = DEFAULT_LIMIT,
+        sort_order: SortOrder = SortOrder.DESC,
+    ) -> list[AlbumDTO]:
+        """Возвращает отфильтрованный постраничный список медиа-альбомов.
+
+        Условие доступа и фильтры применяются на уровне запроса атомарно.
+
+        Parameters
+        ----------
+        filter_dto : FilterManyAlbumsDTO
+            Параметры фильтрации. Пустой DTO возвращает все записи.
+        access_ctx : AccessContext
+            Контекст доступа.
+        offset : int, optional
+            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
+        limit : int, optional
+            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
+        sort_order : SortOrder, optional
+            Направление сортировки по полю `created_at`,
+            по умолчанию `SortOrder.DESC`.
+
+        Returns
+        -------
+        list[AlbumDTO]
+            Список DTO найденных записей медиа-альбомов, удовлетворяющих фильтру.
+        """
+        where_clauses = [
+            *self._build_filter_clauses(filter_dto, albums_table),
+            access_ctx.as_where_clause(albums_table),
+        ]
+
+        result = await self.connection.execute(
+            self._build_read_statement(*where_clauses)
+            .order_by(self._build_order_clause(albums_table.c.created_at, sort_order))
+            .slice(offset, offset + limit)
+        )
+
+        return [
+            AlbumDTO.model_validate(
+                {
+                    **row,
+                    "creator": self._extract_prefixed(
+                        row, "creator", USER_PROJECTION_FIELDS
+                    ),
+                }
+            )
+            for row in result.mappings().all()
+        ]
+
+    async def update_one(
+        self,
+        filter_dto: FilterOneAlbumDTO,
+        update_dto: UpdateAlbumDTO,
+        access_ctx: AccessContext,
+    ) -> bool:
+        """Обновление атрибутов альбома в базе данных.
+
+        Выполняет SQL-запрос UPDATE для изменения атрибутов альбома,
+        фильтруя записи по переданному DTO и правам доступа
+        через `access_ctx.as_where_clause`.
+
+        Parameters
+        ----------
+        filter_dto : FilterOneAlbumDTO
+            Параметры фильтрации.
+        update_dto : UpdateAlbumDTO
+            DTO с полями для обновления.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        bool
+            True если запись о медиа-альбоме найдена и успешно обновлёна.
+        """
+        result = await self.connection.execute(
+            update(albums_table)
+            .values(**update_dto.to_update_values())
+            .where(
+                *self._build_filter_clauses(filter_dto, albums_table),
+                access_ctx.as_where_clause(albums_table),
+            )
+        )
+
+        return result.rowcount == 1
+
+    async def update_many(
+        self,
+        filter_dto: FilterManyAlbumsDTO,
+        update_dto: UpdateAlbumDTO,
+        access_ctx: AccessContext,
+    ) -> int:
+        """Не поддерживается для данной сущности.
+
+        Не предусмотрено обновление множества медиа-альбомов за одну транзакцию,
+        т.к. такой пользовательский сценарий не существует.
+        """
+        raise NotImplementedError(
+            "Method 'update_many' is not implemented in AlbumRepository"
+        )
+
+    async def delete_one(
+        self, filter_dto: FilterOneAlbumDTO, access_ctx: AccessContext
+    ) -> bool:
+        """Удаляет запись о медиа-альбоме из базы данных.
+
+        Parameters
+        ----------
+        filter_dto : FilterOneAlbumDTO
+            Параметры фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        bool
+            True если запись о медиа-альбоме найдена и успешно удалена.
+        """
+        result = await self.connection.execute(
+            delete(albums_table).where(
+                *self._build_filter_clauses(filter_dto, albums_table),
+                access_ctx.as_where_clause(albums_table),
+            )
+        )
+
+        return result.rowcount == 1
+
+    async def delete_many(
+        self, filter_dto: FilterManyAlbumsDTO, access_ctx: AccessContext
+    ) -> int:
+        """Не поддерживается для данной сущности.
+
+        Не предусмотрено удаление множества медиа-альбомов за одну транзакцию,
+        т.к. такой пользовательский сценарий не существует.
+        """
+        raise NotImplementedError(
+            "Method 'delete_many' is not implemented in AlbumRepository"
+        )
+
+    async def count(
+        self, filter_dto: FilterManyAlbumsDTO, access_ctx: AccessContext
+    ) -> int:
+        """Возвращает количество медиа-альбомов по фильтру и контексту доступа.
+
+        Parameters
+        ----------
+        filter_dto : FilterManyAlbumsDTO
+            Параметры фильтрации. Пустой DTO инициирует подсчёт
+            всей таблицы.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        int
+            Количество медиа-альбомов, удовлетворяющих параметрам фильтрации
+            и контексту доступа.
+        """
+        return (
+            await self.connection.scalar(
+                self._build_count_query(
+                    albums_table,
+                    *self._build_filter_clauses(filter_dto, albums_table),
+                    access_ctx.as_where_clause(albums_table),
+                )
+            )
+            or 0
+        )
+
+    async def search(
+        self,
+        search_dto: SearchAlbumDTO,
+        filter_dto: FilterManyAlbumsDTO,
+        access_ctx: AccessContext,
         *,
         offset: int = DEFAULT_OFFSET,
         limit: int = DEFAULT_LIMIT,
@@ -217,16 +415,16 @@ class AlbumRepository(
 
         Parameters
         ----------
+        search_dto : SearchAlbumDTO
+            DTO с данными для поиска.
+        filter_dto : FilterManyAlbumsDTO
+            Параметры фильтрации.
         access_ctx : AccessContext
             Контекст доступа с идентификаторами владельца и партнёра.
-        search_query : str
-            Поисковый запрос, по которому производится поиск.
-        threshold : float
-            Порог сходства для поиска по триграммам.
-        offset : int
-            Смещение от начала списка (количество пропускаемых альбомов).
-        limit : int
-            Максимальное количество альбомов, которое необходимо вернуть.
+        offset : int, optional
+            Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
+        limit : int, optional
+            Максимальное количество возвращаемых записей, по умолчанию `DEFAULT_LIMIT`.
 
         Returns
         -------
@@ -235,7 +433,7 @@ class AlbumRepository(
         """
         await self.connection.execute(
             text("SELECT set_limit(:threshold)"),
-            {"threshold": threshold},
+            {"threshold": search_dto.threshold},
         )
 
         def escape_like(value: str, escape_char: str = self._LIKE_ESCAPE_CHAR) -> str:
@@ -245,7 +443,7 @@ class AlbumRepository(
                 .replace("_", f"{escape_char}_")
             )
 
-        ilike_pattern = f"%{escape_like(search_query)}%"
+        ilike_pattern = f"%{escape_like(search_dto.search_query)}%"
 
         ilikes = [
             albums_table.c.title.ilike(ilike_pattern, escape=self._LIKE_ESCAPE_CHAR),
@@ -254,52 +452,62 @@ class AlbumRepository(
             ),
         ]
 
-        query = (
-            select(albums_table, *self._creator_columns())
-            .join(users_table, users_table.c.id == albums_table.c.created_by)
-            .order_by(
-                # полные вхождения в списке идут выше
-                case((or_(*ilikes), 1.0), else_=0.0).desc(),
-                func.greatest(
-                    func.coalesce(
-                        func.similarity(albums_table.c.title, search_query), 0.0
-                    ),
-                    func.coalesce(
-                        func.similarity(albums_table.c.description, search_query), 0.0
-                    ),
-                ).desc(),
-                albums_table.c.created_at,
-            )
-            .slice(offset, offset + limit)
-        )
-
         where_clauses = [
-            access_ctx.as_where_clause(albums_table.c.created_by),
+            *self._build_filter_clauses(filter_dto, albums_table),
+            access_ctx.as_where_clause(albums_table),
             or_(
                 # поиск полного вхождения
                 *ilikes,
                 # поиск по триграммам
-                albums_table.c.title.op("%")(search_query),
-                albums_table.c.description.op("%")(search_query),
+                albums_table.c.title.op("%")(search_dto.search_query),
+                albums_table.c.description.op("%")(search_dto.search_query),
             ),
         ]
 
-        query = query.where(*where_clauses)
-        count_query = self._build_count_query(albums_table, *where_clauses)
-
         result, total = await asyncio.gather(
-            self.connection.execute(query),
-            self.connection.scalar(count_query),
+            self.connection.execute(
+                self._build_read_statement(*where_clauses)
+                .order_by(
+                    # полные вхождения в списке идут выше
+                    case((or_(*ilikes), 1.0), else_=0.0).desc(),
+                    func.greatest(
+                        func.coalesce(
+                            func.similarity(
+                                albums_table.c.title, search_dto.search_query
+                            ),
+                            0.0,
+                        ),
+                        func.coalesce(
+                            func.similarity(
+                                albums_table.c.description, search_dto.search_query
+                            ),
+                            0.0,
+                        ),
+                    ).desc(),
+                    albums_table.c.created_at,
+                )
+                .slice(offset, offset + limit)
+            ),
+            self.connection.scalar(
+                self._build_count_query(albums_table, *where_clauses)
+            ),
         )
 
         return [
-            AlbumDTO.model_validate({**row, "creator": self._extract_creator(row)})
+            AlbumDTO.model_validate(
+                {
+                    **row,
+                    "creator": self._extract_prefixed(
+                        row, "creator", USER_PROJECTION_FIELDS
+                    ),
+                }
+            )
             for row in result.mappings().all()
         ], total or 0
 
     async def get_with_items(
         self,
-        record_id: UUID,
+        filter_dto: FilterOneAlbumDTO,
         access_ctx: AccessContext,
         *,
         offset: int = DEFAULT_OFFSET,
@@ -314,11 +522,10 @@ class AlbumRepository(
 
         Parameters
         ----------
-        record_id : UUID
-            UUID пользовательского альбома.
+        filter_dto : FilterOneAlbumDTO
+            Параметры фильтрации.
         access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
-            Применяется как к альбому, так и к его медиа-файлам.
+            Контекст доступа. Применяется как к альбому, так и к его медиа-файлам.
         offset : int, optional
             Количество пропускаемых записей, по умолчанию `DEFAULT_OFFSET`.
         limit : int, optional
@@ -329,31 +536,32 @@ class AlbumRepository(
         AlbumWithItemsDTO | None
             DTO альбома с медиа-файлами, или None если альбом не найден.
         """
-        # переиспользуется в запросе items и в count, чтобы total совпадал
-        # с реальным количеством доступных файлов после фильтрации
-        items_where_clause = and_(
-            album_items_table.c.album_id == record_id,
-            access_ctx.as_where_clause(files_table.c.created_by),
-        )
-
         album_result, items_result, total = await asyncio.gather(
             # альбом с данными создателя
             self.connection.execute(
-                select(albums_table, *self._creator_columns())
-                .join(users_table, users_table.c.id == albums_table.c.created_by)
-                .where(
-                    albums_table.c.id == record_id,
-                    access_ctx.as_where_clause(albums_table.c.created_by),
+                self._build_read_statement(
+                    *self._build_filter_clauses(filter_dto, albums_table),
+                    access_ctx.as_where_clause(albums_table),
                 )
             ),
             # постраничная выборка файлов альбома с данными их создателей
             self.connection.execute(
-                select(files_table, *self._creator_columns())
+                select(
+                    files_table,
+                    *self._label_columns(
+                        files_table, USER_PROJECTION_FIELDS, "creator"
+                    ),
+                )
                 .join(users_table, users_table.c.id == files_table.c.created_by)
                 .join(
                     album_items_table, album_items_table.c.file_id == files_table.c.id
                 )
-                .where(items_where_clause)
+                .where(
+                    items_where_clause := and_(
+                        album_items_table.c.album_id == filter_dto.id,
+                        access_ctx.as_where_clause(files_table),
+                    )
+                )
                 .slice(offset, offset + limit)
             ),
             # общее количество доступных файлов (без учёта пагинации)
@@ -373,98 +581,21 @@ class AlbumRepository(
         return AlbumWithItemsDTO.model_validate(
             {
                 **album_row,
-                "creator": self._extract_creator(album_row),
+                "creator": self._extract_prefixed(
+                    album_row, "creator", USER_PROJECTION_FIELDS
+                ),
                 "items": [
-                    {**item_row, "creator": self._extract_creator(item_row)}
+                    {
+                        **item_row,
+                        "creator": self._extract_prefixed(
+                            item_row, "creator", USER_PROJECTION_FIELDS
+                        ),
+                    }
                     for item_row in items_result.mappings().all()
                 ],
                 "total": total or 0,
             }
         )
-
-    async def update(
-        self,
-        record_id: UUID,
-        update_dto: UpdateAlbumDTO,
-        access_ctx: AccessContext,
-    ) -> AlbumDTO | None:
-        """Обновление атрибутов альбома в базе данных.
-
-        Выполняет SQL-запрос UPDATE для изменения атрибутов альбома,
-        фильтруя записи по идентификатору файла и правам доступа.
-
-        Parameters
-        ----------
-        record_id : UUID
-            UUID альбома к изменению.
-        update_dto : UpdateAlbumDTO
-            DTO с полями для обновления. Только явно переданные поля
-            попадают в SET-часть запроса через `to_update_values()`.
-        access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
-
-        Returns
-        -------
-        AlbumDTO | None
-            Доменное DTO альбома, если он обновлён, None - в ином случае.
-        """
-        update_cte = (
-            update(albums_table)
-            .where(
-                albums_table.c.id == record_id,
-                access_ctx.as_where_clause(albums_table.c.created_by),
-            )
-            .values(**update_dto.to_update_values())
-            .returning(albums_table)
-            .cte("update_cte")
-        )
-        result = await self.connection.execute(
-            select(update_cte, *self._creator_columns()).join(
-                users_table, users_table.c.id == update_cte.c.created_by
-            )
-        )
-
-        if not (row := result.mappings().first()):
-            return None
-
-        return AlbumDTO.model_validate({**row, "creator": self._extract_creator(row)})
-
-    async def delete(
-        self, record_id: UUID, access_ctx: AccessContext
-    ) -> AlbumDTO | None:
-        """Удаляет запись о медиа альбоме из базы данных по его UUID.
-
-        Parameters
-        ----------
-        record_id : UUID
-            UUID альбома для удаления.
-        access_ctx : AccessContext
-            Контекст доступа с идентификаторами владельца и партнёра.
-
-        Returns
-        -------
-        AlbumDTO | None
-            Доменное DTO альбома, если он удалён, None - в ином случае.
-        """
-        delete_cte = (
-            delete(albums_table)
-            .where(
-                albums_table.c.id == record_id,
-                access_ctx.as_where_clause(albums_table.c.created_by),
-            )
-            .returning(albums_table)
-            .cte("delete_cte")
-        )
-        result = await self.connection.execute(
-            select(delete_cte, *self._creator_columns()).join(
-                users_table, users_table.c.id == delete_cte.c.created_by
-            )
-        )
-
-        if not (row := result.mappings().first()):
-            return None
-
-        return AlbumDTO.model_validate({**row, "creator": self._extract_creator(row)})
 
     async def attach_files(
         self, record_id: UUID, files_ids: list[UUID], access_ctx: AccessContext
@@ -492,11 +623,11 @@ class AlbumRepository(
                     files_table.c.id.label("file_id"),
                 ).where(
                     files_table.c.id.in_(files_ids),
-                    access_ctx.as_where_clause(files_table.c.created_by),
+                    access_ctx.as_where_clause(files_table),
                     exists(
                         select(albums_table.c.id).where(
                             albums_table.c.id == record_id,
-                            access_ctx.as_where_clause(albums_table.c.created_by),
+                            access_ctx.as_where_clause(albums_table),
                         )
                     ),
                 ),
@@ -532,47 +663,15 @@ class AlbumRepository(
                     exists(
                         select(albums_table.c.id).where(
                             albums_table.c.id == record_id,
-                            access_ctx.as_where_clause(albums_table.c.created_by),
+                            access_ctx.as_where_clause(albums_table),
                         )
                     ),
                     album_items_table.c.file_id.in_(
                         select(files_table.c.id).where(
                             files_table.c.id.in_(files_ids),
-                            access_ctx.as_where_clause(files_table.c.created_by),
+                            access_ctx.as_where_clause(files_table),
                         )
                     ),
                 )
             )
         )
-
-    async def get_attached_files_ids(
-        self, album_id: UUID, files_ids: list[UUID]
-    ) -> list[UUID]:
-        """Возвращает UUID файлов, уже прикреплённых к альбому.
-
-        Используется для отсеивания дубликатов при диагностике
-        частичного провала attach_files - чтобы отличить файлы,
-        которые не были вставлены из-за конфликта, от тех,
-        что недоступны по контексту.
-
-        Parameters
-        ----------
-        album_id : UUID
-            UUID альбома.
-        files_ids : list[UUID]
-            Список UUID файлов для проверки.
-
-        Returns
-        -------
-        list[UUID]
-            UUID файлов из files_ids, которые уже прикреплены к альбому.
-            Пустой список, если ни один из переданных файлов не прикреплён.
-        """
-        result = await self.connection.scalars(
-            select(album_items_table.c.file_id).where(
-                album_items_table.c.album_id == album_id,
-                album_items_table.c.file_id.in_(files_ids),
-            )
-        )
-
-        return list(result.all())
