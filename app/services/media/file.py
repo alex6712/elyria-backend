@@ -541,18 +541,20 @@ class FileService:
             CoupleAccessContext(user_id=user_id),
         )
 
-        tasks = [
-            self._s3_client.generate_presigned_url(
-                "put_object",
-                Params={
-                    "Bucket": self._settings.MINIO_BUCKET_NAME,
-                    "Key": file.object_key,
-                },
-                ExpiresIn=self._settings.PRESIGNED_URL_EXPIRATION,
-            )
-            for file in files
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(
+            *[
+                self._s3_client.generate_presigned_url(
+                    "put_object",
+                    Params={
+                        "Bucket": self._settings.MINIO_BUCKET_NAME,
+                        "Key": file.object_key,
+                    },
+                    ExpiresIn=self._settings.PRESIGNED_URL_EXPIRATION,
+                )
+                for file in files
+            ],
+            return_exceptions=True,
+        )
 
         successful: list[PresignedURLWithRefDTO] = []
         failed_file_ids: list[UUID] = []
@@ -830,18 +832,20 @@ class FileService:
             except MediaDomainException as exc:
                 failed.append(self._map_download_exception_to_error_dto(exc, file_id))
 
-        tasks = [
-            self._s3_client.generate_presigned_url(
-                "get_object",
-                Params={
-                    "Bucket": self._settings.MINIO_BUCKET_NAME,
-                    "Key": file.object_key,
-                },
-                ExpiresIn=self._settings.PRESIGNED_URL_EXPIRATION,
-            )
-            for file in valid_files
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(
+            *[
+                self._s3_client.generate_presigned_url(
+                    "get_object",
+                    Params={
+                        "Bucket": self._settings.MINIO_BUCKET_NAME,
+                        "Key": file.object_key,
+                    },
+                    ExpiresIn=self._settings.PRESIGNED_URL_EXPIRATION,
+                )
+                for file in valid_files
+            ],
+            return_exceptions=True,
+        )
 
         successful: list[PresignedURLDTO] = []
         for file, result in zip(valid_files, results):
