@@ -129,8 +129,7 @@ my-love-backend/                # FastAPI приложение
 │   │   ├── client/
 │   │   ├── server/
 │   │   └── success/
-│   ├── infrastructure/         # Инфраструктурные классы
-│   ├── models/                 # SQLAlchemy модели
+│   ├── infra/                  # Внешние инфраструктурные зависимости
 │   ├── repositories/           # Репозитории для работы с БД
 │   ├── schemas/                # Pydantic схемы
 │   │   ├── dto/                # Схемы DTO
@@ -154,22 +153,22 @@ my-love-backend/                # FastAPI приложение
 
 Проект построен как слоистый backend на FastAPI с чётким разделением ответственности между API, бизнес-логикой, доступом к данным и инфраструктурой.
 
-**Поток запроса:**  
+**Поток запроса:**
 `HTTP -> Router -> Dependencies -> Service -> Repository + UnitOfWork -> PostgreSQL/Redis/S3 -> Response schema`
 
 ### Основные слои
 
-- **API (`app/api/...`)**  
+- **API (`app/api/...`)**
   Роутеры и HTTP-контракты. Принимают запросы, валидируют входные данные и возвращают типизированные ответы.
-- **Services (`app/services/...`)**  
+- **Services (`app/services/...`)**
   Реализация use-case’ов и бизнес-правил. Здесь находятся сценарии приложения, а не SQL/HTTP-детали.
-- **Repositories (`app/repositories/...`)**  
+- **Repositories (`app/repositories/...`)**
   Изолированный доступ к данным через SQLAlchemy-модели (`app/models/...`).
-- **Infrastructure (`app/infrastructure/...`)**  
-  Адаптеры внешних систем: PostgreSQL, Redis, S3/MinIO.
-- **Core (`app/core/...`)**  
+- **Infrastructure (`app/infra/...`)**
+  Адаптеры внешних систем: PostgreSQL, Redis, S3/MinIO, таблицы базы данных.
+- **Core (`app/core/...`)**
   Базовые зависимости, безопасность, исключения, общие типы и вспомогательная логика.
-- **Schemas (`app/schemas/...`)**  
+- **Schemas (`app/schemas/...`)**
   DTO и API-схемы запросов/ответов, формализующие границы между слоями.
 
 ### Ключевые принципы
@@ -184,7 +183,7 @@ my-love-backend/                # FastAPI приложение
 
 1. Добавить endpoint в `app/api/v1/...`.
 2. Реализовать use-case в `app/services/...`.
-3. Добавить/обновить операции в `app/repositories/...` (и при необходимости модели в `app/models/...`).
+3. Добавить/обновить операции в `app/repositories/...` (и при необходимости таблицы в `app/infra/...`).
 4. Обновить схемы в `app/schemas/...`.
 5. Если меняется БД - добавить миграцию в `alembic/versions/...`.
 6. Покрыть изменения тестами соответствующего уровня (`test_api`, `test_services`, `test_repositories`, `test_security`).
@@ -205,7 +204,7 @@ my-love-backend/                # FastAPI приложение
 | POST | `/v1/auth/login` | Вход в систему | ❌ |
 | GET | `/v1/auth/refresh` | Обновление токена | ✅ |
 | POST | `/v1/auth/logout` | Выход из системы | ✅ |
-| GET | `/v1/couples/partner` | Информация о партнёре | ✅ |
+| GET | `/v1/couples` | Информация о паре | ✅ |
 | POST | `/v1/couples/request` | Запрос на создание пары | ✅ |
 | POST | `/v1/couples/{id}/accept` | Принятие запроса | ✅ |
 | POST | `/v1/couples/{id}/decline` | Отклонение запроса | ✅ |
