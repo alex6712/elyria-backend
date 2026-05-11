@@ -6,7 +6,7 @@ from app.core.exceptions.base import NothingToUpdateException
 from app.core.exceptions.media import MediaNotFoundException
 from app.infra.postgres.uow import UnitOfWork
 from app.repositories.couple import CoupleRepository
-from app.repositories.interface import CoupleAccessContext
+from app.repositories.interface import CoupleAccessContext, CreatorAccessContext
 from app.repositories.media import AlbumRepository, FileRepository
 from app.schemas.dto.album import (
     AlbumDTO,
@@ -279,7 +279,7 @@ class AlbumService:
             или текущий пользователь не является создателем альбома.
         """
         if not await self._album_repo.delete_one(
-            FilterOneAlbumDTO(id=album_id), CoupleAccessContext(user_id=user_id)
+            FilterOneAlbumDTO(id=album_id), CreatorAccessContext(user_id=user_id)
         ):
             raise MediaNotFoundException(
                 media_type="album",

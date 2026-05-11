@@ -33,7 +33,7 @@ from app.core.exceptions.media import (
 from app.infra.postgres.uow import UnitOfWork
 from app.infra.redis import RedisClient
 from app.repositories.couple import CoupleRepository
-from app.repositories.interface import CoupleAccessContext
+from app.repositories.interface import CoupleAccessContext, CreatorAccessContext
 from app.repositories.media import FileRepository
 from app.schemas.dto.file import (
     CreateFileDTO,
@@ -576,7 +576,7 @@ class FileService:
         if failed_file_ids:
             await self._file_repo.delete_many(
                 FilterManyFilesDTO(ids=failed_file_ids),
-                CoupleAccessContext(user_id=user_id),
+                CreatorAccessContext(user_id=user_id),
             )
 
         await self._redis_client.finalize_idempotency_key(
@@ -681,7 +681,7 @@ class FileService:
         """
         filter_dto, access_ctx = (
             FilterOneFileDTO(id=file_id),
-            CoupleAccessContext(user_id=user_id),
+            CreatorAccessContext(user_id=user_id),
         )
 
         file = await self._file_repo.read_one_for_update(filter_dto, access_ctx)
@@ -998,7 +998,7 @@ class FileService:
         if not await self._file_repo.update_one(
             FilterOneFileDTO(id=file_id),
             update_dto,
-            CoupleAccessContext(user_id=user_id),
+            CreatorAccessContext(user_id=user_id),
         ):
             raise MediaNotFoundException(
                 media_type="file",
@@ -1027,7 +1027,7 @@ class FileService:
         """
         filter_dto, access_ctx = (
             FilterOneFileDTO(id=file_id),
-            CoupleAccessContext(user_id=user_id),
+            CreatorAccessContext(user_id=user_id),
         )
 
         file = await self._file_repo.read_one_for_update(filter_dto, access_ctx)

@@ -6,7 +6,7 @@ from app.core.exceptions.base import NothingToUpdateException
 from app.core.exceptions.note import NoteNotFoundException
 from app.infra.postgres.uow import UnitOfWork
 from app.infra.redis import RedisClient
-from app.repositories.interface import CoupleAccessContext
+from app.repositories.interface import CoupleAccessContext, CreatorAccessContext
 from app.repositories.note import NoteRepository
 from app.schemas.dto.note import (
     CreateNoteDTO,
@@ -213,7 +213,7 @@ class NoteService:
             или текущий пользователь не является создателем заметки.
         """
         if not await self._note_repo.delete_one(
-            FilterOneNoteDTO(id=note_id), CoupleAccessContext(user_id=user_id)
+            FilterOneNoteDTO(id=note_id), CreatorAccessContext(user_id=user_id)
         ):
             raise NoteNotFoundException(
                 detail=f"Note with id={note_id} not found, or you're not this note's creator.",

@@ -150,6 +150,47 @@ class PublicAccessContext(AccessContext):
         return true()
 
 
+class CreatorAccessContext(AccessContext):
+    """Контекст доступа, ограничивающий видимость записей по их создателю.
+
+    Используется для фильтрации данных, доступных только пользователю,
+    который их создал. WHERE-условие ограничивает выборку записями,
+    у которых колонка `created_by` совпадает с идентификатором пользователя
+    из контекста.
+
+    Attributes
+    ----------
+    user_id : UUID
+        Идентификатор пользователя, для которого строится ограничение доступа.
+    """
+
+    user_id: UUID
+
+    def as_where_clause(self, table: Table) -> ColumnElement[bool]:
+        """
+        Сформировать SQLAlchemy WHERE-условие для ограничения доступа по создателю.
+
+        Параметры
+        ----------
+        table : Table
+            SQLAlchemy Core-таблица, для которой строится условие.
+            Ожидается наличие колонки `created_by`.
+
+        Возвращаемое значение
+        -------------------
+        ColumnElement[bool]
+            SQLAlchemy-выражение, готовое к использованию в методе `.where()`.
+            Ограничивает выборку записями, где `created_by == user_id`.
+
+        Исключения
+        ----------
+        ValueError
+            Если в таблице отсутствует колонка `created_by`.
+        """
+        col = self._require_col(table, "created_by")
+        return col == self.user_id
+
+
 class CoupleAccessContext(AccessContext):
     """Контекст доступа к записи с ограниченной видимостью.
 
