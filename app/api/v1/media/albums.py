@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Path, Query, status
 
+from app.core.consts import DEFAULT_LIMIT, DEFAULT_OFFSET, MAX_LIMIT, MAX_OFFSET
 from app.core.dependencies.auth import StrictAuthenticationDependency
 from app.core.dependencies.context import PartnerIdDependency
 from app.core.dependencies.services import ServiceManagerDependency
@@ -37,17 +38,18 @@ async def get_albums(
         int,
         Query(
             ge=0,
+            le=MAX_OFFSET,
             description="Смещение от начала списка (количество пропускаемых альбомов).",
         ),
-    ] = 0,
+    ] = DEFAULT_OFFSET,
     limit: Annotated[
         int,
         Query(
             ge=1,
-            le=50,
+            le=MAX_LIMIT,
             description="Количество возвращаемых альбомов.",
         ),
-    ] = 10,
+    ] = DEFAULT_LIMIT,
     order: Annotated[
         SortOrder,
         Query(
@@ -163,17 +165,18 @@ async def search_albums(
         int,
         Query(
             ge=0,
+            le=MAX_OFFSET,
             description="Смещение от начала списка (количество пропускаемых альбомов).",
         ),
-    ] = 0,
+    ] = DEFAULT_OFFSET,
     limit: Annotated[
         int,
         Query(
             ge=1,
-            le=50,
+            le=MAX_LIMIT,
             description="Количество возвращаемых альбомов.",
         ),
-    ] = 10,
+    ] = DEFAULT_LIMIT,
 ) -> AlbumsResponse:
     """Поиск альбомов по переданному тексту.
 
@@ -234,14 +237,15 @@ async def get_album(
         int,
         Query(
             ge=0,
+            le=MAX_OFFSET,
             description="Смещение от начала списка (количество пропускаемых элементов).",
         ),
-    ] = 0,
+    ] = DEFAULT_OFFSET,
     limit: Annotated[
         int,
         Query(
             ge=1,
-            le=50,
+            le=MAX_LIMIT,
             description="Количество возвращаемых элементов.",
         ),
     ] = 20,

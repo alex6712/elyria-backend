@@ -435,7 +435,7 @@ class RedisClient:
         await self.client.expire(redis_key, ttl)
 
 
-redis_client: RedisClient = RedisClient(
+redis_client = RedisClient(
     redis_url=settings.REDIS_URL.unicode_string(),
 )
 """Project-wide клиент Redis, предоставляющий методы работы с хранилищем."""

@@ -16,7 +16,7 @@ from app.config import Settings, get_settings
 from app.infra.postgres.tables import metadata as target_metadata
 
 config = context.config
-settings: Settings = get_settings()
+settings = get_settings()
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

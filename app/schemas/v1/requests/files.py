@@ -2,6 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.core.consts import MAX_LIMIT
 from app.core.types import UNSET, Maybe
 
 
@@ -45,13 +46,13 @@ class UploadFilesBatchRequest(BaseModel):
     ----------
     files_metadata : list[UploadFileRequest]
         Метаданные для каждого файла.
-        Ограничения: минимум один элемент, максимум 50 элементов.
+        Ограничения: минимум один элемент, максимум `MAX_LIMIT` элементов.
     """
 
     files_metadata: list[UploadFileRequest] = Field(
         description="Метаданные для каждого файла.",
         min_length=1,
-        max_length=50,
+        max_length=MAX_LIMIT,
     )
 
 
@@ -77,7 +78,7 @@ class DownloadFilesBatchRequest(BaseModel):
     ----------
     files_uuids : list[UUID]
         Список UUID медиа-файлов для скачивания.
-        Ограничения: минимум один UUID, максимум 50 UUID.
+        Ограничения: минимум один UUID, максимум `MAX_LIMIT` UUID.
     """
 
     files_uuids: list[UUID] = Field(
@@ -89,7 +90,7 @@ class DownloadFilesBatchRequest(BaseModel):
             ]
         ],
         min_length=1,
-        max_length=50,
+        max_length=MAX_LIMIT,
     )
 
 

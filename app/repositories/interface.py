@@ -51,6 +51,10 @@ UpdateDTO = TypeVar("UpdateDTO", bound=BaseUpdateDTO)
 SearchDTO = TypeVar("SearchDTO", bound=BaseSearchDTO)
 
 USER_PROJECTION_FIELDS = ["id", "created_at", "username", "avatar_url", "is_active"]
+"""Атрибуты проекции записи пользователя.
+
+Используется для маппинга записей таблицы users на доменные DTO.
+"""
 
 
 class AccessContext(ABC, BaseModel):

@@ -536,31 +536,26 @@ class FileService:
         ]
         await self._file_repo.create_many(create_dtos)
 
-        files = await self._file_repo.read_many(
-            FilterManyFilesDTO(ids=[dto.id for dto in create_dtos]),
-            CoupleAccessContext(user_id=user_id),
-        )
-
         results = await asyncio.gather(
             *[
                 self._s3_client.generate_presigned_url(
                     "put_object",
                     Params={
                         "Bucket": self._settings.MINIO_BUCKET_NAME,
-                        "Key": file.object_key,
+                        "Key": dto.object_key,
                     },
                     ExpiresIn=self._settings.PRESIGNED_URL_EXPIRATION,
                 )
-                for file in files
+                for dto in create_dtos
             ],
             return_exceptions=True,
         )
 
         successful: list[PresignedURLWithRefDTO] = []
         failed_file_ids: list[UUID] = []
-        for file, metadata, result in zip(files, valid_files, results):
+        for dto, metadata, result in zip(create_dtos, valid_files, results):
             if isinstance(result, BaseException):
-                failed_file_ids.append(file.id)
+                failed_file_ids.append(dto.id)
 
                 failed.append(
                     UploadFileErrorDTO(
@@ -572,7 +567,7 @@ class FileService:
             else:
                 successful.append(
                     PresignedURLWithRefDTO(
-                        file_id=file.id,
+                        file_id=dto.id,
                         presigned_url=AnyHttpUrl(result),
                         client_ref_id=metadata.client_ref_id,
                     )
