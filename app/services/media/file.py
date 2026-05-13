@@ -409,12 +409,11 @@ class FileService:
             return PresignedURLWithRefDTO.model_validate_json(raws["successful"][0])
 
         validated_file = self._validate_file_for_upload(file_metadata)
-        object_key = self._generate_object_key(user_id, uuid4())
 
         create_dto = CreateFileDTO(
             **validated_file.model_dump(exclude={"client_ref_id"}),
-            id=(file_id := uuid4()),
-            object_key=object_key,
+            id=uuid4(),
+            object_key=self._generate_object_key(user_id, uuid4()),
             status=FileStatus.PENDING,
             created_by=user_id,
         )
@@ -425,7 +424,7 @@ class FileService:
                 "put_object",
                 Params={
                     "Bucket": self._settings.MINIO_BUCKET_NAME,
-                    "Key": object_key,
+                    "Key": create_dto.object_key,
                 },
                 ExpiresIn=self._settings.PRESIGNED_URL_EXPIRATION,
             )
@@ -435,7 +434,7 @@ class FileService:
             ) from exc
 
         result = PresignedURLWithRefDTO(
-            file_id=file_id,
+            file_id=create_dto.id,
             presigned_url=AnyHttpUrl(url),
             client_ref_id=file_metadata.client_ref_id,
         )
@@ -754,7 +753,6 @@ class FileService:
             FilterOneFileDTO(id=file_id),
             CoupleAccessContext(user_id=user_id, partner_id=partner_id),
         )
-
         validated_file = self._validate_file_for_download(file, file_id)
 
         try:
@@ -826,6 +824,9 @@ class FileService:
                 raise  # пробрасывается наверх, т.к. является неожиданным состоянием системы
             except MediaDomainException as exc:
                 failed.append(self._map_download_exception_to_error_dto(exc, file_id))
+
+        if not valid_files:
+            return [], failed
 
         results = await asyncio.gather(
             *[
