@@ -19,16 +19,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Error: File .env not found"
+    exit 1
+fi
+
 echo "Generating EC signature keys"
 
 if [ ! -d "$KEYS_DIR" ]; then
     echo "Creating keys directory: $KEYS_DIR"
     mkdir -p "$KEYS_DIR"
-fi
-
-if [ ! -f "$ENV_FILE" ]; then
-    echo "Error: File .env not found"
-    exit 1
 fi
 
 PRIVATE_SIGNATURE_KEY_PASSWORD=$(
