@@ -12,10 +12,10 @@ fi
 
 # Генерация requirements-dev.txt
 echo "requirements-dev.txt generation..."
-uv pip compile pyproject.toml --group dev -o requirements-dev.txt
+uv pip compile pyproject.toml -U --group dev -o requirements-dev.txt
 
 # Генерация requirements.txt
 echo "requirements.txt generation..."
-uv pip compile pyproject.toml -o requirements.txt
+uv pip compile pyproject.toml -U -o requirements.txt
 
 echo "requirements files generated!"
