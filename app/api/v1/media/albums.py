@@ -9,7 +9,11 @@ from app.core.dependencies.context import PartnerIdDependency
 from app.core.dependencies.services import ServiceManagerDependency
 from app.core.docs import AUTHORIZATION_ERROR_REF
 from app.core.enums import SortOrder
-from app.schemas.dto.album import CreateAlbumDTO, UpdateAlbumDTO
+from app.schemas.dto.album import (
+    CreateAlbumDTO,
+    PublicAlbumWithItemsDTO,
+    UpdateAlbumDTO,
+)
 from app.schemas.v1.requests.albums import (
     AttachFilesRequest,
     CreateAlbumRequest,
@@ -289,7 +293,7 @@ async def get_album(
     )
 
     return AlbumResponse(
-        album=album,
+        album=PublicAlbumWithItemsDTO.from_internal(album),
         detail=f"Found album with {album.total} files (showing {len(album.items)}).",
     )
 

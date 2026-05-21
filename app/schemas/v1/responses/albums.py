@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from app.schemas.dto.album import AlbumDTO, AlbumWithItemsDTO
+from app.schemas.dto.album import AlbumDTO, PublicAlbumWithItemsDTO
 from app.schemas.v1.responses.standard import PaginationResponse, StandardResponse
 
 
@@ -16,11 +16,11 @@ class AlbumResponse(StandardResponse):
 
     Attributes
     ----------
-    album : AlbumWithItemsDTO
+    album : PublicAlbumWithItemsDTO
         Подробный DTO медиа альбома.
     """
 
-    album: AlbumWithItemsDTO = Field(
+    album: PublicAlbumWithItemsDTO = Field(
         description="Подробная информация о медиа-альбоме.",
     )
 

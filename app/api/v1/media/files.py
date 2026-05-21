@@ -12,6 +12,7 @@ from app.core.docs import AUTHORIZATION_ERROR_REF, IDEMPOTENCY_CONFLICT_ERROR_RE
 from app.core.enums import SortOrder
 from app.schemas.dto.file import (
     FileMetadataDTO,
+    PublicFileDTO,
     UpdateFileDTO,
 )
 from app.schemas.v1.requests.files import (
@@ -105,7 +106,9 @@ async def get_files(
     )
 
     return FilesResponse(
-        files=files, total=total, detail=f"Found {total} file entries."
+        files=PublicFileDTO.from_internals(files),
+        total=total,
+        detail=f"Found {total} file entries.",
     )
 
 

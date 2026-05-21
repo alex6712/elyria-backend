@@ -37,10 +37,10 @@ from app.repositories.interface import (
 )
 from app.schemas.dto.album import (
     AlbumDTO,
-    AlbumWithItemsDTO,
     CreateAlbumDTO,
     FilterManyAlbumsDTO,
     FilterOneAlbumDTO,
+    InternalAlbumWithItemsDTO,
     SearchAlbumDTO,
     UpdateAlbumDTO,
 )
@@ -512,7 +512,7 @@ class AlbumRepository(
         *,
         offset: int = DEFAULT_OFFSET,
         limit: int = DEFAULT_LIMIT,
-    ) -> AlbumWithItemsDTO | None:
+    ) -> InternalAlbumWithItemsDTO | None:
         """Получает DTO альбома с постраничным списком медиа-файлов.
 
         Параллельно выполняет три запроса: получение альбома с создателем,
@@ -533,7 +533,7 @@ class AlbumRepository(
 
         Returns
         -------
-        AlbumWithItemsDTO | None
+        InternalAlbumWithItemsDTO | None
             DTO альбома с медиа-файлами, или None если альбом не найден.
         """
         album_result, items_result, total = await asyncio.gather(
@@ -578,7 +578,7 @@ class AlbumRepository(
         if not (album_row := album_result.mappings().first()):
             return None
 
-        return AlbumWithItemsDTO.model_validate(
+        return InternalAlbumWithItemsDTO.model_validate(
             {
                 **album_row,
                 "creator": self._extract_prefixed(
@@ -657,21 +657,19 @@ class AlbumRepository(
         """
         await self.connection.execute(
             delete(album_items_table).where(
-                and_(
-                    album_items_table.c.album_id == record_id,
-                    album_items_table.c.file_id.in_(files_ids),
-                    exists(
-                        select(albums_table.c.id).where(
-                            albums_table.c.id == record_id,
-                            access_ctx.as_where_clause(albums_table),
-                        )
-                    ),
-                    album_items_table.c.file_id.in_(
-                        select(files_table.c.id).where(
-                            files_table.c.id.in_(files_ids),
-                            access_ctx.as_where_clause(files_table),
-                        )
-                    ),
-                )
+                album_items_table.c.album_id == record_id,
+                album_items_table.c.file_id.in_(files_ids),
+                exists(
+                    select(albums_table.c.id).where(
+                        albums_table.c.id == record_id,
+                        access_ctx.as_where_clause(albums_table),
+                    )
+                ),
+                album_items_table.c.file_id.in_(
+                    select(files_table.c.id).where(
+                        files_table.c.id.in_(files_ids),
+                        access_ctx.as_where_clause(files_table),
+                    )
+                ),
             )
         )

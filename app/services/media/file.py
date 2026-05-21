@@ -38,10 +38,10 @@ from app.repositories.media import FileRepository
 from app.schemas.dto.file import (
     CreateFileDTO,
     DownloadFileErrorDTO,
-    FileDTO,
     FileMetadataDTO,
     FilterManyFilesDTO,
     FilterOneFileDTO,
+    InternalFileDTO,
     UpdateFileDTO,
     UploadFileErrorDTO,
 )
@@ -297,7 +297,7 @@ class FileService:
         sort_order: SortOrder,
         user_id: UUID,
         partner_id: UUID | None,
-    ) -> tuple[list[FileDTO], int]:
+    ) -> tuple[list[InternalFileDTO], int]:
         """Получение всех файлов по UUID создателя.
 
         Получает на вход UUID пользователя, ищет UUID партнёра,
@@ -319,7 +319,7 @@ class FileService:
 
         Returns
         -------
-        tuple[list[FileDTO], int]
+        tuple[list[InternalFileDTO], int]
             Кортеж из списка файлов и общего количества.
         """
         return await asyncio.gather(
@@ -813,7 +813,7 @@ class FileService:
             )
         }
 
-        valid_files: list[FileDTO] = []
+        valid_files: list[InternalFileDTO] = []
         failed: list[DownloadFileErrorDTO] = []
         for file_id in files_ids:
             try:
@@ -861,13 +861,13 @@ class FileService:
         return successful, failed
 
     def _validate_file_for_download(
-        self, file: FileDTO | None, file_id: UUID
-    ) -> FileDTO:
+        self, file: InternalFileDTO | None, file_id: UUID
+    ) -> InternalFileDTO:
         """Проверяет доступность файла для скачивания.
 
         Parameters
         ----------
-        file : FileDTO | None
+        file : InternalFileDTO | None
             DTO файла, полученный из хранилища. None означает,
             что файл не найден или недоступен текущему пользователю.
         file_id : UUID
@@ -876,7 +876,7 @@ class FileService:
 
         Returns
         -------
-        FileDTO
+        InternalFileDTO
             Если файл существует и имеет статус `UPLOADED`.
 
         Raises

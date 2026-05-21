@@ -10,10 +10,10 @@ from app.repositories.interface import CoupleAccessContext, CreatorAccessContext
 from app.repositories.media import AlbumRepository, FileRepository
 from app.schemas.dto.album import (
     AlbumDTO,
-    AlbumWithItemsDTO,
     CreateAlbumDTO,
     FilterManyAlbumsDTO,
     FilterOneAlbumDTO,
+    InternalAlbumWithItemsDTO,
     SearchAlbumDTO,
     UpdateAlbumDTO,
 )
@@ -169,7 +169,7 @@ class AlbumService:
         limit: int,
         user_id: UUID,
         partner_id: UUID | None,
-    ) -> AlbumWithItemsDTO:
+    ) -> InternalAlbumWithItemsDTO:
         """Получение подробной информации об альбоме по его UUID.
 
         Получает на вход UUID медиа-альбома и UUID текущего пользователя,
@@ -191,7 +191,7 @@ class AlbumService:
 
         Returns
         -------
-        AlbumWithItemsDTO
+        InternalAlbumWithItemsDTO
             Подробный DTO медиа-альбома.
 
         Raises

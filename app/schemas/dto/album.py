@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, TypeVar
 from uuid import UUID
 
 from app.core.filtering import ColumnAlias
@@ -11,8 +11,10 @@ from app.schemas.dto.base import (
     BaseSQLCoreDTO,
     BaseUpdateDTO,
 )
-from app.schemas.dto.file import FileDTO
+from app.schemas.dto.file import InternalFileDTO, PublicFileDTO
 from app.schemas.dto.user import CreatorDTO
+
+T = TypeVar("T", bound=PublicFileDTO)
 
 
 class AlbumDTO(BaseSQLCoreDTO):
@@ -40,23 +42,31 @@ class AlbumDTO(BaseSQLCoreDTO):
     creator: CreatorDTO
 
 
-class AlbumWithItemsDTO(AlbumDTO):
+class AlbumWithItemsDTO[T](AlbumDTO):
     """DTO для представления подробной информации о медиа-альбоме.
 
     Наследуется от `AlbumDTO` и добавляет атрибут `items`,
     в котором сохранены все медиа-файлы, добавленные в
-    медиа-альбом.
+    медиа-альбом, а также `total` - общее количество
+    элементов.
 
     Attributes
     ----------
-    items : list[FileDTO]
+    items : list[T]
         Все добавленные в альбом медиа-файлы.
     total : int
         Общее количество элементов в альбоме.
     """
 
-    items: list[FileDTO]
+    items: list[T]
     total: int
+
+
+PublicAlbumWithItemsDTO = AlbumWithItemsDTO[PublicFileDTO]
+"""Публичный DTO альбома с вложенными медиа-файлами, который сериализуется в API-ответах."""
+
+InternalAlbumWithItemsDTO = AlbumWithItemsDTO[InternalFileDTO]
+"""Внутренний DTO альбома с вложенными медиа-файлами, который используется в сервисах и репозиториях."""
 
 
 class FilterOneAlbumDTO(BaseFilterOneDTO):

@@ -17,16 +17,16 @@ from app.repositories.interface import (
 )
 from app.schemas.dto.file import (
     CreateFileDTO,
-    FileDTO,
     FilterManyFilesDTO,
     FilterOneFileDTO,
+    InternalFileDTO,
     UpdateFileDTO,
 )
 
 
 class FileRepository(
     Creator[CreateFileDTO],
-    Reader[FilterOneFileDTO, FilterManyFilesDTO, FileDTO],
+    Reader[FilterOneFileDTO, FilterManyFilesDTO, InternalFileDTO],
     Updater[FilterOneFileDTO, FilterManyFilesDTO, UpdateFileDTO],
     Deleter[FilterOneFileDTO, FilterManyFilesDTO],
     Counter[FilterManyFilesDTO],
@@ -129,7 +129,7 @@ class FileRepository(
 
     async def read_one(
         self, filter_dto: FilterOneFileDTO, access_ctx: AccessContext
-    ) -> FileDTO | None:
+    ) -> InternalFileDTO | None:
         """Возвращает DTO пользовательского медиа-файла.
 
         Parameters
@@ -141,7 +141,7 @@ class FileRepository(
 
         Returns
         -------
-        FileDTO | None
+        InternalFileDTO | None
             DTO записи медиа-файла или None, если запись не найдена.
         """
         result = await self.connection.execute(
@@ -154,7 +154,7 @@ class FileRepository(
         if not (row := result.mappings().first()):
             return None
 
-        return FileDTO.model_validate(
+        return InternalFileDTO.model_validate(
             {
                 **row,
                 "creator": self._extract_prefixed(
@@ -165,7 +165,7 @@ class FileRepository(
 
     async def read_one_for_update(
         self, filter_dto: FilterOneFileDTO, access_ctx: AccessContext
-    ) -> FileDTO | None:
+    ) -> InternalFileDTO | None:
         """Возвращает DTO пользовательского медиа-файла с блокировкой строки для последующего изменения.
 
         Делегирует построение запроса в `_build_read_statement`.
@@ -181,7 +181,7 @@ class FileRepository(
 
         Returns
         -------
-        FileDTO | None
+        InternalFileDTO | None
             Найденная запись о медиа-файле с вложенным DTO создателя
             или None, если ни одна запись не соответствует фильтрам.
         """
@@ -195,7 +195,7 @@ class FileRepository(
         if not (row := result.mappings().first()):
             return None
 
-        return FileDTO.model_validate(
+        return InternalFileDTO.model_validate(
             {
                 **row,
                 "creator": self._extract_prefixed(
@@ -212,7 +212,7 @@ class FileRepository(
         offset: int = DEFAULT_OFFSET,
         limit: int = DEFAULT_LIMIT,
         sort_order: SortOrder = SortOrder.DESC,
-    ) -> list[FileDTO]:
+    ) -> list[InternalFileDTO]:
         """Возвращает отфильтрованный постраничный список медиа-файлов.
 
         Условие доступа и фильтры применяются на уровне запроса атомарно.
@@ -233,7 +233,7 @@ class FileRepository(
 
         Returns
         -------
-        list[FileDTO]
+        list[InternalFileDTO]
             Список DTO найденных записей медиа-файлов, удовлетворяющих фильтру.
         """
         result = await self.connection.execute(
@@ -246,7 +246,7 @@ class FileRepository(
         )
 
         return [
-            FileDTO.model_validate(
+            InternalFileDTO.model_validate(
                 {
                     **row,
                     "creator": self._extract_prefixed(

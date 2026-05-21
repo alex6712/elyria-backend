@@ -49,23 +49,32 @@ class FileMetadataDTO(InternalFileMetadataDTO):
     client_ref_id: str
 
 
-class FileDTO(BaseSQLCoreDTO, InternalFileMetadataDTO):
-    """DTO для представления медиа-файла.
+class PublicFileDTO(BaseSQLCoreDTO, InternalFileMetadataDTO):
+    """Публичное DTO для представления медиа-файла.
 
     Attributes
     ----------
-    object_key : str
-        Путь до файла внутри бакета приложения.
     status : FileStatus
         Текущий статус медиа-файла.
     creator : CreatorDTO
         DTO пользователя, создавшего медиа-файл.
     """
 
-    object_key: str
     status: FileStatus
 
     creator: CreatorDTO
+
+
+class InternalFileDTO(PublicFileDTO):
+    """Внутреннее DTO для представления медиа-файла.
+
+    Attributes
+    ----------
+    object_key : str
+        Путь до файла внутри бакета приложения.
+    """
+
+    object_key: str
 
 
 class FilterOneFileDTO(BaseFilterOneDTO):

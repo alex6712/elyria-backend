@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from app.schemas.dto.file import FileDTO
+from app.schemas.dto.file import PublicFileDTO
 from app.schemas.v1.responses.standard import PaginationResponse
 
 
@@ -12,10 +12,10 @@ class FilesResponse(PaginationResponse):
 
     Attributes
     ----------
-    files : list[AlbumDTO]
+    files : list[PublicFileDTO]
         Список всех файлов, подходящих под фильтры.
     """
 
-    files: list[FileDTO] = Field(
+    files: list[PublicFileDTO] = Field(
         description="Список всех файлов, подходящих под фильтры.",
     )

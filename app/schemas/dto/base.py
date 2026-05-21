@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Self
+from typing import Any, Self, Sequence
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -16,6 +16,44 @@ class BaseDTO(BaseModel):
     """
 
     model_config = ConfigDict(frozen=True)
+
+    @classmethod
+    def from_internal(cls, internal_dto: BaseDTO) -> Self:
+        """Создает экземпляр публичного DTO из внутреннего.
+
+        Pydantic v2 автоматически рекурсивно преобразует вложенные модели,
+        если их имена и типы совпадают в схеме.
+
+        Parameters
+        ----------
+        internal_dto : BaseDTO
+            Внутреннее DTO для преобразования.
+
+        Returns
+        -------
+        Self
+            Объект публичного DTO.
+        """
+        return cls.model_validate(internal_dto)
+
+    @classmethod
+    def from_internals(cls, internal_dtos: Sequence[BaseDTO]) -> list[Self]:
+        """Создает экземпляры публичных DTO из внутренних.
+
+        Pydantic v2 автоматически рекурсивно преобразует вложенные модели,
+        если их имена и типы совпадают в схеме.
+
+        Parameters
+        ----------
+        internal_dtos : Sequence[BaseDTO]
+            Внутренние DTO для преобразования.
+
+        Returns
+        -------
+        list[Self]
+            Список объектов публичных DTO.
+        """
+        return [cls.model_validate(dto) for dto in internal_dtos]
 
 
 class BaseSQLCoreDTO(BaseDTO):
