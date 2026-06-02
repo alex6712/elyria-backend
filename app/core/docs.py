@@ -280,10 +280,10 @@ AUTHORIZATION_ERROR_SCHEMA: dict[str, Any] = {
             },
             "examples": {
                 "tokenNotPassed": {
-                    "description": "Токен не передан",
+                    "description": "Токен не передан в auth-cookie",
                     "value": {
                         "code": APICode.TOKEN_NOT_PASSED,
-                        "detail": "${tokenType} token not found in Authorization header. Make sure to add it with Bearer scheme.",
+                        "detail": "Access token not found in auth cookie. Make sure to log in first.",
                     },
                 },
                 "invalidToken": {
@@ -294,7 +294,7 @@ AUTHORIZATION_ERROR_SCHEMA: dict[str, Any] = {
                     },
                 },
                 "tokenSignatureExpired": {
-                    "description": "Подпись токена верна, но просрочена",
+                    "description": "Подпись токена верна, но просрочена (refresh-cookie также отсутствует или невалиден)",
                     "value": {
                         "code": APICode.TOKEN_SIGNATURE_EXPIRED,
                         "detail": "Signature of passed token has expired.",

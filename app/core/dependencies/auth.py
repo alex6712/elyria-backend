@@ -1,148 +1,215 @@
-from typing import Annotated, Any, Callable, Coroutine
+from typing import Annotated
 
-from fastapi import Depends, Security
-from fastapi.security import (
-    HTTPAuthorizationCredentials,
-    HTTPBearer,
-    OAuth2PasswordBearer,
-    OAuth2PasswordRequestForm,
-)
+from fastapi import Depends, Request, Response
+from fastapi.security import OAuth2PasswordRequestForm
 
-from app.config import get_settings
+from app.core.cookies import get_access_token, get_refresh_token, set_auth_cookies
 from app.core.dependencies.services import ServiceManagerDependency
-from app.core.exceptions.auth import AuthDomainException
+from app.core.dependencies.settings import SettingsDependency
+from app.core.exceptions.auth import (
+    AuthDomainException,
+    InvalidTokenException,
+    TokenNotPassedException,
+    TokenRevokedException,
+    TokenSignatureExpiredException,
+)
+from app.core.security import jwt_decode
+from app.infra.postgres.uow import UnitOfWork
+from app.infra.redis import redis_client
 from app.schemas.dto.payload import AccessTokenPayload
+from app.services.auth import AuthService
 
 SignInCredentialsDependency = Annotated[OAuth2PasswordRequestForm, Depends()]
-"""Зависимость на получение реквизитов для входа в систему."""
+"""Зависимость на получение реквизитов для входа в систему.
 
-settings = get_settings()
-
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"/{settings.CURRENT_API_PATH}/auth/login",
-    auto_error=False,
-)
+Принимает данные из тела запроса в формате
+`application/x-www-form-urlencoded` согласно спецификации
+OAuth2 Password Grant (поля `username` и `password`).
+"""
 
 
-def dependency(
-    credentials: Annotated[
-        HTTPAuthorizationCredentials | None, Security(HTTPBearer(auto_error=False))
-    ],
-) -> str | None:
-    """Функция-зависимость на получение значения токена обновления.
+async def _resolve_auth(
+    request: Request,
+    response: Response,
+    settings: SettingsDependency,
+    services: ServiceManagerDependency,
+) -> AccessTokenPayload | None:
+    """Разрешает сессию пользователя по auth-cookie.
+
+    На каждый запрос с объявленной auth-зависимостью выполняет:
+
+    1. Чтение access-cookie из запроса. Если токен валиден
+       (корректная подпись + отсутствие в Redis blacklist) -
+       payload возвращается вызывающему коду.
+    2. Если access-cookie отсутствует или его валидация
+       завершилась `TokenSignatureExpiredException`,
+       `TokenRevokedException` или `InvalidTokenException` -
+       выполняется попытка прозрачной ротации пары токенов
+       по refresh-cookie. При успехе новые `access` и
+       `refresh` токены записываются в исходящий ответ
+       через `set_auth_cookies`, а payload нового
+       access-токена возвращается вызывающему коду.
+    3. Если ни access, ни refresh cookie не позволили
+       сформировать валидную сессию, возвращается `None`.
 
     Parameters
     ----------
-    credentials : HTTPAuthorizationCredentials | None
-        Учётные данные, полученные из HTTP Bearer-токена.
+    request : Request
+        Объект входящего HTTP-запроса.
+    response : Response
+        Объект HTTP-ответа, через который FastAPI позволяет
+        зависимости модифицировать финальный ответ маршрута
+        (в данном случае - установить новые `Set-Cookie`
+        заголовки после успешной ротации).
+    settings : Settings
+        Конфигурация приложения, описывающая имена и
+        атрибуты auth-cookie.
+    services : ServiceManager
+        Request-scoped менеджер сервисов, предоставляющий
+        доступ к `AuthService` для валидации access-токена.
+        Использует общий с маршрутом `UnitOfWork`.
 
     Returns
     -------
-    str | None
-        Значение токена обновления либо None, если токен отсутствует.
+    AccessTokenPayload | None
+        Валидированный payload access-токена при его наличии
+        либо `None`, если ни access, ни refresh cookie не
+        позволили сформировать валидную сессию.
 
     Notes
     -----
-    Из объекта HTTPAuthorizationCredentials извлекается только поле
-    `credentials`, содержащее сам токен. Поле `scheme` игнорируется.
+    Ротация refresh-токена выполняется в **изолированном**
+    короткоживующем `UnitOfWork`, не разделяемом с маршрутом.
+    Это сознательное решение, обеспечивающее коммит обновления
+    записи `user_sessions` в БД **до** запуска тела маршрута.
     """
-    return credentials.credentials if credentials else None
+    if (access_token := get_access_token(request, settings)) is not None:
+        try:
+            return await services.auth.validate_access_token(access_token)
+        except (
+            TokenSignatureExpiredException,
+            TokenRevokedException,
+            InvalidTokenException,
+        ):
+            pass
+
+    return await _try_refresh_session(request, response, settings)
 
 
-ExtractAccessTokenDependency = Annotated[str | None, Depends(oauth2_scheme)]
-"""Зависимость на получение токена доступа из заголовков запроса."""
+async def _try_refresh_session(
+    request: Request,
+    response: Response,
+    settings: SettingsDependency,
+) -> AccessTokenPayload | None:
+    """Пытается прозрачно обновить пару токенов по refresh-cookie.
 
-ExtractRefreshTokenDependency = Annotated[str | None, Depends(dependency)]
-"""Зависимость на получение токена обновления из заголовков запроса."""
-
-AuthDependencyCallable = Callable[
-    [ExtractAccessTokenDependency, ServiceManagerDependency],
-    Coroutine[Any, Any, AccessTokenPayload | None],
-]
-"""Тип вызываемого объекта зависимости аутентификации."""
-
-
-def check_auth(strict: bool) -> AuthDependencyCallable:
-    """Фабрика для создания зависимостей аутентификации.
-
-    Генерирует зависимости FastAPI с гибким поведением при ошибках
-    аутентификации. Позволяет выбирать между строгим и мягким режимом
-    проверки access token.
+    Извлекает refresh-cookie из запроса, делегирует ротацию
+    `AuthService.rotate_session` в изолированном `UnitOfWork`
+    и при успехе устанавливает новые `access`/`refresh` cookie
+    в исходящий ответ.
 
     Parameters
     ----------
-    strict : bool
-        Режим обработки ошибок:
-        - True: строгий режим - исключение пробрасывается.
-        - False: мягкий режим - при ошибке возвращается None.
+    request : Request
+        Объект входящего HTTP-запроса, из которого извлекается
+        refresh-cookie.
+    response : Response
+        Объект HTTP-ответа, в который добавляются
+        `Set-Cookie` заголовки с обновлённой парой токенов
+        при успешной ротации.
+    settings : Settings
+        Конфигурация приложения, описывающая имена cookie
+        и параметры их установки.
 
     Returns
     -------
-    AuthDependencyCallable
-        Функция зависимости, использующая ServiceManager
-        для доступа к AuthService.
+    AccessTokenPayload | None
+        Payload нового access-токена при успешной ротации
+        либо `None`, если refresh-cookie отсутствует,
+        невалиден или ротация завершилась доменной ошибкой
+        auth-домена.
 
-    See Also
-    --------
-    SoftAuthenticationDependency
-    StrictAuthenticationDependency
+    Notes
+    -----
+    Прямое создание `UnitOfWork` и `AuthService` внутри
+    функции обусловлено требованием изолированной транзакции
+    для ротации. Все остальные auth-сценарии в проекте
+    работают через `ServiceManagerDependency`.
     """
+    if (refresh_token := get_refresh_token(request, settings)) is None:
+        return None
 
-    async def dependency(
-        access_token: ExtractAccessTokenDependency,
-        services: ServiceManagerDependency,
-    ) -> AccessTokenPayload | None:
-        """Внутренняя функция зависимости, выполняющая проверку токена.
+    try:
+        async with UnitOfWork() as rotation_uow:
+            rotation_service = AuthService(rotation_uow, redis_client, settings)
+            new_tokens = await rotation_service.rotate_session(refresh_token)
+    except AuthDomainException:
+        return None
 
-        Parameters
-        ----------
-        access_token : str | None
-            JWT access token, извлечённый из заголовков запроса.
-        services : ServiceManagerDependency
-            Менеджер сервисов уровня запроса.
+    set_auth_cookies(
+        response,
+        access_token=new_tokens.access,
+        refresh_token=new_tokens.refresh,
+        settings=settings,
+    )
 
-        Returns
-        -------
-        AccessTokenPayload | None
-            Расшифрованные данные токена при успешной проверке.
-            В мягком режиме при ошибке возвращается None.
-
-        Raises
-        ------
-        AuthDomainException
-            В строгом режиме при ошибке аутентификации.
-
-        Notes
-        -----
-        Поведение:
-        1. В строгом режиме доменные исключения пробрасываются.
-        2. В мягком режиме AuthDomainException преобразуется в None.
-        3. Недоменные исключения никогда не подавляются.
-        """
-        try:
-            return await services.auth.validate_access_token(access_token)
-        except AuthDomainException as e:
-            if strict:
-                raise e
-            return None
-
-    return dependency
+    return jwt_decode(new_tokens.access, "access")
 
 
 SoftAuthenticationDependency = Annotated[
-    AccessTokenPayload | None, Depends(check_auth(strict=False))
+    AccessTokenPayload | None, Depends(_resolve_auth)
 ]
 """Зависимость для мягкой проверки аутентификации.
 
 Используется в эндпоинтах, доступных как аутентифицированным,
 так и неаутентифицированным пользователям.
+
+При отсутствии валидной сессии возвращает `None` -
+endpoint сам решает, что с этим делать.
 """
 
-StrictAuthenticationDependency = Annotated[
-    AccessTokenPayload, Depends(check_auth(strict=True))
-]
+
+async def _require_auth(payload: SoftAuthenticationDependency) -> AccessTokenPayload:
+    """Приводит мягкий результат `_resolve_auth` к строгой форме.
+
+    Используется как обёртка над `SoftAuthenticationDependency`
+    для формирования `StrictAuthenticationDependency`.
+
+    Parameters
+    ----------
+    payload : AccessTokenPayload | None
+        Результат `_resolve_auth`. Может быть `None`, если
+        валидная сессия не была сформирована ни по access,
+        ни по refresh cookie.
+
+    Returns
+    -------
+    AccessTokenPayload
+        Гарантированно непустой payload access-токена.
+
+    Raises
+    ------
+    TokenNotPassedException
+        Если `payload is None` - валидная сессия отсутствует
+        (пользователь не аутентифицирован или refresh не
+        удался). Приводит к HTTP 401 через зарегистрированный
+        exception handler.
+    """
+    if payload is None:
+        raise TokenNotPassedException(
+            detail=(
+                "Access token not found in auth cookie. Make sure to log in first."
+            ),
+            token_type="access",
+        )
+
+    return payload
+
+
+StrictAuthenticationDependency = Annotated[AccessTokenPayload, Depends(_require_auth)]
 """Зависимость для строгой проверки аутентификации.
 
-Используется в защищённых эндпоинтах,
-требующих обязательной аутентификации.
+Используется в защищённых эндпоинтах, требующих
+обязательной аутентификации. При отсутствии валидной
+сессии поднимает `TokenNotPassedException` (HTTP 401).
 """

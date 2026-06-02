@@ -1,6 +1,6 @@
 from functools import lru_cache
 from os.path import abspath
-from typing import Self
+from typing import Any, Literal, Self
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ec import (
@@ -93,6 +93,23 @@ class Settings(BaseSettings):
         Время жизни refresh-токена в днях.
     HMAC_SECRET_KEY : str
         Секретный ключ хеширования токенов обновления.
+    ACCESS_TOKEN_COOKIE_NAME : str
+        Имя cookie, в котором хранится JWT access-токен.
+    REFRESH_TOKEN_COOKIE_NAME : str
+        Имя cookie, в котором хранится JWT refresh-токен.
+    AUTH_COOKIE_PATH : str
+        Значение атрибута `Path` для auth-cookie.
+    AUTH_COOKIE_SECURE : bool
+        Значение атрибута `Secure` для auth-cookie.
+        Должно быть `True` в production-окружении.
+    AUTH_COOKIE_SAMESITE : Literal["lax", "strict", "none"]
+        Значение атрибута `SameSite` для auth-cookie.
+        Допустимые значения: `"lax"`, `"strict"`, `"none"`.
+    AUTH_COOKIE_DOMAIN : str | None
+        Значение атрибута `Domain` для auth-cookie.
+        При `None` cookie устанавливается только на текущий хост.
+        Для шаринга между поддоменами используется значение
+        вида `".example.com"`.
     """
 
     APP_NAME: str
@@ -109,7 +126,7 @@ class Settings(BaseSettings):
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, value: list[str] | str) -> list[str]:
+    def _assemble_cors_origins(cls, value: Any) -> list[str]:
         if isinstance(value, str) and not value.startswith("["):
             return [i.strip() for i in value.split(",")]
 
@@ -144,6 +161,43 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_LIFETIME_MINUTES: int
     REFRESH_TOKEN_LIFETIME_DAYS: int
     HMAC_SECRET_KEY: str
+
+    ACCESS_TOKEN_COOKIE_NAME: str
+    REFRESH_TOKEN_COOKIE_NAME: str
+    AUTH_COOKIE_PATH: str
+    AUTH_COOKIE_SECURE: bool
+    AUTH_COOKIE_SAMESITE: Literal["lax", "strict", "none"]
+    AUTH_COOKIE_DOMAIN: str | None
+
+    @field_validator("AUTH_COOKIE_SAMESITE", mode="before")
+    @classmethod
+    def _validate_auth_cookie_samesite(cls, value: Any) -> str:
+        if not isinstance(value, str):
+            raise ValueError(
+                f"AUTH_COOKIE_SAMESITE must be a string, got {type(value).__name__}."
+            )
+
+        normalized = value.strip().lower()
+
+        if normalized not in {"lax", "strict", "none"}:
+            raise ValueError(
+                f"AUTH_COOKIE_SAMESITE must be one of 'lax', 'strict', 'none'; got {value!r}."
+            )
+
+        return normalized
+
+    @field_validator("AUTH_COOKIE_DOMAIN", mode="before")
+    @classmethod
+    def _normalize_auth_cookie_domain(cls, value: Any | None) -> str | None:
+        if value is None:
+            return None
+
+        if not isinstance(value, str):
+            raise ValueError(
+                f"AUTH_COOKIE_DOMAIN must be a string or null, got {type(value).__name__}."
+            )
+
+        return value.strip() or None
 
     model_config = SettingsConfigDict(
         env_file=abspath(".env"),

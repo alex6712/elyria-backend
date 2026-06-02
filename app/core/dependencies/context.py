@@ -3,10 +3,8 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from app.core.dependencies.auth import (
-    ServiceManagerDependency,
-    StrictAuthenticationDependency,
-)
+from app.core.dependencies.auth import StrictAuthenticationDependency
+from app.core.dependencies.services import ServiceManagerDependency
 
 
 async def get_partner_id(
