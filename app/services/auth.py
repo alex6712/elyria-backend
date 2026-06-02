@@ -37,7 +37,7 @@ from app.schemas.dto.payload import (
     AnyTokenPayload,
     RefreshTokenPayload,
 )
-from app.schemas.dto.token import Tokens
+from app.schemas.dto.token import LoginResult, Tokens
 from app.schemas.dto.user import CreateUserDTO, FilterOneUserDTO, UpdateUserDTO
 from app.schemas.dto.user_session import (
     CreateUserSessionDTO,
@@ -75,8 +75,9 @@ class AuthService:
         Регистрирует пользователя.
     login(username, password)
         Аутентифицирует пользователя и создаёт новую сессию.
-    refresh(refresh_token)
-        Обновляет пару токенов (refresh rotation).
+    rotate_session(refresh_token)
+        Прозрачно обновляет пару токенов по refresh-токену
+        (вызывается middleware при истечении access-токена).
     logout(access_token)
         Завершает текущую сессию пользователя.
     change_password(current_password, new_password, access_token)
@@ -112,14 +113,15 @@ class AuthService:
             CreateUserDTO(username=username, password_hash=hash_(password))
         )
 
-    async def login(self, username: str, password: str) -> Tokens:
-        """Аутентифицирует пользователя и возвращает JWT.
+    async def login(self, username: str, password: str) -> LoginResult:
+        """Аутентифицирует пользователя и возвращает пару JWT.
 
         Проверяет существование пользователя по переданному `username`,
         сверяет хеш переданного пароля и сохранённый в базе данных
         хеш.
 
-        Если все проверки пройдены успешно, возвращает пару JWT.
+        Если все проверки пройдены успешно, возвращает пару JWT
+        и минимальный набор публичных данных пользователя.
 
         Parameters
         ----------
@@ -130,8 +132,9 @@ class AuthService:
 
         Returns
         -------
-        Tokens
-            Пара access и refresh токенов.
+        LoginResult
+            Результат аутентификации: идентификатор и логин
+            пользователя, а также пара выпущенных JWT-токенов.
 
         Raises
         ------
@@ -170,20 +173,24 @@ class AuthService:
             )
         )
 
-        return Tokens(
-            access=create_jwt(
-                user.id,
-                current_time,
-                session_id,
-                expires_delta=timedelta(
-                    minutes=self._settings.ACCESS_TOKEN_LIFETIME_MINUTES
+        return LoginResult(
+            user_id=user.id,
+            username=user.username,
+            tokens=Tokens(
+                access=create_jwt(
+                    user.id,
+                    current_time,
+                    session_id,
+                    expires_delta=timedelta(
+                        minutes=self._settings.ACCESS_TOKEN_LIFETIME_MINUTES
+                    ),
+                    couple_id=couple.id if couple else None,
                 ),
-                couple_id=couple.id if couple else None,
+                refresh=refresh_token,
             ),
-            refresh=refresh_token,
         )
 
-    async def refresh(self, refresh_token: str | None) -> Tokens:
+    async def rotate_session(self, refresh_token: str | None) -> Tokens:
         """Обновляет пару токенов по валидному refresh-токену.
 
         Выполняет:
@@ -192,10 +199,14 @@ class AuthService:
         - refresh rotation (инвалидация старого refresh-токена);
         - генерацию новой пары токенов.
 
+        Метод предназначен для прозрачного вызова из auth-middleware
+        при истечении access-токена, поэтому не предоставляется
+        в виде HTTP-эндпоинта.
+
         Parameters
         ----------
         refresh_token : str | None
-            Refresh-токен из заголовка Authorization.
+            Refresh-токен, извлечённый из auth-cookie.
 
         Returns
         -------
@@ -205,14 +216,15 @@ class AuthService:
         Raises
         ------
         TokenNotPassedException
-            Токен обновления не передан в заголовках запроса.
+            Токен обновления не передан в cookie запроса.
         InvalidTokenException
             Токен невалиден или не соответствует активной сессии.
+        TokenSignatureExpiredException
+            Срок действия refresh-токена истёк.
         """
         if refresh_token is None:
             raise TokenNotPassedException(
-                detail="Refresh token not found in Authorization header. Make sure to add it with Bearer scheme.",
-                token_type="refresh",
+                detail="Refresh token not found in auth cookie.", token_type="refresh"
             )
 
         payload = self._validate_token(refresh_token, "refresh")
@@ -380,7 +392,8 @@ class AuthService:
         Parameters
         ----------
         access_token : str | None
-            Access-токен из заголовка Authorization.
+            Access-токен, извлечённый из auth-cookie
+            (`ACCESS_TOKEN_COOKIE_NAME`, по умолчанию `ml_at`).
 
         Returns
         -------
@@ -400,7 +413,7 @@ class AuthService:
         """
         if access_token is None:
             raise TokenNotPassedException(
-                detail="Access token not found in Authorization header. Make sure to add it with Bearer scheme.",
+                detail="Access token not found in auth cookie. Make sure to log in first.",
                 token_type="access",
             )
 

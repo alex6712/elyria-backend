@@ -2,12 +2,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Request, Response, status
 
+from app.core.cookies import delete_auth_cookies, set_auth_cookies
 from app.core.dependencies.auth import (
-    ExtractRefreshTokenDependency,
     SignInCredentialsDependency,
     StrictAuthenticationDependency,
 )
 from app.core.dependencies.services import ServiceManagerDependency
+from app.core.dependencies.settings import SettingsDependency
 from app.core.docs import (
     AUTHORIZATION_ERROR_REF,
     CHANGE_PASSWORD_ERROR_REF,
@@ -19,13 +20,12 @@ from app.core.docs import (
 from app.core.rate_limiter import (
     CHANGE_PASSWORD_LIMIT,
     LOGIN_LIMIT,
-    REFRESH_LIMIT,
     REGISTER_LIMIT,
     limiter,
 )
 from app.schemas.v1.requests.auth import ChangePasswordRequest, RegisterRequest
+from app.schemas.v1.responses.auth import LoggedInUserDTO, LoginResponse
 from app.schemas.v1.responses.standard import StandardResponse
-from app.schemas.v1.responses.tokens import TokensResponse
 
 router = APIRouter(prefix="/auth", tags=["authorization"])
 
@@ -81,7 +81,7 @@ async def register(
 
 @router.post(
     "/login",
-    response_model=TokensResponse,
+    response_model=LoginResponse,
     status_code=status.HTTP_200_OK,
     summary="Аутентификация пользователя.",
     response_description="Успешная аутентификация",
@@ -93,10 +93,26 @@ async def login(
     response: Response,
     form_data: SignInCredentialsDependency,
     services: ServiceManagerDependency,
-) -> TokensResponse:
+    settings: SettingsDependency,
+) -> LoginResponse:
     """Аутентификация пользователя.
 
-    Принимает учетные данные пользователя, проверяет их и возвращает JWT-токены.
+    Принимает учётные данные пользователя, проверяет их и
+    устанавливает HttpOnly-cookie с парой JWT-токенов.
+
+    В cookie передаются:
+
+    - `ACCESS_TOKEN_COOKIE_NAME` (по умолчанию `ml_at`) -
+      короткоживущий access-токен, используемый при
+      авторизации защищённых эндпоинтов;
+    - `REFRESH_TOKEN_COOKIE_NAME` (по умолчанию `ml_rt`) -
+      долгоживущий refresh-токен, используемый
+      auth-зависимостью `_resolve_auth` для прозрачной
+      ротации пары токенов при истечении access-токена.
+
+    Тело ответа намеренно не содержит JWT - фронтенд
+    получает только публичную информацию о пользователе
+    для инициализации клиентского состояния.
 
     Parameters
     ----------
@@ -104,82 +120,40 @@ async def login(
         Объект HTTP-запроса. Требуется для работы slowapi.Limiter
         при определении rate limit по IP-адресу клиента.
     response : Response
-        Объект HTTP-ответа. Требуется для работы slowapi.Limiter
-        при инъекции заголовков X-RateLimit-*.
+        Объект HTTP-ответа, в который будут добавлены
+        `Set-Cookie` заголовки. Также используется
+        slowapi.Limiter для инъекции заголовков
+        `X-RateLimit-*`.
     form_data : SignInCredentialsDependency
-        Зависимость для получения учетных данных из формы.
+        Зависимость для получения учётных данных из формы
+        (поля `username` и `password`).
     services : ServiceManager
         Менеджер сервисов уровня запроса (request-scoped).
 
         Предоставляет доступ к бизнес-сервисам приложения
         (например, auth, user, note, file и др.) через единый
         контейнер зависимостей.
+    settings : Settings
+        Конфигурация приложения, описывающая имена и
+        атрибуты auth-cookie.
 
     Returns
     -------
-    TokensResponse
-        Ответ с вложенными JWT access и refresh токенами.
+    LoginResponse
+        Ответ с публичными данными вошедшего пользователя.
     """
-    tokens = await services.auth.login(
-        form_data.username,
-        form_data.password,
+    result = await services.auth.login(form_data.username, form_data.password)
+
+    set_auth_cookies(
+        response,
+        access_token=result.tokens.access,
+        refresh_token=result.tokens.refresh,
+        settings=settings,
     )
 
-    return TokensResponse(
+    return LoginResponse(
         detail="Login successful.",
-        access_token=tokens.access,
-        refresh_token=tokens.refresh,
-    )
-
-
-@router.post(
-    "/refresh",
-    response_model=TokensResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Обновление токенов доступа.",
-    response_description="Обновление токенов прошло успешно",
-    responses={401: AUTHORIZATION_ERROR_REF, 429: RATE_LIMIT_ERROR_REF},
-)
-@limiter.limit(REFRESH_LIMIT)  # type: ignore
-async def refresh(
-    request: Request,
-    response: Response,
-    services: ServiceManagerDependency,
-    refresh_token: ExtractRefreshTokenDependency,
-) -> TokensResponse:
-    """Обновление пары JWT-токенов.
-
-    Использует refresh token для генерации новой пары токенов.
-    При успешном обновлении старый refresh token инвалидируется.
-
-    Parameters
-    ----------
-    request : Request
-        Объект HTTP-запроса. Требуется для работы slowapi.Limiter
-        при определении rate limit по IP-адресу клиента.
-    response : Response
-        Объект HTTP-ответа. Требуется для работы slowapi.Limiter
-        при инъекции заголовков X-RateLimit-*.
-    services : ServiceManager
-        Менеджер сервисов уровня запроса (request-scoped).
-
-        Предоставляет доступ к бизнес-сервисам приложения
-        (например, auth, user, note, file и др.) через единый
-        контейнер зависимостей.
-    refresh_token : ExtractRefreshTokenDependency
-        Зависимость на получение токена обновления из заголовков запроса.
-
-    Returns
-    -------
-    TokensResponse
-        Ответ с вложенными JWT access и refresh токенами.
-    """
-    tokens = await services.auth.refresh(refresh_token)
-
-    return TokensResponse(
-        detail="Refresh successful.",
-        access_token=tokens.access,
-        refresh_token=tokens.refresh,
+        user=LoggedInUserDTO(id=str(result.user_id), username=result.username),
     )
 
 
@@ -192,37 +166,63 @@ async def refresh(
     responses={401: AUTHORIZATION_ERROR_REF},
 )
 async def logout(
+    response: Response,
     services: ServiceManagerDependency,
+    settings: SettingsDependency,
     payload: StrictAuthenticationDependency,
 ) -> StandardResponse:
     """Завершение текущей сессии пользователя.
 
-    Инвалидирует refresh token пользователя.
-    Для выполнения операции требуется валидный access token.
+    Выполняет:
+
+    - добавление `jti` access-токена в Redis blacklist
+      с TTL до окончания срока его действия;
+    - удаление связанной пользовательской сессии
+      (refresh-токен автоматически становится невалидным);
+    - очистку auth-cookie на стороне клиента
+      через `Set-Cookie` с `Max-Age=0`.
+
+    Для выполнения операции требуется валидный access-cookie.
+    После выполнения запроса все auth-cookie пользователя
+    становятся недействительными.
 
     Parameters
     ----------
+    response : Response
+        Объект HTTP-ответа, в который будут добавлены
+        `Set-Cookie` заголовки для очистки cookie.
     services : ServiceManager
         Менеджер сервисов уровня запроса (request-scoped).
 
         Предоставляет доступ к бизнес-сервисам приложения
         (например, auth, user, note, file и др.) через единый
         контейнер зависимостей.
+    settings : Settings
+        Конфигурация приложения, описывающая имена и
+        атрибуты auth-cookie.
     payload : AccessTokenPayload
-        Полезная нагрузка (payload) токена доступа.
-        Получена автоматически из зависимости на строгую аутентификацию.
+        Полезная нагрузка (payload) access-токена,
+        возвращаемая `StrictAuthenticationDependency`
+        после разрешения сессии через auth-зависимость
+        `_resolve_auth` (с валидацией access-cookie
+        или прозрачной ротацией по refresh-cookie).
 
     Returns
     -------
     StandardResponse
-        Стандартный ответ с сообщением об успешном выходе из системы.
+        Стандартный ответ с сообщением об успешном выходе
+        из системы.
 
     Notes
     -----
-    - Access token должен быть валидным на момент выполнения запроса
-    - После выполнения запроса refresh token становится недействительным
+    - Access-токен должен быть валидным на момент
+      выполнения запроса.
+    - После выполнения запроса auth-cookie пользователя
+      становятся недействительными.
     """
     await services.auth.logout(payload)
+
+    delete_auth_cookies(response, settings=settings)
 
     return StandardResponse(detail="User successfully logout.")
 
@@ -254,7 +254,7 @@ async def change_password(
     """Смена пароля текущего пользователя.
 
     Валидирует текущий пароль и заменяет его на новый.
-    Требует наличия действующего access token в заголовках запроса.
+    Требует наличия действующего access-токена в auth-cookie.
 
     Parameters
     ----------
