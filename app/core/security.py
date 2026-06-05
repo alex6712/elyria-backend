@@ -310,6 +310,7 @@ def create_jwt(
         expires_delta=expires_delta,
         couple_id=couple_id,
     )
+
     return _jwt_encode(payload)
 
 
