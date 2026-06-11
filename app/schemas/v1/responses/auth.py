@@ -1,52 +1,43 @@
+from typing import Literal
+
 from pydantic import Field
 
-from app.schemas.dto.base import BaseDTO
 from app.schemas.v1.responses.standard import StandardResponse
 
 
-class LoggedInUserDTO(BaseDTO):
-    """Публичное DTO пользователя в ответе на вход в систему.
+class AccessTokenResponse(StandardResponse):
+    """Модель ответа сервера с access-токеном.
 
-    Содержит минимальный набор полей, необходимых фронтенду
-    для инициализации пользовательской сессии сразу после
-    успешной аутентификации. Чувствительные данные
-    (например, `password_hash`) намеренно не включаются.
-
-    Attributes
-    ----------
-    id : str
-        UUID пользователя в строковом представлении -
-        используется как стабильный идентификатор в
-        клиентских сторах.
-    username : str
-        Логин пользователя, отображённый в интерфейсе.
-    """
-
-    id: str = Field(
-        description="UUID идентификатор пользователя в строковом представлении.",
-        examples=["3fa85f64-5717-4562-b3fc-2c963f66afa6"],
-    )
-    username: str = Field(
-        description="Логин пользователя.",
-        examples=["john_doe"],
-    )
-
-
-class LoginResponse(StandardResponse):
-    """Модель ответа сервера на успешный вход в систему.
-
-    Тело ответа намеренно не содержит JWT - access- и
-    refresh-токены передаются в HttpOnly-cookie
-    (см. `app.core.cookies.set_auth_cookies`).
-    Фронтенд использует `user` для первичной инициализации
-    состояния после успешной аутентификации.
+    Возвращается после успешного входа в систему или обновления
+    токенов. Access-токен должен передаваться в заголовке
+    `Authorization: Bearer <token>` для доступа к защищённым
+    эндпоинтам. Refresh-токен устанавливается в HttpOnly-cookie
+    (см. `app.core.cookies.set_refresh_token_cookie`).
 
     Attributes
     ----------
-    user : LoggedInUserDTO
-        DTO вошедшего пользователя.
+    access_token : str
+        JWT access-токен для авторизации запросов.
+    token_type : Literal["bearer"]
+        Тип токена (всегда `"bearer"`).
+    expires_in : int
+        Время жизни токена в секундах.
     """
 
-    user: LoggedInUserDTO = Field(
-        description="DTO вошедшего пользователя.",
+    access_token: str = Field(
+        description="Значение токена доступа",
+        examples=[
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+            ".eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ"
+            ".SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        ],
+    )
+    token_type: Literal["bearer"] = Field(
+        default="bearer",
+        description="Тип токенов",
+        examples=["bearer"],
+    )
+    expires_in: int = Field(
+        description="Количество секунд, через которое токен будет считаться недействительным",
+        examples=[900],
     )

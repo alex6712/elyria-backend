@@ -280,10 +280,10 @@ AUTHORIZATION_ERROR_SCHEMA: dict[str, Any] = {
             },
             "examples": {
                 "tokenNotPassed": {
-                    "description": "Токен не передан в auth-cookie",
+                    "description": "Access-токен не передан в заголовке Authorization",
                     "value": {
                         "code": APICode.TOKEN_NOT_PASSED,
-                        "detail": "Access token not found in auth cookie. Make sure to log in first.",
+                        "detail": "Access token is missing. Provide it in the Authorization: Bearer <token> header.",
                     },
                 },
                 "invalidToken": {
@@ -294,7 +294,7 @@ AUTHORIZATION_ERROR_SCHEMA: dict[str, Any] = {
                     },
                 },
                 "tokenSignatureExpired": {
-                    "description": "Подпись токена верна, но просрочена (refresh-cookie также отсутствует или невалиден)",
+                    "description": "Подпись токена верна, но срок действия истёк",
                     "value": {
                         "code": APICode.TOKEN_SIGNATURE_EXPIRED,
                         "detail": "Signature of passed token has expired.",
@@ -308,6 +308,12 @@ AUTHORIZATION_ERROR_SCHEMA: dict[str, Any] = {
                     },
                 },
             },
+        }
+    },
+    "headers": {
+        "WWW-Authenticate": {
+            "description": "Схема аутентификации",
+            "schema": {"type": "string"},
         }
     },
 }

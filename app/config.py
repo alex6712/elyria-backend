@@ -93,8 +93,6 @@ class Settings(BaseSettings):
         Время жизни refresh-токена в днях.
     HMAC_SECRET_KEY : str
         Секретный ключ хеширования токенов обновления.
-    ACCESS_TOKEN_COOKIE_NAME : str
-        Имя cookie, в котором хранится JWT access-токен.
     REFRESH_TOKEN_COOKIE_NAME : str
         Имя cookie, в котором хранится JWT refresh-токен.
     AUTH_COOKIE_PATH : str
@@ -162,7 +160,6 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_LIFETIME_DAYS: int
     HMAC_SECRET_KEY: str
 
-    ACCESS_TOKEN_COOKIE_NAME: str
     REFRESH_TOKEN_COOKIE_NAME: str
     AUTH_COOKIE_PATH: str
     AUTH_COOKIE_SECURE: bool

@@ -31,7 +31,7 @@ from app.repositories.couple import CoupleRepository
 from app.repositories.interface import PublicAccessContext
 from app.repositories.user import UserRepository
 from app.repositories.user_session import UserSessionRepository
-from app.schemas.dto.auth import LoginResult, Tokens
+from app.schemas.dto.auth import Tokens
 from app.schemas.dto.couple import FilterOneCoupleDTO
 from app.schemas.dto.payload import (
     AccessTokenPayload,
@@ -75,9 +75,8 @@ class AuthService:
         Регистрирует пользователя.
     login(username, password)
         Аутентифицирует пользователя и создаёт новую сессию.
-    rotate_session(refresh_token)
-        Прозрачно обновляет пару токенов по refresh-токену
-        (вызывается middleware при истечении access-токена).
+    refresh(refresh_token)
+        Обновляет пару токенов по refresh-токену.
     logout(access_token)
         Завершает текущую сессию пользователя.
     change_password(current_password, new_password, access_token)
@@ -113,15 +112,16 @@ class AuthService:
             CreateUserDTO(username=username, password_hash=hash_(password))
         )
 
-    async def login(self, username: str, password: str) -> LoginResult:
+    async def login(self, username: str, password: str) -> Tokens:
         """Аутентифицирует пользователя и возвращает пару JWT.
 
         Проверяет существование пользователя по переданному `username`,
         сверяет хеш переданного пароля и сохранённый в базе данных
         хеш.
 
-        Если все проверки пройдены успешно, возвращает пару JWT
-        и минимальный набор публичных данных пользователя.
+        При успешной аутентификации создаёт новую сессию и возвращает
+        пару JWT-токенов: access (короткоживущий, для заголовка
+        Authorization) и refresh (долгоживущий, для HttpOnly-cookie).
 
         Parameters
         ----------
@@ -132,9 +132,8 @@ class AuthService:
 
         Returns
         -------
-        LoginResult
-            Результат аутентификации: идентификатор и логин
-            пользователя, а также пара выпущенных JWT-токенов.
+        Tokens
+            Пара JWT-токенов: access и refresh.
 
         Raises
         ------
@@ -173,24 +172,20 @@ class AuthService:
             )
         )
 
-        return LoginResult(
-            user_id=user.id,
-            username=user.username,
-            tokens=Tokens(
-                access=create_jwt(
-                    user.id,
-                    current_time,
-                    session_id,
-                    expires_delta=timedelta(
-                        minutes=self._settings.ACCESS_TOKEN_LIFETIME_MINUTES
-                    ),
-                    couple_id=couple.id if couple else None,
+        return Tokens(
+            access=create_jwt(
+                user.id,
+                current_time,
+                session_id,
+                expires_delta=timedelta(
+                    minutes=self._settings.ACCESS_TOKEN_LIFETIME_MINUTES
                 ),
-                refresh=refresh_token,
+                couple_id=couple.id if couple else None,
             ),
+            refresh=refresh_token,
         )
 
-    async def rotate_session(self, refresh_token: str | None) -> Tokens:
+    async def refresh(self, refresh_token: str | None) -> Tokens:
         """Обновляет пару токенов по валидному refresh-токену.
 
         Выполняет:
@@ -199,14 +194,12 @@ class AuthService:
         - refresh rotation (инвалидация старого refresh-токена);
         - генерацию новой пары токенов.
 
-        Метод предназначен для прозрачного вызова из auth-middleware
-        при истечении access-токена, поэтому не предоставляется
-        в виде HTTP-эндпоинта.
+        Вызывается из HTTP-эндпоинта `/auth/refresh`.
 
         Parameters
         ----------
         refresh_token : str | None
-            Refresh-токен, извлечённый из auth-cookie.
+            Refresh-токен, извлечённый из HttpOnly-cookie.
 
         Returns
         -------
@@ -392,8 +385,8 @@ class AuthService:
         Parameters
         ----------
         access_token : str | None
-            Access-токен, извлечённый из auth-cookie
-            (`ACCESS_TOKEN_COOKIE_NAME`, по умолчанию `ml_at`).
+            Access-токен, извлечённый из заголовка
+            `Authorization: Bearer <token>`.
 
         Returns
         -------
@@ -413,7 +406,10 @@ class AuthService:
         """
         if access_token is None:
             raise TokenNotPassedException(
-                detail="Access token not found in auth cookie. Make sure to log in first.",
+                detail=(
+                    "Access token is missing. Provide it in the "
+                    "Authorization: Bearer <token> header."
+                ),
                 token_type="access",
             )
 

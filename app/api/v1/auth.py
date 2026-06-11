@@ -2,8 +2,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Request, Response, status
 
-from app.core.cookies import delete_auth_cookies, set_auth_cookies
+from app.core.cookies import delete_refresh_token_cookie, set_refresh_token_cookie
 from app.core.dependencies.auth import (
+    ExtractRefreshTokenDependency,
     SignInCredentialsDependency,
     StrictAuthenticationDependency,
 )
@@ -20,11 +21,12 @@ from app.core.docs import (
 from app.core.rate_limiter import (
     CHANGE_PASSWORD_LIMIT,
     LOGIN_LIMIT,
+    REFRESH_LIMIT,
     REGISTER_LIMIT,
     limiter,
 )
 from app.schemas.v1.requests.auth import ChangePasswordRequest, RegisterRequest
-from app.schemas.v1.responses.auth import LoggedInUserDTO, LoginResponse
+from app.schemas.v1.responses.auth import AccessTokenResponse
 from app.schemas.v1.responses.standard import StandardResponse
 
 router = APIRouter(prefix="/auth", tags=["authorization"])
@@ -81,7 +83,7 @@ async def register(
 
 @router.post(
     "/login",
-    response_model=LoginResponse,
+    response_model=AccessTokenResponse,
     status_code=status.HTTP_200_OK,
     summary="Аутентификация пользователя.",
     response_description="Успешная аутентификация",
@@ -94,25 +96,18 @@ async def login(
     form_data: SignInCredentialsDependency,
     services: ServiceManagerDependency,
     settings: SettingsDependency,
-) -> LoginResponse:
+) -> AccessTokenResponse:
     """Аутентификация пользователя.
 
     Принимает учётные данные пользователя, проверяет их и
-    устанавливает HttpOnly-cookie с парой JWT-токенов.
+    возвращает access-токен в теле ответа. Refresh-токен
+    устанавливается в HttpOnly-cookie (`REFRESH_TOKEN_COOKIE_NAME`)
+    и используется только на endpoint `/auth/refresh` для ротации
+    пары токенов.
 
-    В cookie передаются:
-
-    - `ACCESS_TOKEN_COOKIE_NAME` (по умолчанию `ml_at`) -
-      короткоживущий access-токен, используемый при
-      авторизации защищённых эндпоинтов;
-    - `REFRESH_TOKEN_COOKIE_NAME` (по умолчанию `ml_rt`) -
-      долгоживущий refresh-токен, используемый
-      auth-зависимостью `_resolve_auth` для прозрачной
-      ротации пары токенов при истечении access-токена.
-
-    Тело ответа намеренно не содержит JWT - фронтенд
-    получает только публичную информацию о пользователе
-    для инициализации клиентского состояния.
+    Access-токен должен передаваться в заголовке
+    `Authorization: Bearer <token>` для доступа к защищённым
+    эндпоинтам.
 
     Parameters
     ----------
@@ -120,10 +115,8 @@ async def login(
         Объект HTTP-запроса. Требуется для работы slowapi.Limiter
         при определении rate limit по IP-адресу клиента.
     response : Response
-        Объект HTTP-ответа, в который будут добавлены
-        `Set-Cookie` заголовки. Также используется
-        slowapi.Limiter для инъекции заголовков
-        `X-RateLimit-*`.
+        Объект HTTP-ответа, в который будет добавлен
+        `Set-Cookie` с refresh-токеном.
     form_data : SignInCredentialsDependency
         Зависимость для получения учётных данных из формы
         (поля `username` и `password`).
@@ -139,21 +132,81 @@ async def login(
 
     Returns
     -------
-    LoginResponse
-        Ответ с публичными данными вошедшего пользователя.
+    AccessTokenResponse
+        Ответ с access-токеном и временем его жизни.
     """
-    result = await services.auth.login(form_data.username, form_data.password)
+    tokens = await services.auth.login(form_data.username, form_data.password)
 
-    set_auth_cookies(
-        response,
-        access_token=result.tokens.access,
-        refresh_token=result.tokens.refresh,
-        settings=settings,
+    set_refresh_token_cookie(response, refresh_token=tokens.refresh, settings=settings)
+
+    return AccessTokenResponse(
+        detail="Login successful.",
+        access_token=tokens.access,
+        expires_in=settings.ACCESS_TOKEN_LIFETIME_MINUTES * 60,
     )
 
-    return LoginResponse(
-        detail="Login successful.",
-        user=LoggedInUserDTO(id=str(result.user_id), username=result.username),
+
+@router.post(
+    "/refresh",
+    response_model=AccessTokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Обновление токенов доступа.",
+    response_description="Обновление токенов прошло успешно",
+    responses={429: RATE_LIMIT_ERROR_REF},
+)
+@limiter.limit(REFRESH_LIMIT)  # type: ignore
+async def refresh(
+    request: Request,
+    response: Response,
+    services: ServiceManagerDependency,
+    settings: SettingsDependency,
+    refresh_token: ExtractRefreshTokenDependency,
+) -> AccessTokenResponse:
+    """Ротация пары JWT-токенов.
+
+    Извлекает refresh-токен из HttpOnly-cookie `REFRESH_TOKEN_COOKIE_NAME`,
+    проверяет его валидность и выполняет ротацию: текущий refresh-токен
+    отзывается, создаётся новая пара (access + refresh). Новый refresh-токен
+    устанавливается в HttpOnly-cookie ответа.
+
+    Access-токен возвращается в теле ответа и должен передаваться
+    в заголовке `Authorization: Bearer <token>` для доступа к защищённым
+    эндпоинтам.
+
+    Parameters
+    ----------
+    request : Request
+        Объект HTTP-запроса. Требуется для работы slowapi.Limiter
+        при определении rate limit по IP-адресу клиента.
+    response : Response
+        Объект HTTP-ответа, в который будет установлен
+        новый refresh-токен через `Set-Cookie`.
+    services : ServiceManager
+        Менеджер сервисов уровня запроса (request-scoped).
+
+        Предоставляет доступ к бизнес-сервисам приложения
+        (например, auth, user, note, file и др.) через единый
+        контейнер зависимостей.
+    settings : Settings
+        Конфигурация приложения, описывающая имена и
+        атрибуты auth-cookie.
+    refresh_token : str | None
+        Refresh-токен, извлечённый из HttpOnly-cookie
+        (`REFRESH_TOKEN_COOKIE_NAME`).
+
+    Returns
+    -------
+    AccessTokenResponse
+        Ответ с новым access-токеном и временем его жизни.
+    """
+    tokens = await services.auth.refresh(refresh_token)
+
+    set_refresh_token_cookie(response, refresh_token=tokens.refresh, settings=settings)
+
+    return AccessTokenResponse(
+        detail="Refresh successful.",
+        access_token=tokens.access,
+        expires_in=settings.ACCESS_TOKEN_LIFETIME_MINUTES * 60,
     )
 
 
@@ -179,12 +232,11 @@ async def logout(
       с TTL до окончания срока его действия;
     - удаление связанной пользовательской сессии
       (refresh-токен автоматически становится невалидным);
-    - очистку auth-cookie на стороне клиента
-      через `Set-Cookie` с `Max-Age=0`.
+    - очистку HttpOnly-cookie с refresh-токеном на стороне
+      клиента через `Set-Cookie` с `Max-Age=0`.
 
-    Для выполнения операции требуется валидный access-cookie.
-    После выполнения запроса все auth-cookie пользователя
-    становятся недействительными.
+    Для выполнения операции требуется валидный access-токен
+    в заголовке `Authorization: Bearer <token>`.
 
     Parameters
     ----------
@@ -199,13 +251,10 @@ async def logout(
         контейнер зависимостей.
     settings : Settings
         Конфигурация приложения, описывающая имена и
-        атрибуты auth-cookie.
+        атрибуты сookie.
     payload : AccessTokenPayload
         Полезная нагрузка (payload) access-токена,
-        возвращаемая `StrictAuthenticationDependency`
-        после разрешения сессии через auth-зависимость
-        `_resolve_auth` (с валидацией access-cookie
-        или прозрачной ротацией по refresh-cookie).
+        полученная из `StrictAuthenticationDependency`.
 
     Returns
     -------
@@ -217,12 +266,12 @@ async def logout(
     -----
     - Access-токен должен быть валидным на момент
       выполнения запроса.
-    - После выполнения запроса auth-cookie пользователя
-      становятся недействительными.
+    - После выполнения запроса refresh-токен в HttpOnly-cookie
+      становится недействительным.
     """
     await services.auth.logout(payload)
 
-    delete_auth_cookies(response, settings=settings)
+    delete_refresh_token_cookie(response, settings=settings)
 
     return StandardResponse(detail="User successfully logout.")
 
@@ -254,7 +303,8 @@ async def change_password(
     """Смена пароля текущего пользователя.
 
     Валидирует текущий пароль и заменяет его на новый.
-    Требует наличия действующего access-токена в auth-cookie.
+    Требует наличия действующего access-токена в заголовке
+    `Authorization: Bearer <token>`.
 
     Parameters
     ----------
