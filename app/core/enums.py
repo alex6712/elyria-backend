@@ -11,6 +11,8 @@ class APICode(StrEnum):
     ----------
     SUCCESS
         Успех.
+    I_AM_A_TEAPOT
+        Я - чайник.
     RESOURCE_NOT_FOUND
         Ресурс не найден.
     VALIDATION_ERROR
@@ -65,6 +67,9 @@ class APICode(StrEnum):
 
     SUCCESS = "SUCCESS"
     """Когда всё хорошо, ничего не сломалось, а пользователь - молодец."""
+
+    I_AM_A_TEAPOT = "I_AM_A_TEAPOT"
+    """Я - чайник и не могу сварить кофе."""
 
     RESOURCE_NOT_FOUND = "RESOURCE_NOT_FOUND"
     """При попытке доступа к несуществующему ресурсу."""

@@ -2,6 +2,7 @@ from fastapi import APIRouter, status
 from fastapi.responses import PlainTextResponse
 
 from app.core.dependencies.settings import SettingsDependency
+from app.core.enums import APICode
 from app.schemas.v1.responses.app_info import AppInfoResponse
 from app.schemas.v1.responses.standard import StandardResponse
 
@@ -70,8 +71,6 @@ async def app_info(settings: SettingsDependency) -> AppInfoResponse:
     "/robots.txt",
     response_class=PlainTextResponse,
     status_code=status.HTTP_200_OK,
-    summary="Получение файла robots.txt для ботов.",
-    response_description="Файл robots.txt для API",
     include_in_schema=False,
 )
 async def robots_txt(settings: SettingsDependency) -> str:
@@ -91,3 +90,27 @@ async def robots_txt(settings: SettingsDependency) -> str:
         Текст файла robots.txt.
     """
     return settings.ROBOTS_CONTENT
+
+
+@api_root_router.get(
+    "/coffee",
+    response_model=StandardResponse,
+    status_code=status.HTTP_418_IM_A_TEAPOT,
+    include_in_schema=False,
+)
+async def coffee() -> StandardResponse:
+    """Пасхальное яйцо, возвращающее знаменитый ответ "Я - заварочный чайник".
+
+    Эта конечная точка реализует шутливый стандарт *RFC 2324*. Она возвращает
+    ошибку с кодом состояния **418 I'm a teapot**, указывая на то, что данный
+    ресурс является чайником и не может выполнять функции кофеварки.
+
+    Returns
+    -------
+    StandardResponse
+        Объект ответа с кодом ошибки `APICode.I_AM_A_TEAPOT` и сообщением
+        'I cannot brew coffee, I am a teapot.'.
+    """
+    return StandardResponse(
+        code=APICode.I_AM_A_TEAPOT, detail="I cannot brew coffee, I am a teapot."
+    )
