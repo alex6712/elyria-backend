@@ -47,18 +47,10 @@ async def get_albums(
         ),
     ] = DEFAULT_OFFSET,
     limit: Annotated[
-        int,
-        Query(
-            ge=1,
-            le=MAX_LIMIT,
-            description="Количество возвращаемых альбомов.",
-        ),
+        int, Query(ge=1, le=MAX_LIMIT, description="Количество возвращаемых альбомов.")
     ] = DEFAULT_LIMIT,
     order: Annotated[
-        SortOrder,
-        Query(
-            description="Направление сортировки альбомов.",
-        ),
+        SortOrder, Query(description="Направление сортировки альбомов.")
     ] = SortOrder.ASC,
 ) -> AlbumsResponse:
     """Получение списка всех доступных пользователю медиа альбомов с пагинацией.
@@ -108,7 +100,7 @@ async def get_albums(
     summary="Создать новый медиа альбом.",
     response_description="Медиа-альбом создан успешно",
 )
-async def post_albums(
+async def post_album(
     body: Annotated[
         CreateAlbumRequest, Body(description="Схема получения данных о медиа альбоме.")
     ],
@@ -174,12 +166,7 @@ async def search_albums(
         ),
     ] = DEFAULT_OFFSET,
     limit: Annotated[
-        int,
-        Query(
-            ge=1,
-            le=MAX_LIMIT,
-            description="Количество возвращаемых альбомов.",
-        ),
+        int, Query(ge=1, le=MAX_LIMIT, description="Количество возвращаемых альбомов.")
     ] = DEFAULT_LIMIT,
 ) -> AlbumsResponse:
     """Поиск альбомов по переданному тексту.
@@ -246,12 +233,7 @@ async def get_album(
         ),
     ] = DEFAULT_OFFSET,
     limit: Annotated[
-        int,
-        Query(
-            ge=1,
-            le=MAX_LIMIT,
-            description="Количество возвращаемых элементов.",
-        ),
+        int, Query(ge=1, le=MAX_LIMIT, description="Количество возвращаемых элементов.")
     ] = 20,
 ) -> AlbumResponse:
     """Получение подробной информации о медиа-альбоме.
@@ -355,8 +337,7 @@ async def patch_album(
 
 @router.delete(
     "/{album_id}",
-    response_model=StandardResponse,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Удаление медиа альбома по его UUID.",
     response_description="Медиа-альбом удалён успешно",
 )
@@ -364,7 +345,7 @@ async def delete_album(
     album_id: Annotated[UUID, Path(description="UUID медиа альбома к удалению.")],
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
-) -> StandardResponse:
+) -> None:
     """Удаление медиа альбома по его UUID.
 
     Проверяет права владения текущего пользователя над альбомом с
@@ -383,15 +364,8 @@ async def delete_album(
     payload : AccessTokenPayload
         Полезная нагрузка (payload) токена доступа.
         Получена автоматически из зависимости на строгую аутентификацию.
-
-    Returns
-    -------
-    StandardResponse
-        Ответ о результате удаления медиа альбома.
     """
     await services.album.delete_album(album_id, payload.sub)
-
-    return StandardResponse(detail="Album entry deleted successfully.")
 
 
 @router.patch(

@@ -56,18 +56,10 @@ async def get_files(
         ),
     ] = DEFAULT_OFFSET,
     limit: Annotated[
-        int,
-        Query(
-            ge=1,
-            le=MAX_LIMIT,
-            description="Количество возвращаемых файлов.",
-        ),
+        int, Query(ge=1, le=MAX_LIMIT, description="Количество возвращаемых файлов.")
     ] = DEFAULT_LIMIT,
     order: Annotated[
-        SortOrder,
-        Query(
-            description="Направление сортировки файлов.",
-        ),
+        SortOrder, Query(description="Направление сортировки файлов.")
     ] = SortOrder.ASC,
 ) -> FilesResponse:
     """Получение списка всех доступных пользователю медиа файлов с пагинацией.
@@ -119,7 +111,7 @@ async def get_files(
     summary="Получение количества всех доступных пользователю медиа файлов.",
     response_description="Количество доступных пользователю медиа файлов.",
 )
-async def count(
+async def count_files(
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
     partner_id: PartnerIdDependency,
@@ -200,15 +192,10 @@ async def upload(
         Успешный ответ о генерации presigned-url.
     """
     url = await services.file.get_upload_presigned_url(
-        FileMetadataDTO.model_validate(body.model_dump()),
-        payload.sub,
-        idempotency_key,
+        FileMetadataDTO.model_validate(body.model_dump()), payload.sub, idempotency_key
     )
 
-    return PresignedURLResponse(
-        url=url,
-        detail="Presigned URL generated successfully.",
-    )
+    return PresignedURLResponse(url=url, detail="Presigned URL generated successfully.")
 
 
 @router.post(
@@ -322,10 +309,7 @@ async def upload_confirm(
     response_description="URL для скачивания получена успешно",
 )
 async def download(
-    file_id: Annotated[
-        UUID,
-        Path(description="UUID файла для скачивания на клиент."),
-    ],
+    file_id: Annotated[UUID, Path(description="UUID файла для скачивания на клиент.")],
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
     partner_id: PartnerIdDependency,
@@ -464,9 +448,7 @@ async def patch_file(
         Ответ о результате изменения медиа файла.
     """
     await services.file.update_file(
-        file_id,
-        UpdateFileDTO.from_request_schema(body),
-        payload.sub,
+        file_id, UpdateFileDTO.from_request_schema(body), payload.sub
     )
 
     return StandardResponse(detail="File info edited successfully.")
@@ -474,19 +456,15 @@ async def patch_file(
 
 @router.delete(
     "/{file_id}",
-    response_model=StandardResponse,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Удаление медиа-файла из системы.",
     response_description="Файл удалён успешно",
 )
 async def delete_file(
-    file_id: Annotated[
-        UUID,
-        Path(description="UUID файла для удаления."),
-    ],
+    file_id: Annotated[UUID, Path(description="UUID файла для удаления.")],
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
-) -> StandardResponse:
+) -> None:
     """Удаление медиа-файла по его UUID.
 
     Удаляет файл по переданному UUID, что открепляет его от файла.
@@ -505,12 +483,5 @@ async def delete_file(
     payload : AccessTokenPayload
         Полезная нагрузка (payload) токена доступа.
         Получена автоматически из зависимости на строгую аутентификацию.
-
-    Returns
-    -------
-    StandardResponse
-        Успешный ответ об удалении медиа-файла.
     """
     await services.file.delete_file(file_id, payload.sub)
-
-    return StandardResponse(detail="File deleted successfully.")

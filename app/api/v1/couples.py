@@ -24,8 +24,7 @@ router = APIRouter(
     response_description="Информация о паре текущего пользователя",
 )
 async def get_couple(
-    services: ServiceManagerDependency,
-    payload: StrictAuthenticationDependency,
+    services: ServiceManagerDependency, payload: StrictAuthenticationDependency
 ) -> CoupleResponse:
     """Запрос на получение информации о паре текущего пользователя.
 
@@ -197,8 +196,7 @@ async def decline_request(
     response_description="Список текущих приглашений в пару",
 )
 async def get_requests(
-    services: ServiceManagerDependency,
-    payload: StrictAuthenticationDependency,
+    services: ServiceManagerDependency, payload: StrictAuthenticationDependency
 ) -> CoupleRequestsResponse:
     """Получение списка текущих приглашений.
 

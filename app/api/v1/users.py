@@ -26,8 +26,7 @@ router = APIRouter(prefix="/users", tags=["users"])
     responses={401: AUTHORIZATION_ERROR_REF},
 )
 async def get_me(
-    services: ServiceManagerDependency,
-    payload: StrictAuthenticationDependency,
+    services: ServiceManagerDependency, payload: StrictAuthenticationDependency
 ) -> UserResponse:
     """Запрос на получение информации о пользователе.
 

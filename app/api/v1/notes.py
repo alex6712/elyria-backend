@@ -42,18 +42,10 @@ async def get_notes(
         ),
     ] = DEFAULT_OFFSET,
     limit: Annotated[
-        int,
-        Query(
-            ge=1,
-            le=MAX_LIMIT,
-            description="Количество возвращаемых заметок.",
-        ),
+        int, Query(ge=1, le=MAX_LIMIT, description="Количество возвращаемых заметок.")
     ] = DEFAULT_LIMIT,
     order: Annotated[
-        SortOrder,
-        Query(
-            description="Направление сортировки заметок.",
-        ),
+        SortOrder, Query(description="Направление сортировки заметок.")
     ] = SortOrder.ASC,
 ) -> NotesResponse:
     """Получение списка всех доступных пользователю заметок с пагинацией.
@@ -105,7 +97,7 @@ async def get_notes(
     summary="Создание пользовательской заметки.",
     response_description="Заметка создана успешно",
 )
-async def post_notes(
+async def post_note(
     body: Annotated[
         CreateNoteRequest, Body(description="Схема получения данных о заметке.")
     ],
@@ -150,7 +142,7 @@ async def post_notes(
     summary="Получение количества всех доступных пользователю заметок.",
     response_description="Количество доступных пользователю заметок.",
 )
-async def count(
+async def count_notes(
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
     partner_id: PartnerIdDependency,
@@ -192,7 +184,7 @@ async def count(
     summary="Частичное изменение пользовательской заметки.",
     response_description="Заметка успешно изменена",
 )
-async def patch_notes(
+async def patch_note(
     note_id: Annotated[UUID, Path(description="UUID изменяемой заметки.")],
     body: Annotated[
         PatchNoteRequest, Body(description="Схема частичного обновления заметки.")
@@ -233,10 +225,7 @@ async def patch_notes(
         Успешный ответ о результате изменения заметки.
     """
     await services.note.update_note(
-        note_id,
-        UpdateNoteDTO.from_request_schema(body),
-        payload.sub,
-        partner_id,
+        note_id, UpdateNoteDTO.from_request_schema(body), payload.sub, partner_id
     )
 
     return StandardResponse(detail="Note content updated successfully.")
@@ -244,16 +233,15 @@ async def patch_notes(
 
 @router.delete(
     "/{note_id}",
-    response_model=StandardResponse,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Удаление пользовательской заметки.",
-    response_description="Заметка успешно изменено",
+    response_description="Заметка успешно удалена",
 )
-async def delete_notes(
+async def delete_note(
     note_id: Annotated[UUID, Path(description="UUID изменяемой заметки.")],
     services: ServiceManagerDependency,
     payload: StrictAuthenticationDependency,
-) -> StandardResponse:
+) -> None:
     """Удаление пользовательской заметки.
 
     Проверяет права владения текущего пользователя над заметкой с
@@ -272,12 +260,5 @@ async def delete_notes(
     payload : AccessTokenPayload
         Полезная нагрузка (payload) токена доступа.
         Получена автоматически из зависимости на строгую аутентификацию.
-
-    Returns
-    -------
-    StandardResponse
-        Успешный ответ об удалении заметки.
     """
     await services.note.delete_note(note_id, payload.sub)
-
-    return StandardResponse(detail="Note deleted successfully.")
