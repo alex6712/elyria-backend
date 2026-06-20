@@ -7,7 +7,7 @@ from app.core.enums import IdempotencyStatus
 from app.core.types import TokenType
 from app.schemas.dto.idempotency_key import IdempotencyKeyDTO
 
-settings = get_settings()
+_settings = get_settings()
 
 
 class RedisClient:
@@ -435,6 +435,6 @@ class RedisClient:
 
 
 redis_client = RedisClient(
-    redis_url=settings.REDIS_URL.unicode_string(),
+    redis_url=_settings.REDIS_URL.unicode_string(),
 )
 """Project-wide клиент Redis, предоставляющий методы работы с хранилищем."""

@@ -2,10 +2,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config import get_settings
 
-settings = get_settings()
-
 async_engine = create_async_engine(
-    url=settings.POSTGRES_DSN.unicode_string(),
+    url=get_settings().POSTGRES_DSN.unicode_string(),
     echo=False,
     pool_pre_ping=True,
     pool_size=10,

@@ -8,11 +8,11 @@ from app.config import get_settings
 if TYPE_CHECKING:
     from types_aiobotocore_s3 import S3Client
 
-settings = get_settings()
+_settings = get_settings()
 
 _session = aioboto3.Session(
-    aws_access_key_id=settings.MINIO_ROOT_USER,
-    aws_secret_access_key=settings.MINIO_ROOT_PASSWORD,
+    aws_access_key_id=_settings.MINIO_ROOT_USER,
+    aws_secret_access_key=_settings.MINIO_ROOT_PASSWORD,
 )
 """Project-wide сессия подключения к объектному хранилищу."""
 
@@ -31,7 +31,7 @@ async def get_s3_client() -> AsyncGenerator["S3Client", None]:
     """
     async with _session.client(  # type: ignore
         "s3",
-        endpoint_url=settings.MINIO_HOST.unicode_string(),
+        endpoint_url=_settings.MINIO_HOST.unicode_string(),
         config=aioboto3.session.AioConfig(  # type: ignore
             signature_version="s3v4",
             s3={"addressing_style": "path"},

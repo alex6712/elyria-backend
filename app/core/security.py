@@ -26,7 +26,7 @@ from app.schemas.dto.payload import (
     RefreshTokenPayload,
 )
 
-settings = get_settings()
+_settings = get_settings()
 
 
 def _jwt_encode(payload: AnyTokenPayload) -> str:
@@ -44,12 +44,12 @@ def _jwt_encode(payload: AnyTokenPayload) -> str:
     """
     return jwt.encode(
         payload.to_jwt_payload(),
-        key=settings.PRIVATE_SIGNATURE_KEY.private_bytes(
+        key=_settings.PRIVATE_SIGNATURE_KEY.private_bytes(
             encoding=Encoding.PEM,
             format=PrivateFormat.PKCS8,
             encryption_algorithm=NoEncryption(),
         ),
-        algorithm=settings.JWT_ALGORITHM,
+        algorithm=_settings.JWT_ALGORITHM,
     )
 
 
@@ -76,10 +76,10 @@ def jwt_decode(token: str, token_type: TokenType) -> AnyTokenPayload:
     """
     decoded = jwt.decode(
         token,
-        key=settings.PUBLIC_SIGNATURE_KEY.public_bytes(
+        key=_settings.PUBLIC_SIGNATURE_KEY.public_bytes(
             Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
         ),
-        algorithms=[settings.JWT_ALGORITHM],
+        algorithms=[_settings.JWT_ALGORITHM],
     )
 
     if token_type == "access":
@@ -383,7 +383,7 @@ def verify(
 
 
 def hash_token(
-    token: str, secret_key: bytes = settings.HMAC_SECRET_KEY.encode()
+    token: str, secret_key: bytes = _settings.HMAC_SECRET_KEY.encode()
 ) -> str:
     """Создаёт детерминированный HMAC-SHA256 хеш токена.
 

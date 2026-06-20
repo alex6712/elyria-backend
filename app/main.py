@@ -29,7 +29,7 @@ from app.infra.redis import redis_client
 from app.infra.s3 import get_s3_client
 from app.schemas.v1.responses.validation_error import ValidationErrorResponse
 
-settings = get_settings()
+_settings = get_settings()
 
 tags_metadata = [
     {
@@ -93,12 +93,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
 
     async with get_s3_client() as s3_client:
         try:
-            await s3_client.head_bucket(Bucket=settings.MINIO_BUCKET_NAME)
+            await s3_client.head_bucket(Bucket=_settings.MINIO_BUCKET_NAME)
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
 
             if error_code in ("404", "NoSuchBucket"):
-                await s3_client.create_bucket(Bucket=settings.MINIO_BUCKET_NAME)
+                await s3_client.create_bucket(Bucket=_settings.MINIO_BUCKET_NAME)
             else:
                 raise
 
@@ -111,21 +111,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
 
 
 my_love_backend = FastAPI(
-    title=settings.APP_NAME,
-    summary=settings.APP_SUMMARY,
-    description=settings.APP_DESCRIPTION,
-    version=settings.APP_VERSION,
+    title=_settings.APP_NAME,
+    summary=_settings.APP_SUMMARY,
+    description=_settings.APP_DESCRIPTION,
+    version=_settings.APP_VERSION,
     openapi_tags=tags_metadata,
     lifespan=lifespan,
     contact={
-        "name": settings.ADMIN_NAME,
-        "email": settings.ADMIN_EMAIL,
+        "name": _settings.ADMIN_NAME,
+        "email": _settings.ADMIN_EMAIL,
     },
 )
 
 my_love_backend.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=_settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -159,21 +159,21 @@ def custom_openapi() -> dict[str, Any]:
     - RateLimitError: Превышение лимитов запросов;
     - RegisterError: Ошибки регистрации.
 
-    Все настройки (название, версия, контакты) берутся из объекта `settings`.
+    Все настройки (название, версия, контакты) берутся из объекта `_settings`.
     """
     if my_love_backend.openapi_schema:
         return my_love_backend.openapi_schema
 
     openapi_schema = get_openapi(
-        title=settings.APP_NAME,
-        version=settings.APP_VERSION,
-        summary=settings.APP_SUMMARY,
-        description=settings.APP_DESCRIPTION,
+        title=_settings.APP_NAME,
+        version=_settings.APP_VERSION,
+        summary=_settings.APP_SUMMARY,
+        description=_settings.APP_DESCRIPTION,
         routes=my_love_backend.routes,
         tags=tags_metadata,
         contact={
-            "name": settings.ADMIN_NAME,
-            "email": settings.ADMIN_EMAIL,
+            "name": _settings.ADMIN_NAME,
+            "email": _settings.ADMIN_EMAIL,
         },
     )
 
