@@ -27,12 +27,14 @@ async def get_dashboard(
 
     Этот эндпоинт возвращает:
     - Количество всех доступных пользователю медиафайлов (`files_count`);
-    - Количество заметок пользователя (`notes_count`).
+    - Количество заметок пользователя (`notes_count`);
+    - Реальную дату начала отношений, если у пользователя есть пара.
 
     Данные формируются путём последовательного вызова методов соответствующих сервисов:
-    - `services.file.count_files(user_id)` - возвращает количество медиафайлов,
+    - `services.file.count_files(...)` - возвращает количество медиафайлов,
         включая файлы партнёра.
-    - `services.note.count_notes(user_id)` - возвращает количество заметок пользователя.
+    - `services.note.count_notes(...)` - возвращает количество заметок пользователя;
+    - `services.couple.get_couple(...)` - возвращает данные по текущей паре пользователя.
 
     Используется кэш Redis при наличии (cash hit).
 
@@ -59,9 +61,11 @@ async def get_dashboard(
 
     files_count = await services.file.count_files(user_id, partner_id)
     notes_count = await services.note.count_notes(user_id, partner_id)
+    couple = await services.couple.get_couple(user_id)
 
     return DashboardResponse(
         files_count=files_count,
         notes_count=notes_count,
+        relationship_started_on=couple.relationship_started_on if couple else None,
         detail="Data for dashboard aggregated successfully.",
     )

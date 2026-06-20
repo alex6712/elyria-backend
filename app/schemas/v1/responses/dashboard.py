@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic import Field
 
 from app.schemas.v1.responses.standard import StandardResponse
@@ -17,6 +19,8 @@ class DashboardResponse(StandardResponse):
     notes_count : int
         Общее количество заметок, доступных пользователю, включая заметки партнёра.
         Значение может быть закэшировано через Redis для ускорения ответа.
+    relationship_started_on : date | None
+        Реальная дата начала отношений.
     """
 
     files_count: int = Field(
@@ -26,4 +30,8 @@ class DashboardResponse(StandardResponse):
     notes_count: int = Field(
         description="Количество заметок, созданных пользователем.",
         examples=[33, 1, 321],
+    )
+    relationship_started_on: date | None = Field(
+        description="Реальная дата начала отношений.",
+        examples=["2021-01-01"],
     )
