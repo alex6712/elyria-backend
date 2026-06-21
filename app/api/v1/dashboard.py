@@ -28,7 +28,7 @@ async def get_dashboard(
     Этот эндпоинт возвращает:
     - Количество всех доступных пользователю медиафайлов (`files_count`);
     - Количество заметок пользователя (`notes_count`);
-    - Реальную дату начала отношений, если у пользователя есть пара.
+    - Реальную дату начала отношений, если у пользователя есть пара (`relationship_started_on`).
 
     Данные формируются путём последовательного вызова методов соответствующих сервисов:
     - `services.file.count_files(...)` - возвращает количество медиафайлов,
@@ -64,8 +64,8 @@ async def get_dashboard(
     couple = await services.couple.get_couple(user_id)
 
     return DashboardResponse(
+        detail="Data for dashboard aggregated successfully.",
         files_count=files_count,
         notes_count=notes_count,
         relationship_started_on=couple.relationship_started_on if couple else None,
-        detail="Data for dashboard aggregated successfully.",
     )
