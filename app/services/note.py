@@ -1,4 +1,3 @@
-import asyncio
 from uuid import UUID
 
 from app.core.enums import NoteType, SortOrder
@@ -102,17 +101,16 @@ class NoteService:
         tuple[list[NoteDTO], int]
             Кортеж из списка заметок и общего количества.
         """
-        return await asyncio.gather(
-            self._note_repo.read_many(
-                FilterManyNotesDTO(types=[note_type])
-                if note_type
-                else FilterManyNotesDTO(),
-                CoupleAccessContext(user_id=user_id, partner_id=partner_id),
-                offset=offset,
-                limit=limit,
-                sort_order=sort_order,
-            ),
-            self.count_notes(user_id, partner_id, [note_type] if note_type else None),
+        return await self._note_repo.read_many(
+            FilterManyNotesDTO(types=[note_type])
+            if note_type
+            else FilterManyNotesDTO(),
+            CoupleAccessContext(user_id=user_id, partner_id=partner_id),
+            offset=offset,
+            limit=limit,
+            sort_order=sort_order,
+        ), await self.count_notes(
+            user_id, partner_id, [note_type] if note_type else None
         )
 
     async def count_notes(

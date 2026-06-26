@@ -322,16 +322,13 @@ class FileService:
         tuple[list[InternalFileDTO], int]
             Кортеж из списка файлов и общего количества.
         """
-        return await asyncio.gather(
-            self._file_repo.read_many(
-                FilterManyFilesDTO(),
-                CoupleAccessContext(user_id=user_id, partner_id=partner_id),
-                offset=offset,
-                limit=limit,
-                sort_order=sort_order,
-            ),
-            self.count_files(user_id, partner_id),
-        )
+        return await self._file_repo.read_many(
+            FilterManyFilesDTO(),
+            CoupleAccessContext(user_id=user_id, partner_id=partner_id),
+            offset=offset,
+            limit=limit,
+            sort_order=sort_order,
+        ), await self.count_files(user_id, partner_id)
 
     async def count_files(self, user_id: UUID, partner_id: UUID | None) -> int:
         """Получение количества всех доступных пользователю медиафайлов.
@@ -364,10 +361,7 @@ class FileService:
         return count
 
     async def get_upload_presigned_url(
-        self,
-        file_metadata: FileMetadataDTO,
-        user_id: UUID,
-        idempotency_key: UUID,
+        self, file_metadata: FileMetadataDTO, user_id: UUID, idempotency_key: UUID
     ) -> PresignedURLWithRefDTO:
         """Получение presigned-url для загрузки файла напрямую в S3.
 
@@ -552,7 +546,9 @@ class FileService:
 
         successful: list[PresignedURLWithRefDTO] = []
         failed_file_ids: list[UUID] = []
-        for dto, metadata, result in zip(create_dtos, valid_files, results):
+        for dto, metadata, result in zip(
+            create_dtos, valid_files, results, strict=True
+        ):
             if isinstance(result, BaseException):
                 failed_file_ids.append(dto.id)
 
@@ -844,7 +840,7 @@ class FileService:
         )
 
         successful: list[PresignedURLDTO] = []
-        for file, result in zip(valid_files, results):
+        for file, result in zip(valid_files, results, strict=True):
             if isinstance(result, BaseException):
                 failed.append(
                     DownloadFileErrorDTO(
