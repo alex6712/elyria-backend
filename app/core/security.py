@@ -474,11 +474,7 @@ def encrypt_data(
 
 
 def decrypt_data(
-    key: bytes,
-    ciphertext: bytes,
-    iv: bytes,
-    tag: bytes,
-    aad: bytes | None = None,
+    key: bytes, ciphertext: bytes, iv: bytes, tag: bytes, aad: bytes | None = None
 ) -> str:
     """Дешифрует ранее зашифрованные данные.
 

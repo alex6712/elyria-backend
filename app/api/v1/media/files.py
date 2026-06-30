@@ -12,6 +12,7 @@ from app.core.docs import AUTHORIZATION_ERROR_REF, IDEMPOTENCY_CONFLICT_ERROR_RE
 from app.core.enums import SortOrder
 from app.schemas.dto.file import (
     FileMetadataDTO,
+    FileMetadataWithRefDTO,
     PublicFileDTO,
     UpdateFileDTO,
 )
@@ -244,7 +245,10 @@ async def upload_batch(
         Успешный ответ о генерации presigned-url.
     """
     successful, failed = await services.file.get_upload_presigned_urls(
-        [FileMetadataDTO.model_validate(m.model_dump()) for m in body.files_metadata],
+        [
+            FileMetadataWithRefDTO.model_validate(m.model_dump())
+            for m in body.files_metadata
+        ],
         payload.sub,
         idempotency_key,
     )

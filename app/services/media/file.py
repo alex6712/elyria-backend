@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import TYPE_CHECKING, Literal, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 from uuid import UUID, uuid4
 
 from botocore.exceptions import ClientError
@@ -39,6 +39,7 @@ from app.schemas.dto.file import (
     CreateFileDTO,
     DownloadFileErrorDTO,
     FileMetadataDTO,
+    FileMetadataWithRefDTO,
     FilterManyFilesDTO,
     FilterOneFileDTO,
     InternalFileDTO,
@@ -49,6 +50,8 @@ from app.schemas.dto.presigned_url import PresignedURLDTO, PresignedURLWithRefDT
 
 if TYPE_CHECKING:
     from types_aiobotocore_s3 import S3Client
+
+_TFileMetadata = TypeVar("_TFileMetadata", FileMetadataDTO, FileMetadataWithRefDTO)
 
 type UploadFilesResult = tuple[list[PresignedURLWithRefDTO], list[UploadFileErrorDTO]]
 """Тип результата операции пакетной выгрузки файлов.
@@ -261,27 +264,46 @@ class FileService:
 
         return created, response
 
-    def _serialize_idempotency_response(
-        self, successful: list[PresignedURLWithRefDTO], failed: list[UploadFileErrorDTO]
-    ) -> str:
-        """Сериализует результат операции в JSON-строку для сохранения в кэше идемпотентности.
+    def _serialize_single_response(self, successful: PresignedURLDTO) -> str:
+        """Сериализует результат успешной операции в JSON-строку.
 
-        Формирует структуру с двумя ключами: successful и failed,
-        каждый из которых содержит список JSON-сериализованных DTO.
-        Используется перед вызовом finalize_idempotency_key.
+        Используется перед вызовом finalize_idempotency_key для сохранения
+        результата обработки одиночного файла в кэше идемпотентности.
 
         Parameters
         ----------
-        successful : list[PresignedURLWithRefDTO]
-            Список успешно сгенерированных presigned URLs.
-        failed : list[UploadFileErrorDTO]
-            Список ошибок для файлов, которые не удалось обработать.
+        successful : PresignedURLDTO
+            DTO с данными успешно сгенерированного presigned URL.
 
         Returns
         -------
         str
-            JSON-строка вида:
-            {"successful": ["<json>", ...], "failed": ["<json>", ...]}.
+            JSON-представление объекта `PresignedURLDTO`.
+        """
+        return successful.model_dump_json()
+
+    def _serialize_batch_response(
+        self, successful: list[PresignedURLWithRefDTO], failed: list[UploadFileErrorDTO]
+    ) -> str:
+        """Сериализует результат пакетной операции в JSON-строку.
+
+        Формирует JSON-объект с двумя ключами: `successful` и `failed`,
+        содержащими списки JSON-представлений соответствующих DTO.
+        Используется перед вызовом `finalize_idempotency_key` для сохранения
+        результата обработки нескольких файлов в кэше идемпотентности.
+
+        Parameters
+        ----------
+        successful : list[PresignedURLWithRefDTO]
+            Список DTO для файлов, для которых успешно сгенерированы presigned URLs.
+        failed : list[UploadFileErrorDTO]
+            Список DTO с информацией об ошибках обработки файлов.
+
+        Returns
+        -------
+        str
+            JSON-строка вида
+            `{"successful": ["<json>", ...], "failed": ["<json>", ...]}`.
         """
         return json.dumps(
             {
@@ -362,7 +384,7 @@ class FileService:
 
     async def get_upload_presigned_url(
         self, file_metadata: FileMetadataDTO, user_id: UUID, idempotency_key: UUID
-    ) -> PresignedURLWithRefDTO:
+    ) -> PresignedURLDTO:
         """Получение presigned-url для загрузки файла напрямую в S3.
 
         Принимает дополнительные данные о файле для сохранения записи.
@@ -399,17 +421,18 @@ class FileService:
             idem_scope, user_id, idempotency_key, not_null=True
         )
         if not is_new:
-            raws = json.loads(cached)
-            return PresignedURLWithRefDTO.model_validate_json(raws["successful"][0])
+            return PresignedURLDTO.model_validate_json(cached)
 
         validated_file = self._validate_file_for_upload(file_metadata)
 
-        create_dto = CreateFileDTO(
-            **validated_file.model_dump(exclude={"client_ref_id"}),
-            id=uuid4(),
-            object_key=self._generate_object_key(user_id, uuid4()),
-            status=FileStatus.PENDING,
-            created_by=user_id,
+        create_dto = CreateFileDTO.model_validate(
+            {
+                **validated_file.model_dump(),
+                "id": uuid4(),
+                "object_key": self._generate_object_key(user_id, uuid4()),
+                "status": FileStatus.PENDING,
+                "created_by": user_id,
+            }
         )
         await self._file_repo.create_one(create_dto)
 
@@ -424,28 +447,24 @@ class FileService:
             )
         except Exception as exc:
             raise FilePresignedUrlGenerationFailedException(
-                detail=f"Failed to generate presigned URL for file with client_ref_id={file_metadata.client_ref_id}.",
+                detail="Failed to generate presigned URL for uploading file."
             ) from exc
 
-        result = PresignedURLWithRefDTO(
-            file_id=create_dto.id,
-            presigned_url=AnyHttpUrl(url),
-            client_ref_id=file_metadata.client_ref_id,
-        )
+        result = PresignedURLDTO(file_id=create_dto.id, presigned_url=AnyHttpUrl(url))
 
         await self._redis_client.finalize_idempotency_key(
             scope=idem_scope,
             user_id=user_id,
             key=idempotency_key,
             ttl=self._IDEMPOTENCY_KEY_TTL,
-            response=self._serialize_idempotency_response([result], []),
+            response=self._serialize_single_response(result),
         )
 
         return result
 
     async def get_upload_presigned_urls(
         self,
-        files_metadata: list[FileMetadataDTO],
+        files_metadata: list[FileMetadataWithRefDTO],
         user_id: UUID,
         idempotency_key: UUID,
     ) -> UploadFilesResult:
@@ -460,7 +479,7 @@ class FileService:
 
         Parameters
         ----------
-        files_metadata : list[FileMetadataDTO]
+        files_metadata : list[FileMetadataWithRefDTO]
             Список метаданных загружаемых файлов.
         user_id : UUID
             UUID пользователя, загружающего файлы.
@@ -495,7 +514,7 @@ class FileService:
                 [UploadFileErrorDTO.model_validate_json(r) for r in raws["failed"]],
             )
 
-        valid_files: list[FileMetadataDTO] = []
+        valid_files: list[FileMetadataWithRefDTO] = []
         failed: list[UploadFileErrorDTO] = []
         for metadata in files_metadata:
             try:
@@ -511,19 +530,21 @@ class FileService:
                 user_id=user_id,
                 key=idempotency_key,
                 ttl=self._IDEMPOTENCY_KEY_TTL,
-                response=self._serialize_idempotency_response([], failed),
+                response=self._serialize_batch_response([], failed),
             )
             return [], failed
 
         batch_id = uuid4()
 
         create_dtos = [
-            CreateFileDTO(
-                **metadata.model_dump(exclude={"client_ref_id"}),
-                id=uuid4(),
-                object_key=self._generate_object_key(user_id, batch_id),
-                status=FileStatus.PENDING,
-                created_by=user_id,
+            CreateFileDTO.model_validate(
+                {
+                    **metadata.model_dump(),
+                    "id": uuid4(),
+                    "object_key": self._generate_object_key(user_id, batch_id),
+                    "status": FileStatus.PENDING,
+                    "created_by": user_id,
+                }
             )
             for metadata in valid_files
         ]
@@ -579,24 +600,24 @@ class FileService:
             user_id=user_id,
             key=idempotency_key,
             ttl=self._IDEMPOTENCY_KEY_TTL,
-            response=self._serialize_idempotency_response(successful, failed),
+            response=self._serialize_batch_response(successful, failed),
         )
 
         return successful, failed
 
     def _validate_file_for_upload(
-        self, file_metadata: FileMetadataDTO
-    ) -> FileMetadataDTO:
+        self, file_metadata: _TFileMetadata
+    ) -> _TFileMetadata:
         """Проверяет, что тип файла входит в список поддерживаемых.
 
         Parameters
         ----------
-        file_metadata : FileMetadataDTO
+        file_metadata : _TFileMetadata
             Метаданные файла для валидации.
 
         Returns
         -------
-        FileMetadataDTO
+        _TFileMetadata
             Те же метаданные, если файл прошёл проверку.
 
         Raises

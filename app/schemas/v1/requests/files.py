@@ -11,8 +11,6 @@ class UploadFileRequest(BaseModel):
 
     Attributes
     ----------
-    client_ref_id : str
-        Произвольный клиентский идентификатор для корреляции результата.
     content_type : str
         MIME-тип отправляемого файла.
     title : str
@@ -21,10 +19,6 @@ class UploadFileRequest(BaseModel):
         Описание медиафайла.
     """
 
-    client_ref_id: str = Field(
-        description="Произвольный клиентский идентификатор для корреляции результата.",
-        examples=["file-upload-1"],
-    )
     content_type: str = Field(
         description="MIME-тип отправляемого файла.",
         examples=["image/png"],
@@ -39,17 +33,37 @@ class UploadFileRequest(BaseModel):
     )
 
 
+class _UploadFileInBatchRequest(UploadFileRequest):
+    """Схема запроса на получение presigned URL для загрузки файла
+    в составе batch-запроса.
+
+    Имеет дополнительный параметр `client_ref_id` для идентификации
+    новых файлов без установленных `file_id`. Нужен только в рамках
+    операции загрузки файлов для корреляции результата.
+
+    Attributes
+    ----------
+    client_ref_id : str
+        Произвольный клиентский идентификатор для корреляции результата.
+    """
+
+    client_ref_id: str = Field(
+        description="Произвольный клиентский идентификатор для корреляции результата.",
+        examples=["file-upload-1"],
+    )
+
+
 class UploadFilesBatchRequest(BaseModel):
     """Схема запроса на получение Presigned URL загрузки пакета файлов.
 
     Attributes
     ----------
-    files_metadata : list[UploadFileRequest]
+    files_metadata : list[_UploadFileInBatchRequest]
         Метаданные для каждого файла.
         Ограничения: минимум один элемент, максимум `MAX_LIMIT` элементов.
     """
 
-    files_metadata: list[UploadFileRequest] = Field(
+    files_metadata: list[_UploadFileInBatchRequest] = Field(
         description="Метаданные для каждого файла.",
         min_length=1,
         max_length=MAX_LIMIT,

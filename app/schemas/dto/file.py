@@ -16,7 +16,7 @@ from app.schemas.dto.base import (
 from app.schemas.dto.user import CreatorDTO
 
 
-class InternalFileMetadataDTO(BaseDTO):
+class FileMetadataDTO(BaseDTO):
     """Базовое DTO для представления метаданных медиафайла.
 
     Attributes
@@ -37,8 +37,8 @@ class InternalFileMetadataDTO(BaseDTO):
     geo_data: dict[str, Any] | None = None
 
 
-class FileMetadataDTO(InternalFileMetadataDTO):
-    """DTO для представления метаданных медиафайла.
+class FileMetadataWithRefDTO(FileMetadataDTO):
+    """DTO для представления метаданных медиафайла с обратным корреляционным идентификатором.
 
     Attributes
     ----------
@@ -49,7 +49,7 @@ class FileMetadataDTO(InternalFileMetadataDTO):
     client_ref_id: str
 
 
-class PublicFileDTO(BaseSQLCoreDTO, InternalFileMetadataDTO):
+class PublicFileDTO(BaseSQLCoreDTO, FileMetadataDTO):
     """Публичное DTO для представления медиафайла.
 
     Attributes
@@ -123,11 +123,11 @@ class FilterManyFilesDTO(BaseFilterManyDTO):
     statuses: Annotated[Maybe[list[FileStatus]], ColumnAlias("status")] = UNSET
 
 
-class CreateFileDTO(BaseCreateDTO, InternalFileMetadataDTO):
+class CreateFileDTO(BaseCreateDTO, FileMetadataDTO):
     """DTO для создания нового файла.
 
     Объединяет базовые поля создания сущности (`BaseCreateDTO`)
-    и метаданные медиафайла (`InternalFileMetadataDTO`).
+    и метаданные медиафайла (`FileMetadataDTO`).
     Также содержит информацию, необходимую для доступа к
     объекту в файловом хранилище.
 
