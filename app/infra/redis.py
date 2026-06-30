@@ -283,7 +283,9 @@ class RedisClient:
         if await self.client.exists(redis_key):
             await self.client.incr(redis_key)
 
-    async def decrement_count(self, scope: str, user_id: UUID, amount: int = 1) -> None:
+    async def decrement_count(
+        self, scope: str, user_id: UUID, *, amount: int = 1
+    ) -> None:
         """Декрементирует счётчик записей пользователя.
 
         Атомарно уменьшает счётчик на указанное количество.

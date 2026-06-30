@@ -289,7 +289,7 @@ class AlbumService:
 
     async def delete_albums(
         self, album_ids: list[UUID], user_id: UUID
-    ) -> tuple[int, list["DeleteItemErrorDTO"]]:
+    ) -> tuple[int, list[DeleteItemErrorDTO]]:
         """Удаление нескольких медиаальбомов по их UUID.
 
         Получает список UUID медиаальбомов и UUID пользователя,
@@ -316,21 +316,22 @@ class AlbumService:
         existing = await self._album_repo.read_many(
             FilterManyAlbumsDTO(ids=album_ids), access_ctx, limit=len(album_ids)
         )
-        existing_ids = {a.id for a in existing}
+        existing_ids = {album.id for album in existing}
 
+        deleted = 0
         if existing_ids:
-            await self._album_repo.delete_many(
+            deleted = await self._album_repo.delete_many(
                 FilterManyAlbumsDTO(ids=list(existing_ids)), access_ctx
             )
 
-        return len(existing_ids), [
+        return deleted, [
             DeleteItemErrorDTO(
-                id=aid,
+                id=album_id,
                 code=DeleteErrorCode.NOT_FOUND,
-                message=f"Album with id={aid} not found, or you're lack of rights.",
+                message=f"Album with id={album_id} not found, or you're lack of rights.",
             )
-            for aid in album_ids
-            if aid not in existing_ids
+            for album_id in album_ids
+            if album_id not in existing_ids
         ]
 
     async def attach_files(

@@ -263,22 +263,22 @@ class NoteService:
         existing = await self._note_repo.read_many(
             FilterManyNotesDTO(ids=note_ids), access_ctx, limit=len(note_ids)
         )
-        existing_ids = {n.id for n in existing}
+        existing_ids = {note.id for note in existing}
 
+        deleted = 0
         if existing_ids:
-            await self._note_repo.delete_many(
+            deleted = await self._note_repo.delete_many(
                 FilterManyNotesDTO(ids=list(existing_ids)), access_ctx
             )
-            await self._redis_client.decrement_count(
-                "notes", user_id, amount=len(existing_ids)
-            )
 
-        return len(existing_ids), [
+            await self._redis_client.decrement_count("notes", user_id, amount=deleted)
+
+        return deleted, [
             DeleteItemErrorDTO(
-                id=nid,
+                id=note_id,
                 code=DeleteErrorCode.NOT_FOUND,
-                message=f"Note with id={nid} not found, or you're not this note's creator.",
+                message=f"Note with id={note_id} not found, or you're not this note's creator.",
             )
-            for nid in note_ids
-            if nid not in existing_ids
+            for note_id in note_ids
+            if note_id not in existing_ids
         ]

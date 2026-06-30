@@ -1115,8 +1115,9 @@ class FileService:
 
         not_found_ids = [file_id for file_id in file_ids if file_id not in existing_map]
 
+        deleted = 0
         if existing_map:
-            await self._file_repo.delete_many(
+            deleted = await self._file_repo.delete_many(
                 FilterManyFilesDTO(ids=list(existing_map.keys())), access_ctx
             )
 
@@ -1128,11 +1129,9 @@ class FileService:
                 return_exceptions=True,
             )
 
-            await self._redis_client.decrement_count(
-                "files", user_id, amount=len(existing_map)
-            )
+            await self._redis_client.decrement_count("files", user_id, amount=deleted)
 
-        return len(existing_map), [
+        return deleted, [
             DeleteItemErrorDTO(
                 id=file_id,
                 code=DeleteErrorCode.NOT_FOUND,
