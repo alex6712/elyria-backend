@@ -30,7 +30,7 @@ async def health() -> StandardResponse:
 
 
 @api_root_router.get(
-    "/app_info",
+    "/app-info",
     response_model=AppInfoResponse,
     status_code=status.HTTP_200_OK,
     summary="Получение информации о приложении.",
