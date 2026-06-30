@@ -302,7 +302,7 @@ async def upload_confirm(
 
 
 @router.get(
-    "/{file_id}/download",
+    "/download/{file_id}",
     response_model=PresignedURLResponse,
     status_code=status.HTTP_200_OK,
     summary="Получение Presigned URL для получения медиафайла из приватного хранилища.",

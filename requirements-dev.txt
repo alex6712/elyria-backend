@@ -214,7 +214,7 @@ ruff==0.15.20
     # via my-love-backend (pyproject.toml:dev)
 s3transfer==0.14.0
     # via boto3
-sentry-sdk==2.63.0
+sentry-sdk==2.64.0
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
