@@ -8,6 +8,7 @@ from pydantic import AnyHttpUrl
 
 from app.config import Settings
 from app.core.enums import (
+    DeleteErrorCode,
     DownloadFileErrorCode,
     FileStatus,
     IdempotencyStatus,
@@ -35,6 +36,7 @@ from app.infra.redis import RedisClient
 from app.repositories.couple import CoupleRepository
 from app.repositories.interface import CoupleAccessContext, CreatorAccessContext
 from app.repositories.media import FileRepository
+from app.schemas.dto.deletion import DeleteItemErrorDTO
 from app.schemas.dto.file import (
     CreateFileDTO,
     DownloadFileErrorDTO,
@@ -1023,6 +1025,25 @@ class FileService:
                 detail=f"File with id={file_id} not found, or you're not this file's creator.",
             )
 
+    async def _delete_object_from_s3(self, object_key: str) -> None:
+        """Удаляет объект из S3 хранилища.
+
+        Ошибки удаления игнорируются (best-effort),
+        чтобы не прерывать процесс удаления остальных файлов.
+
+        Parameters
+        ----------
+        object_key : str
+            Ключ объекта в S3 хранилище.
+        """
+        try:
+            await self._s3_client.delete_object(
+                Bucket=self._settings.MINIO_BUCKET_NAME,
+                Key=object_key,
+            )
+        except ClientError:
+            pass
+
     async def delete_file(self, file_id: UUID, user_id: UUID) -> None:
         """Удаление файла по его UUID.
 
@@ -1057,12 +1078,65 @@ class FileService:
 
         await self._file_repo.delete_one(filter_dto, access_ctx)
 
-        try:
-            await self._s3_client.delete_object(
-                Bucket=self._settings.MINIO_BUCKET_NAME,
-                Key=file.object_key,
-            )
-        except ClientError:
-            pass
+        await self._delete_object_from_s3(file.object_key)
 
         await self._redis_client.decrement_count("files", user_id)
+
+    async def delete_files(
+        self, file_ids: list[UUID], user_id: UUID
+    ) -> tuple[int, list[DeleteItemErrorDTO]]:
+        """Удаление нескольких медиафайлов по их UUID.
+
+        Получает список UUID медиафайлов и UUID пользователя,
+        совершающего действие удаления. Удаляет только те файлы,
+        которые принадлежат указанному пользователю. Для файлов,
+        которые не найдены или недоступны, формирует список ошибок,
+        не прерывая обработку остальных.
+
+        Parameters
+        ----------
+        file_ids : list[UUID]
+            Список UUID файлов к удалению.
+        user_id : UUID
+            UUID пользователя, запрашивающего удаление.
+
+        Returns
+        -------
+        tuple[int, list[DeleteItemErrorDTO]]
+            Кортеж из количества успешно удалённых файлов
+            и списка ошибок для недоступных файлов.
+        """
+        access_ctx = CreatorAccessContext(user_id=user_id)
+
+        existing = await self._file_repo.read_many(
+            FilterManyFilesDTO(ids=file_ids), access_ctx, limit=len(file_ids)
+        )
+        existing_map = {file.id: file for file in existing}
+
+        not_found_ids = [file_id for file_id in file_ids if file_id not in existing_map]
+
+        if existing_map:
+            await self._file_repo.delete_many(
+                FilterManyFilesDTO(ids=list(existing_map.keys())), access_ctx
+            )
+
+            await asyncio.gather(
+                *[
+                    self._delete_object_from_s3(file.object_key)
+                    for file in existing_map.values()
+                ],
+                return_exceptions=True,
+            )
+
+            await self._redis_client.decrement_count(
+                "files", user_id, amount=len(existing_map)
+            )
+
+        return len(existing_map), [
+            DeleteItemErrorDTO(
+                id=file_id,
+                code=DeleteErrorCode.NOT_FOUND,
+                message=f"File with id={file_id} not found, or you're not this file's creator.",
+            )
+            for file_id in not_found_ids
+        ]

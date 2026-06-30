@@ -355,14 +355,28 @@ class AlbumRepository(
     async def delete_many(
         self, filter_dto: FilterManyAlbumsDTO, access_ctx: AccessContext
     ) -> int:
-        """Не поддерживается для данной сущности.
+        """Удаляет множество записей о медиаальбомах из базы данных.
 
-        Не предусмотрено удаление множества медиаальбомов за одну транзакцию,
-        т.к. такой пользовательский сценарий не существует.
+        Parameters
+        ----------
+        filter_dto : FilterManyAlbumsDTO
+            Параметры фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        int
+            Количество успешно удалённых записей.
         """
-        raise NotImplementedError(
-            "Method 'delete_many' is not implemented in AlbumRepository"
+        result = await self.connection.execute(
+            delete(albums_table).where(
+                *self._build_filter_clauses(filter_dto, albums_table),
+                access_ctx.as_where_clause(albums_table),
+            )
         )
+
+        return result.rowcount
 
     async def count(
         self, filter_dto: FilterManyAlbumsDTO, access_ctx: AccessContext

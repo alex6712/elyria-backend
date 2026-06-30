@@ -1,7 +1,7 @@
 import asyncio
 from uuid import UUID
 
-from app.core.enums import SortOrder
+from app.core.enums import DeleteErrorCode, SortOrder
 from app.core.exceptions.base import NothingToUpdateException
 from app.core.exceptions.media import MediaNotFoundException
 from app.infra.postgres.uow import UnitOfWork
@@ -17,6 +17,7 @@ from app.schemas.dto.album import (
     SearchAlbumDTO,
     UpdateAlbumDTO,
 )
+from app.schemas.dto.deletion import DeleteItemErrorDTO
 
 
 class AlbumService:
@@ -285,6 +286,52 @@ class AlbumService:
                 media_type="album",
                 detail=f"Album with id={album_id} not found, or you're not this album's creator.",
             )
+
+    async def delete_albums(
+        self, album_ids: list[UUID], user_id: UUID
+    ) -> tuple[int, list["DeleteItemErrorDTO"]]:
+        """Удаление нескольких медиаальбомов по их UUID.
+
+        Получает список UUID медиаальбомов и UUID пользователя,
+        совершающего действие удаления. Удаляет только те альбомы,
+        которые принадлежат указанному пользователю. Для альбомов,
+        которые не найдены или недоступны, формирует список ошибок,
+        не прерывая обработку остальных.
+
+        Parameters
+        ----------
+        album_ids : list[UUID]
+            Список UUID альбомов к удалению.
+        user_id : UUID
+            UUID пользователя, запрашивающего удаление.
+
+        Returns
+        -------
+        tuple[int, list[DeleteItemErrorDTO]]
+            Кортеж из количества успешно удалённых альбомов
+            и списка ошибок для недоступных альбомов.
+        """
+        access_ctx = CreatorAccessContext(user_id=user_id)
+
+        existing = await self._album_repo.read_many(
+            FilterManyAlbumsDTO(ids=album_ids), access_ctx, limit=len(album_ids)
+        )
+        existing_ids = {a.id for a in existing}
+
+        if existing_ids:
+            await self._album_repo.delete_many(
+                FilterManyAlbumsDTO(ids=list(existing_ids)), access_ctx
+            )
+
+        return len(existing_ids), [
+            DeleteItemErrorDTO(
+                id=aid,
+                code=DeleteErrorCode.NOT_FOUND,
+                message=f"Album with id={aid} not found, or you're lack of rights.",
+            )
+            for aid in album_ids
+            if aid not in existing_ids
+        ]
 
     async def attach_files(
         self,

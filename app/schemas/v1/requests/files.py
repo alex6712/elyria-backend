@@ -136,3 +136,26 @@ class PatchFileRequest(BaseModel):
         description="Описание медиафайла",
         examples=["Файл смерти: кто прочитал, тот..."],
     )
+
+
+class DeleteFilesBatchRequest(BaseModel):
+    """Схема запроса на пакетное удаление медиафайлов.
+
+    Attributes
+    ----------
+    file_ids : list[UUID]
+        Список UUID медиафайлов для удаления.
+        Ограничения: минимум один UUID, максимум `MAX_LIMIT` UUID.
+    """
+
+    file_ids: list[UUID] = Field(
+        description="Список UUID медиафайлов, которые необходимо удалить.",
+        examples=[
+            [
+                "681cbf12-fe3f-41f4-92f1-c8cb33dfe47e",
+                "f466bb69-bf31-4125-a29a-35166033e4ef",
+            ]
+        ],
+        min_length=1,
+        max_length=MAX_LIMIT,
+    )

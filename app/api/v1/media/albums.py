@@ -17,10 +17,11 @@ from app.schemas.dto.album import (
 from app.schemas.v1.requests.albums import (
     AttachFilesRequest,
     CreateAlbumRequest,
+    DeleteAlbumsBatchRequest,
     PatchAlbumRequest,
 )
 from app.schemas.v1.responses.albums import AlbumResponse, AlbumsResponse
-from app.schemas.v1.responses.standard import StandardResponse
+from app.schemas.v1.responses.standard import DeleteBatchResponse, StandardResponse
 
 router = APIRouter(
     prefix="/albums", tags=["media-albums"], responses={401: AUTHORIZATION_ERROR_REF}
@@ -366,6 +367,55 @@ async def delete_album(
         Получена автоматически из зависимости на строгую аутентификацию.
     """
     await services.album.delete_album(album_id, payload.sub)
+
+
+@router.post(
+    "/delete/batch",
+    response_model=DeleteBatchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Удаление нескольких медиаальбомов одним запросом.",
+    response_description="Альбомы удалены успешно",
+)
+async def delete_batch(
+    body: Annotated[
+        DeleteAlbumsBatchRequest,
+        Body(description="Список UUID медиаальбомов к удалению."),
+    ],
+    services: ServiceManagerDependency,
+    payload: StrictAuthenticationDependency,
+) -> DeleteBatchResponse:
+    """Удаление нескольких медиаальбомов по их UUID.
+
+    Получает список UUID медиаальбомов, проверяет права владения
+    текущего пользователя над каждым из них и удаляет доступные.
+    Для недоступных альбомов возвращает ошибки в списке `failed`,
+    не прерывая обработку остальных.
+
+    Parameters
+    ----------
+    body : DeleteAlbumsBatchRequest
+        Список UUID медиаальбомов к удалению.
+    services : ServiceManager
+        Менеджер сервисов уровня запроса (request-scoped).
+
+        Предоставляет доступ к бизнес-сервисам приложения
+        (например, auth, user, note, file и др.) через единый
+        контейнер зависимостей.
+    payload : AccessTokenPayload
+        Полезная нагрузка (payload) токена доступа.
+        Получена автоматически из зависимости на строгую аутентификацию.
+
+    Returns
+    -------
+    DeleteBatchResponse
+        Ответ, содержащий количество успешно удалённых альбомов
+        и список ошибок для недоступных альбомов.
+    """
+    deleted, failed = await services.album.delete_albums(body.album_ids, payload.sub)
+
+    return DeleteBatchResponse(
+        deleted_count=deleted, failed=failed, detail=f"Deleted {deleted} albums."
+    )
 
 
 @router.patch(

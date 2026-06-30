@@ -2,6 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.core.consts import MAX_LIMIT
 from app.core.types import UNSET, Maybe
 
 
@@ -93,6 +94,29 @@ class PatchAlbumRequest(BaseModel):
         default_factory=lambda: UNSET,
         description="Видимость альбома (True - личный или False - публичный)",
         examples=[True, False],
+    )
+
+
+class DeleteAlbumsBatchRequest(BaseModel):
+    """Схема запроса на пакетное удаление медиаальбомов.
+
+    Attributes
+    ----------
+    album_ids : list[UUID]
+        Список UUID медиаальбомов для удаления.
+        Ограничения: минимум один UUID, максимум `MAX_LIMIT` UUID.
+    """
+
+    album_ids: list[UUID] = Field(
+        description="Список UUID медиаальбомов, которые необходимо удалить.",
+        examples=[
+            [
+                "681cbf12-fe3f-41f4-92f1-c8cb33dfe47e",
+                "f466bb69-bf31-4125-a29a-35166033e4ef",
+            ]
+        ],
+        min_length=1,
+        max_length=MAX_LIMIT,
     )
 
 

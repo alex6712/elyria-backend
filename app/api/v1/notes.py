@@ -10,9 +10,17 @@ from app.core.dependencies.services import ServiceManagerDependency
 from app.core.docs import AUTHORIZATION_ERROR_REF
 from app.core.enums import NoteType, SortOrder
 from app.schemas.dto.note import CreateNoteDTO, UpdateNoteDTO
-from app.schemas.v1.requests.notes import CreateNoteRequest, PatchNoteRequest
+from app.schemas.v1.requests.notes import (
+    CreateNoteRequest,
+    DeleteNotesBatchRequest,
+    PatchNoteRequest,
+)
 from app.schemas.v1.responses.notes import NotesResponse
-from app.schemas.v1.responses.standard import CountResponse, StandardResponse
+from app.schemas.v1.responses.standard import (
+    CountResponse,
+    DeleteBatchResponse,
+    StandardResponse,
+)
 
 router = APIRouter(
     prefix="/notes", tags=["notes"], responses={401: AUTHORIZATION_ERROR_REF}
@@ -262,3 +270,51 @@ async def delete_note(
         Получена автоматически из зависимости на строгую аутентификацию.
     """
     await services.note.delete_note(note_id, payload.sub)
+
+
+@router.post(
+    "/delete/batch",
+    response_model=DeleteBatchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Удаление нескольких пользовательских заметок одним запросом.",
+    response_description="Заметки удалены успешно",
+)
+async def delete_batch(
+    body: Annotated[
+        DeleteNotesBatchRequest, Body(description="Список UUID заметок к удалению.")
+    ],
+    services: ServiceManagerDependency,
+    payload: StrictAuthenticationDependency,
+) -> DeleteBatchResponse:
+    """Удаление нескольких пользовательских заметок по их UUID.
+
+    Получает список UUID заметок, проверяет права владения
+    текущего пользователя над каждой из них и удаляет доступные.
+    Для недоступных заметок возвращает ошибки в списке `failed`,
+    не прерывая обработку остальных.
+
+    Parameters
+    ----------
+    body : DeleteNotesBatchRequest
+        Список UUID заметок к удалению.
+    services : ServiceManager
+        Менеджер сервисов уровня запроса (request-scoped).
+
+        Предоставляет доступ к бизнес-сервисам приложения
+        (например, auth, user, note, file и др.) через единый
+        контейнер зависимостей.
+    payload : AccessTokenPayload
+        Полезная нагрузка (payload) токена доступа.
+        Получена автоматически из зависимости на строгую аутентификацию.
+
+    Returns
+    -------
+    DeleteBatchResponse
+        Ответ, содержащий количество успешно удалённых заметок
+        и список ошибок для недоступных заметок.
+    """
+    deleted, failed = await services.note.delete_notes(body.note_ids, payload.sub)
+
+    return DeleteBatchResponse(
+        deleted_count=deleted, failed=failed, detail=f"Deleted {deleted} notes."
+    )

@@ -328,14 +328,28 @@ class NoteRepository(
     async def delete_many(
         self, filter_dto: FilterManyNotesDTO, access_ctx: AccessContext
     ) -> int:
-        """Не поддерживается для данной сущности.
+        """Удаляет множество записей о пользовательских заметках из базы данных.
 
-        Не предусмотрено удаление множества заметок за одну транзакцию,
-        т.к. такой пользовательский сценарий не существует.
+        Parameters
+        ----------
+        filter_dto : FilterManyNotesDTO
+            Параметры фильтрации.
+        access_ctx : AccessContext
+            Контекст доступа.
+
+        Returns
+        -------
+        int
+            Количество успешно удалённых записей.
         """
-        raise NotImplementedError(
-            "Method 'delete_many' is not implemented in NoteRepository"
+        result = await self.connection.execute(
+            delete(notes_table).where(
+                *self._build_filter_clauses(filter_dto, notes_table),
+                access_ctx.as_where_clause(notes_table),
+            )
         )
+
+        return result.rowcount
 
     async def count(
         self, filter_dto: FilterManyNotesDTO, access_ctx: AccessContext

@@ -283,10 +283,10 @@ class RedisClient:
         if await self.client.exists(redis_key):
             await self.client.incr(redis_key)
 
-    async def decrement_count(self, scope: str, user_id: UUID) -> None:
+    async def decrement_count(self, scope: str, user_id: UUID, amount: int = 1) -> None:
         """Декрементирует счётчик записей пользователя.
 
-        Атомарно уменьшает счётчик на единицу.
+        Атомарно уменьшает счётчик на указанное количество.
         Если ключ отсутствует в Redis, операция не выполняется,
         чтобы не создавать некорректный счётчик в обход БД.
         Счётчик не может опуститься ниже нуля.
@@ -298,11 +298,14 @@ class RedisClient:
             Например: "files", "notes".
         user_id : UUID
             UUID пользователя, которому принадлежит счётчик.
+        amount : int, optional
+            Количество, на которое необходимо уменьшить счётчик.
+            По умолчанию 1.
         """
         redis_key = self._count_key(scope, user_id)
 
         if await self.client.exists(redis_key):
-            await self.client.decr(redis_key)
+            await self.client.decrby(redis_key, amount)
 
     @staticmethod
     def _idempotency_key(scope: str, user_id: UUID, key: UUID) -> str:

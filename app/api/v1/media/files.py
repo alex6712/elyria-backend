@@ -18,13 +18,18 @@ from app.schemas.dto.file import (
 )
 from app.schemas.v1.requests.files import (
     ConfirmUploadRequest,
+    DeleteFilesBatchRequest,
     DownloadFilesBatchRequest,
     PatchFileRequest,
     UploadFileRequest,
     UploadFilesBatchRequest,
 )
 from app.schemas.v1.responses.files import FilesResponse
-from app.schemas.v1.responses.standard import CountResponse, StandardResponse
+from app.schemas.v1.responses.standard import (
+    CountResponse,
+    DeleteBatchResponse,
+    StandardResponse,
+)
 from app.schemas.v1.responses.urls import (
     PresignedURLResponse,
     PresignedURLsBatchResponse,
@@ -489,3 +494,52 @@ async def delete_file(
         Получена автоматически из зависимости на строгую аутентификацию.
     """
     await services.file.delete_file(file_id, payload.sub)
+
+
+@router.post(
+    "/delete/batch",
+    response_model=DeleteBatchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Удаление нескольких медиафайлов одним запросом.",
+    response_description="Файлы удалены успешно",
+)
+async def delete_batch(
+    body: Annotated[
+        DeleteFilesBatchRequest, Body(description="Список UUID медиафайлов к удалению.")
+    ],
+    services: ServiceManagerDependency,
+    payload: StrictAuthenticationDependency,
+) -> DeleteBatchResponse:
+    """Удаление нескольких медиафайлов по их UUID.
+
+    Получает список UUID медиафайлов, проверяет права владения
+    текущего пользователя над каждым из них и удаляет доступные
+    из базы данных и объектного хранилища. Для недоступных файлов
+    возвращает ошибки в списке `failed`, не прерывая обработку
+    остальных.
+
+    Parameters
+    ----------
+    body : DeleteFilesBatchRequest
+        Список UUID медиафайлов к удалению.
+    services : ServiceManager
+        Менеджер сервисов уровня запроса (request-scoped).
+
+        Предоставляет доступ к бизнес-сервисам приложения
+        (например, auth, user, note, file и др.) через единый
+        контейнер зависимостей.
+    payload : AccessTokenPayload
+        Полезная нагрузка (payload) токена доступа.
+        Получена автоматически из зависимости на строгую аутентификацию.
+
+    Returns
+    -------
+    DeleteBatchResponse
+        Ответ, содержащий количество успешно удалённых файлов
+        и список ошибок для недоступных файлов.
+    """
+    deleted, failed = await services.file.delete_files(body.file_ids, payload.sub)
+
+    return DeleteBatchResponse(
+        deleted_count=deleted, failed=failed, detail=f"Deleted {deleted} files."
+    )

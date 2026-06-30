@@ -1,12 +1,13 @@
 from uuid import UUID
 
-from app.core.enums import NoteType, SortOrder
+from app.core.enums import DeleteErrorCode, NoteType, SortOrder
 from app.core.exceptions.base import NothingToUpdateException
 from app.core.exceptions.note import NoteNotFoundException
 from app.infra.postgres.uow import UnitOfWork
 from app.infra.redis import RedisClient
 from app.repositories.interface import CoupleAccessContext, CreatorAccessContext
 from app.repositories.note import NoteRepository
+from app.schemas.dto.deletion import DeleteItemErrorDTO
 from app.schemas.dto.note import (
     CreateNoteDTO,
     FilterManyNotesDTO,
@@ -232,3 +233,52 @@ class NoteService:
             )
 
         await self._redis_client.decrement_count("notes", user_id)
+
+    async def delete_notes(
+        self, note_ids: list[UUID], user_id: UUID
+    ) -> tuple[int, list[DeleteItemErrorDTO]]:
+        """Удаление нескольких заметок по их UUID.
+
+        Получает список UUID заметок и UUID пользователя,
+        совершающего действие удаления. Удаляет только те заметки,
+        которые принадлежат указанному пользователю. Для заметок,
+        которые не найдены или недоступны, формирует список ошибок,
+        не прерывая обработку остальных.
+
+        Parameters
+        ----------
+        note_ids : list[UUID]
+            Список UUID заметок к удалению.
+        user_id : UUID
+            UUID пользователя, запрашивающего удаление.
+
+        Returns
+        -------
+        tuple[int, list[DeleteItemErrorDTO]]
+            Кортеж из количества успешно удалённых заметок
+            и списка ошибок для недоступных заметок.
+        """
+        access_ctx = CreatorAccessContext(user_id=user_id)
+
+        existing = await self._note_repo.read_many(
+            FilterManyNotesDTO(ids=note_ids), access_ctx, limit=len(note_ids)
+        )
+        existing_ids = {n.id for n in existing}
+
+        if existing_ids:
+            await self._note_repo.delete_many(
+                FilterManyNotesDTO(ids=list(existing_ids)), access_ctx
+            )
+            await self._redis_client.decrement_count(
+                "notes", user_id, amount=len(existing_ids)
+            )
+
+        return len(existing_ids), [
+            DeleteItemErrorDTO(
+                id=nid,
+                code=DeleteErrorCode.NOT_FOUND,
+                message=f"Note with id={nid} not found, or you're not this note's creator.",
+            )
+            for nid in note_ids
+            if nid not in existing_ids
+        ]

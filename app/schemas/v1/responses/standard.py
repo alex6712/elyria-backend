@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 
 from app.core.enums import APICode
+from app.schemas.dto.deletion import DeleteItemErrorDTO
 
 
 class BaseResponse(BaseModel):
@@ -83,4 +84,29 @@ class CountResponse(StandardResponse):
 
     count: int = Field(
         description="Общее количество записей",
+    )
+
+
+class DeleteBatchResponse(StandardResponse):
+    """Модель ответа сервера для операции пакетного удаления.
+
+    Используется в качестве ответа на запрос удаления пакета сущностей.
+    Содержит количество успешно удалённых записей и список ошибок
+    по отдельным сущностям, не прерывая обработку остального пакета.
+
+    Attributes
+    ----------
+    deleted_count : int
+        Количество сущностей, успешно удалённых из системы.
+    failed : list[DeleteItemErrorDTO]
+        Ошибки для сущностей, которые не удалось удалить.
+        По умолчанию - пустой список.
+    """
+
+    deleted_count: int = Field(
+        description="Количество сущностей, успешно удалённых из системы.",
+    )
+    failed: list[DeleteItemErrorDTO] = Field(
+        default_factory=lambda: list(),
+        description="Ошибки для сущностей, которые не удалось удалить.",
     )
