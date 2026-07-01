@@ -9,15 +9,21 @@ users_table = Table(
     *base_columns(),
     Column(
         "username",
-        String(64),
+        String(32),
         nullable=False,
-        comment="Уникальный логин (макс. 64 символа)",
+        comment="Уникальный логин (макс. 32 символа)",
     ),
     Column(
         "password_hash",
         String(128),
         nullable=False,
         comment="Хэш пароля (Argon2id через Passlib)",
+    ),
+    Column(
+        "display_name",
+        String(64),
+        nullable=False,
+        comment="Отображаемое имя пользователя",
     ),
     Column(
         "avatar_url",

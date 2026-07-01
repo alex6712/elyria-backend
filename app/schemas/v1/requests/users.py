@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 
 from app.core.types import UNSET, Maybe
+from app.core.validation import ValidatedDisplayName
 
 
 class PatchProfileRequest(BaseModel):
@@ -12,20 +13,19 @@ class PatchProfileRequest(BaseModel):
 
     Attributes
     ----------
-    first_name : Maybe[str]
-        Реальное имя пользователя. Если не передан - остаётся `UNSET`
+    display_name : Maybe[str]
+        Отображаемое имя пользователя. Если не передан - остаётся `UNSET`
         и текущее значение в базе данных не изменяется.
-        Временно не обрабатывается.
     avatar_url : Maybe[str]
         URL аватара пользователя. Если не передан - остаётся `UNSET`
         и текущее значение в базе данных не изменяется.
     """
 
-    # first_name: Maybe[str] = Field(
-    #     default_factory=lambda: UNSET,
-    #     description="Реальное имя пользователя",
-    #     examples=["Владислав"],
-    # )
+    display_name: Maybe[ValidatedDisplayName] = Field(
+        default_factory=lambda: UNSET,
+        description="Новое отображаемое имя пользователя",
+        examples=["Владислав", "88005553535", "الاسم", "👨⚒👨‍👧‍👦⏮🗿🦀🚀"],
+    )
     avatar_url: Maybe[str] = Field(
         default_factory=lambda: UNSET,
         description="URL аватара пользователя",

@@ -6,7 +6,7 @@ from app.core.dependencies.auth import StrictAuthenticationDependency
 from app.core.dependencies.services import ServiceManagerDependency
 from app.core.docs import AUTHORIZATION_ERROR_REF
 from app.core.enums import PasswordRuleType
-from app.core.validators import PASSWORD_MIN_LENGTH, SPECIAL_CHAR_PATTERN
+from app.core.validation import PASSWORD_MIN_LENGTH, SPECIAL_CHAR_PATTERN
 from app.schemas.dto.password import PasswordRule
 from app.schemas.dto.user import UpdateUserDTO
 from app.schemas.v1.requests.users import PatchProfileRequest
@@ -87,6 +87,12 @@ async def get_password_policy() -> PasswordPolicyResponse:
                 unit="characters",
             ),
             PasswordRule(
+                id="no_space_chars",
+                description="Password must not contain whitespace characters.",
+                type=PasswordRuleType.BOOLEAN,
+                value=True,
+            ),
+            PasswordRule(
                 id="require_uppercase",
                 description="Password must contain at least one uppercase letter.",
                 type=PasswordRuleType.BOOLEAN,
@@ -117,7 +123,7 @@ async def get_password_policy() -> PasswordPolicyResponse:
                 value=SPECIAL_CHAR_PATTERN,
             ),
         ],
-        version="1.0.0",
+        version="1.1.0",
     )
 
 

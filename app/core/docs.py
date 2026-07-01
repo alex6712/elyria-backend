@@ -59,6 +59,21 @@ def _get_password_validations_examples(filed_name: str) -> dict[str, Any]:
                 ],
             },
         },
+        "noSpaceChars": {
+            "description": "Пароль не должен содержать пробельных символов",
+            "value": {
+                "code": APICode.VALIDATION_ERROR,
+                "detail": [
+                    {
+                        "type": "value_error",
+                        "loc": ["body", filed_name],
+                        "msg": "Value error, Password must not contain whitespace characters.",
+                        "input": "a",
+                        "ctx": {"error": {}},
+                    }
+                ],
+            },
+        },
         "uppercaseLetters": {
             "description": "Пароль должен содержать хотя бы одну латинскую букву в верхнем регистре",
             "value": {

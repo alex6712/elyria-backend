@@ -50,7 +50,14 @@ CreateDTO = TypeVar("CreateDTO", bound=BaseCreateDTO)
 UpdateDTO = TypeVar("UpdateDTO", bound=BaseUpdateDTO)
 SearchDTO = TypeVar("SearchDTO", bound=BaseSearchDTO)
 
-USER_PROJECTION_FIELDS = ["id", "created_at", "username", "avatar_url", "is_active"]
+USER_PROJECTION_FIELDS = [
+    "id",
+    "created_at",
+    "username",
+    "display_name",
+    "avatar_url",
+    "is_active",
+]
 """Атрибуты проекции записи пользователя.
 
 Используется для маппинга записей таблицы users на доменные DTO.

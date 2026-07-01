@@ -93,24 +93,20 @@ class AuthService:
         self._user_repo = uow.get_repository(UserRepository)
         self._user_session_repo = uow.get_repository(UserSessionRepository)
 
-    async def register(self, username: str, password: str) -> None:
+    async def register(self, create_dto: CreateUserDTO) -> None:
         """Регистрирует пользователя в системе.
 
         Parameters
         ----------
-        username : str
-            Логин пользователя.
-        password : str
-            Пароль пользователя в открытом виде.
+        create_dto : CreateUserDTO
+            Данные для создания нового пользователя.
 
         Raises
         ------
         UsernameAlreadyExistsException
            Пользователь с переданным username уже существует.
         """
-        await self._user_repo.create_one(
-            CreateUserDTO(username=username, password_hash=hash_(password))
-        )
+        await self._user_repo.create_one(create_dto)
 
     async def login(self, username: str, password: str) -> Tokens:
         """Аутентифицирует пользователя и возвращает пару JWT.

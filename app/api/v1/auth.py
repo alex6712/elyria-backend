@@ -25,6 +25,7 @@ from app.core.rate_limiter import (
     REGISTER_LIMIT,
     limiter,
 )
+from app.schemas.dto.user import CreateUserDTO
 from app.schemas.v1.requests.auth import ChangePasswordRequest, RegisterRequest
 from app.schemas.v1.responses.auth import AccessTokenResponse
 from app.schemas.v1.responses.standard import StandardResponse
@@ -76,7 +77,7 @@ async def register(
     StandardResponse
         Ответ с кодом 201 и сообщением об успешной регистрации.
     """
-    await services.auth.register(body.username, body.password)
+    await services.auth.register(CreateUserDTO.model_validate(body.model_dump()))
 
     return StandardResponse(detail="User created successfully.")
 

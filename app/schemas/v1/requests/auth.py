@@ -2,7 +2,16 @@ from typing import Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.core.validators import ValidatedPassword, ValidatedUsername
+from app.core.validation import (
+    DISPLAY_NAME_MAX_LENGTH,
+    DISPLAY_NAME_MIN_LENGTH,
+    PASSWORD_MIN_LENGTH,
+    USERNAME_MAX_LENGTH,
+    USERNAME_MIN_LENGTH,
+    ValidatedDisplayName,
+    ValidatedPassword,
+    ValidatedUsername,
+)
 
 
 class RegisterRequest(BaseModel):
@@ -11,25 +20,24 @@ class RegisterRequest(BaseModel):
     Attributes
     ----------
     username : str
-        Логин пользователя (3-32 символа, a-z, A-Z, 0-9, _, -).
+        Логин пользователя.
     password : str
-        Пароль пользователя (минимум 12 символов, верхний/нижний регистр,
-        цифра, спецсимвол).
+        Пароль пользователя.
+    display_name : str
+        Отображаемое имя пользователя.
     """
 
     username: ValidatedUsername = Field(
-        description="Логин пользователя (3-32 символа, a-z, A-Z, 0-9, _, -)",
+        description=f"Логин пользователя ({USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} символа, a-z, A-Z, 0-9, _, -)",
         examples=["john_doe", "user123"],
-        json_schema_extra={
-            "minLength": 3,
-            "maxLength": 32,
-            "pattern": "^[a-zA-Z0-9_-]+$",
-        },
     )
     password: ValidatedPassword = Field(
-        description="Пароль (минимум 12 символов, с цифрой, спецсимволом, верхним и нижним регистром)",
+        description=f"Пароль (минимум {PASSWORD_MIN_LENGTH} символов, с цифрой, спецсимволом, верхним и нижним регистром)",
         examples=["SecureP@ss123!"],
-        json_schema_extra={"minLength": 12},
+    )
+    display_name: ValidatedDisplayName = Field(
+        description=f"Отображаемое имя пользователя ({DISPLAY_NAME_MIN_LENGTH}-{DISPLAY_NAME_MAX_LENGTH} символа, любые Unicode-символы)",
+        examples=["Александр", "7", "一只非常重要的鸡", "🍆"],
     )
 
 
@@ -39,11 +47,9 @@ class ChangePasswordRequest(BaseModel):
     Attributes
     ----------
     current_password : str
-        Текущий пароль пользователя (минимум 12 символов, верхний/нижний
-        регистр, цифра, спецсимвол).
+        Текущий пароль пользователя.
     new_password : str
-        Новый пароль пользователя (минимум 12 символов, верхний/нижний
-        регистр, цифра, спецсимвол).
+        Новый пароль пользователя.
     confirm_password : str
         Подтверждение нового пароля. Должно совпадать с `new_password`.
 
@@ -61,7 +67,6 @@ class ChangePasswordRequest(BaseModel):
     new_password: ValidatedPassword = Field(
         description="Новый пароль пользователя",
         examples=["SecureP@ss222!"],
-        json_schema_extra={"minLength": 12},
     )
     confirm_password: str = Field(
         description="Подтверждение нового пароля пользователя",

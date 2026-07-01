@@ -12,7 +12,7 @@ from alembic import context
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from app.config import Settings, get_settings
+from app.config import get_settings
 from app.infra.postgres.tables import metadata as target_metadata
 
 config = context.config

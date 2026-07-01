@@ -17,6 +17,8 @@ class UserDTO(BaseSQLCoreDTO):
     ----------
     username : str
         Логин пользователя для входа в систему.
+    display_name : str
+        Отображаемое имя пользователя.
     avatar_url : str | None
         URL аватара пользователя.
     is_active : bool
@@ -24,6 +26,7 @@ class UserDTO(BaseSQLCoreDTO):
     """
 
     username: str
+    display_name: str
     avatar_url: str | None
     is_active: bool
 
@@ -99,10 +102,13 @@ class CreateUserDTO(BaseCreateDTO):
         Имя пользователя.
     password_hash : str
         Хэш пароля пользователя.
+    display_name : str
+        Отображаемое имя пользователя.
     """
 
     username: str
     password_hash: str
+    display_name: str
 
 
 class UpdateUserDTO(BaseUpdateDTO):
@@ -110,15 +116,14 @@ class UpdateUserDTO(BaseUpdateDTO):
 
     Attributes
     ----------
-    first_name : Maybe[str]
-        Новое реальное имя пользователя. Если `UNSET` - поле не изменяется.
-        Временно не обрабатывается.
+    display_name : Maybe[str]
+        Новое отображаемое имя пользователя. Если `UNSET` - поле не изменяется.
     avatar_url : Maybe[str]
         Новый URL аватара пользователя. Если `UNSET` - поле не изменяется.
     password_hash : Maybe[str]
         Новый хэшированный пароль пользователя. Если `UNSET` - поле не изменяется.
     """
 
-    # first_name: Maybe[str] = UNSET
-    avatar_url: Maybe[str] = UNSET
     password_hash: Maybe[str] = UNSET
+    display_name: Maybe[str] = UNSET
+    avatar_url: Maybe[str] = UNSET
