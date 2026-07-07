@@ -110,7 +110,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
     await redis_client.disconnect()
 
 
-my_love_backend = FastAPI(
+elyria_backend = FastAPI(
     title=_settings.APP_NAME,
     summary=_settings.APP_SUMMARY,
     description=_settings.APP_DESCRIPTION,
@@ -123,7 +123,7 @@ my_love_backend = FastAPI(
     },
 )
 
-my_love_backend.add_middleware(
+elyria_backend.add_middleware(
     CORSMiddleware,
     allow_origins=_settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
@@ -131,8 +131,8 @@ my_love_backend.add_middleware(
     allow_headers=["*"],
 )
 
-my_love_backend.include_router(api_root_router)
-my_love_backend.include_router(api_v1_router)
+elyria_backend.include_router(api_root_router)
+elyria_backend.include_router(api_v1_router)
 
 register_all_handlers()  # должен вызываться только после инициализации FastAPI приложения
 
@@ -161,15 +161,15 @@ def custom_openapi() -> dict[str, Any]:
 
     Все настройки (название, версия, контакты) берутся из объекта `_settings`.
     """
-    if my_love_backend.openapi_schema:
-        return my_love_backend.openapi_schema
+    if elyria_backend.openapi_schema:
+        return elyria_backend.openapi_schema
 
     openapi_schema = get_openapi(
         title=_settings.APP_NAME,
         version=_settings.APP_VERSION,
         summary=_settings.APP_SUMMARY,
         description=_settings.APP_DESCRIPTION,
-        routes=my_love_backend.routes,
+        routes=elyria_backend.routes,
         tags=tags_metadata,
         contact={
             "name": _settings.ADMIN_NAME,
@@ -228,8 +228,8 @@ def custom_openapi() -> dict[str, Any]:
     openapi_schema["components"]["schemas"]["ValidationErrorResponse"] = response_schema
     openapi_schema["components"]["schemas"]["ErrorDetails"] = error_schema
 
-    my_love_backend.openapi_schema = openapi_schema
-    return my_love_backend.openapi_schema
+    elyria_backend.openapi_schema = openapi_schema
+    return elyria_backend.openapi_schema
 
 
-my_love_backend.openapi = custom_openapi
+elyria_backend.openapi = custom_openapi

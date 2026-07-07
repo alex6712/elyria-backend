@@ -3,11 +3,11 @@ from fastapi.responses import JSONResponse
 
 from app.core.enums import APICode
 from app.core.exceptions.media import FilePresignedUrlGenerationFailedException
-from app.main import my_love_backend
+from app.main import elyria_backend
 from app.schemas.v1.responses.standard import StandardResponse
 
 
-@my_love_backend.exception_handler(FilePresignedUrlGenerationFailedException)
+@elyria_backend.exception_handler(FilePresignedUrlGenerationFailedException)
 async def file_presigned_url_generation_failed_exception_handler(
     request: Request,
     exc: FilePresignedUrlGenerationFailedException,

@@ -3,11 +3,11 @@ from fastapi.responses import JSONResponse
 
 from app.core.enums import APICode
 from app.core.exceptions.base import AlreadyExistsException, IdempotencyException
-from app.main import my_love_backend
+from app.main import elyria_backend
 from app.schemas.v1.responses.standard import StandardResponse
 
 
-@my_love_backend.exception_handler(AlreadyExistsException)
+@elyria_backend.exception_handler(AlreadyExistsException)
 async def username_already_exists_exception_handler(
     request: Request,
     exc: AlreadyExistsException,
@@ -38,7 +38,7 @@ async def username_already_exists_exception_handler(
     )
 
 
-@my_love_backend.exception_handler(IdempotencyException)
+@elyria_backend.exception_handler(IdempotencyException)
 async def idempotency_exception_handler(
     request: Request,
     exc: IdempotencyException,

@@ -1,9 +1,9 @@
-# 💖 My Love Backend
+# 💖 Elyria Backend
 
 Романтичное приложение-подарок на 14 февраля от Лёши для Светы.
 
-_Серверная часть. Android-клиент: [My Love Android](https://github.com/alex6712/my-love-android)._
-_Web-клиент: [My Love Web](https://github.com/alex6712/my-love-web)._
+_Серверная часть. Android-клиент: [Elyria Android](https://github.com/alex6712/elyria-android)._
+_Web-клиент: [Elyria Web](https://github.com/alex6712/elyria-web)._
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -48,8 +48,8 @@ _Web-клиент: [My Love Web](https://github.com/alex6712/my-love-web)._
 
 ```bash
 # Клонируйте репозиторий
-git clone https://github.com/alex6712/my-love-backend.git
-cd my-love-backend
+git clone https://github.com/alex6712/elyria-backend.git
+cd elyria-backend
 
 # Создайте .env файл из примера и отредактируйте его
 cp .env.example .env
@@ -62,7 +62,7 @@ chmod +x ./scripts/gen_keys.sh
 docker compose --env-file .env up -d --wait
 
 # Примените миграции
-docker exec my-love-backend alembic upgrade head
+docker exec elyria-backend alembic upgrade head
 ```
 
 Сервисы будут доступны по следующим адресам:
@@ -79,8 +79,8 @@ docker exec my-love-backend alembic upgrade head
 
 ```bash
 # Клонируйте репозиторий
-git clone https://github.com/alex6712/my-love-backend.git
-cd my-love-backend
+git clone https://github.com/alex6712/elyria-backend.git
+cd elyria-backend
 
 # Установите зависимости с помощью менеджера uv
 uv sync --group dev
@@ -100,7 +100,7 @@ chmod +x ./scripts/gen_keys.sh
 ./scripts/gen_keys.sh
 
 # Настройте свои сервисы PostgreSQL, Redis и MinIO или запустите готовые через Docker
-docker compose --env-file .env up my-love-database my-love-redis my-love-minio -d --wait
+docker compose --env-file .env up elyria-database elyria-redis elyria-minio -d --wait
 
 # Примените миграции
 alembic upgrade head
@@ -116,7 +116,7 @@ uv run fastapi dev ./app/main.py
 ## 📁 Структура проекта
 
 ```
-my-love-backend/                # FastAPI приложение
+elyria-backend/                # FastAPI приложение
 ├── .github/workflows/          # CI/CD workflow (тесты и деплой)
 ├── alembic/                    # Alembic миграции
 ├── app/
@@ -232,7 +232,7 @@ uv run pytest --cov=app --cov-report html ./app/tests/
 
 ```bash
 # 1. Клонируйте репозиторий на сервер, например
-rsync -az --delete ./ {ssh_user}@{ssh_host}:~/my-love-backend
+rsync -az --delete ./ {ssh_user}@{ssh_host}:~/elyria-backend
 
 # 2. Настройте .env для продакшена
 # 3. Запустите через Docker Compose

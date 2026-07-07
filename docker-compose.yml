@@ -1,25 +1,25 @@
 services:
-  my-love-backend:
-    container_name: my-love-backend
+  elyria-backend:
+    container_name: elyria-backend
     build: .
     environment:
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
-      my-love-database:
+      elyria-database:
         condition: service_healthy
-      my-love-redis:
+      elyria-redis:
         condition: service_healthy
-      my-love-minio:
+      elyria-minio:
         condition: service_healthy
     networks:
-      - my-love-application-net
+      - elyria-application-net
     restart: unless-stopped
 
-  my-love-database:
+  elyria-database:
     image: postgres:17
-    container_name: my-love-database
+    container_name: elyria-database
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -29,18 +29,18 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      - my-love-application-net
+      - elyria-application-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
 
-  my-love-redis:
+  elyria-redis:
     image: redis:7-alpine
-    container_name: my-love-redis
+    container_name: elyria-redis
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
@@ -48,19 +48,19 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - my-love-application-net
+      - elyria-application-net
     command: >
       redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  my-love-minio:
+  elyria-minio:
     image: minio/minio
-    container_name: my-love-minio
+    container_name: elyria-minio
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -70,11 +70,11 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      - my-love-application-net
+      - elyria-application-net
     command: server --console-address ":9001" /data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 30s
       timeout: 20s
       retries: 5
@@ -84,7 +84,6 @@ volumes:
   redis_data:
   minio_data:
 
-
 networks:
-  my-love-application-net:
+  elyria-application-net:
     driver: bridge

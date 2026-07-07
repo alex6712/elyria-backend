@@ -3,11 +3,11 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
 from app.core.enums import APICode
-from app.main import my_love_backend
+from app.main import elyria_backend
 from app.schemas.v1.responses.standard import StandardResponse
 
 
-@my_love_backend.exception_handler(RateLimitExceeded)
+@elyria_backend.exception_handler(RateLimitExceeded)
 async def rate_limit_exception_handler(
     request: Request,
     exc: RateLimitExceeded,

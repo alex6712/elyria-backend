@@ -9,11 +9,11 @@ from app.core.exceptions.auth import (
     TokenRevokedException,
     TokenSignatureExpiredException,
 )
-from app.main import my_love_backend
+from app.main import elyria_backend
 from app.schemas.v1.responses.standard import StandardResponse
 
 
-@my_love_backend.exception_handler(IncorrectUsernameOrPasswordException)
+@elyria_backend.exception_handler(IncorrectUsernameOrPasswordException)
 async def incorrect_username_or_password_exception_handler(
     request: Request,
     exc: IncorrectUsernameOrPasswordException,
@@ -44,7 +44,7 @@ async def incorrect_username_or_password_exception_handler(
     )
 
 
-@my_love_backend.exception_handler(InvalidTokenException)
+@elyria_backend.exception_handler(InvalidTokenException)
 async def invalid_token_exception_handler(
     request: Request,
     exc: InvalidTokenException,
@@ -75,7 +75,7 @@ async def invalid_token_exception_handler(
     )
 
 
-@my_love_backend.exception_handler(TokenNotPassedException)
+@elyria_backend.exception_handler(TokenNotPassedException)
 async def token_not_passed_exception_handler(
     request: Request,
     exc: TokenNotPassedException,
@@ -106,7 +106,7 @@ async def token_not_passed_exception_handler(
     )
 
 
-@my_love_backend.exception_handler(TokenRevokedException)
+@elyria_backend.exception_handler(TokenRevokedException)
 async def token_revoked_exception_handler(
     request: Request,
     exc: TokenRevokedException,
@@ -136,7 +136,7 @@ async def token_revoked_exception_handler(
     )
 
 
-@my_love_backend.exception_handler(TokenSignatureExpiredException)
+@elyria_backend.exception_handler(TokenSignatureExpiredException)
 async def token_signature_expired_exception_handler(
     request: Request,
     exc: TokenSignatureExpiredException,

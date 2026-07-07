@@ -5,12 +5,12 @@ from fastapi.responses import JSONResponse
 
 from app.core.enums import APICode
 from app.core.exceptions.media import FileUploadFailedException
-from app.main import my_love_backend
+from app.main import elyria_backend
 from app.schemas.v1.responses.standard import StandardResponse
 from app.schemas.v1.responses.validation_error import ValidationErrorResponse
 
 
-@my_love_backend.exception_handler(RequestValidationError)
+@elyria_backend.exception_handler(RequestValidationError)
 async def request_validation_error_handler(
     request: Request,
     exc: RequestValidationError,
@@ -41,7 +41,7 @@ async def request_validation_error_handler(
     )
 
 
-@my_love_backend.exception_handler(FileUploadFailedException)
+@elyria_backend.exception_handler(FileUploadFailedException)
 async def file_upload_failed_exception_handler(
     request: Request,
     exc: FileUploadFailedException,

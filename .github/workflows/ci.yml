@@ -7,7 +7,7 @@ on:
 
 jobs:
   # test:
-  #   name: Test My Love Backend
+  #   name: Test Elyria Backend
   #   runs-on: ubuntu-latest
 
   #   steps:
@@ -45,7 +45,7 @@ jobs:
     # needs: test
     if: github.ref == 'refs/heads/master'
 
-    name: Deploy My Love Backend
+    name: Deploy Elyria Backend
     runs-on: ubuntu-latest
 
     steps:
@@ -64,14 +64,14 @@ jobs:
 
       - name: Copy project to server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/my-love-backend"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/elyria-backend"
 
-          rsync -az --delete --exclude=keys/ ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/my-love-backend
+          rsync -az --delete --exclude=keys/ ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/elyria-backend
 
       - name: Deploy with Docker Compose
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
-            cd ~/my-love-backend
+            cd ~/elyria-backend
 
             chmod +x ./scripts/gen_keys.sh
             ./scripts/gen_keys.sh
@@ -80,5 +80,5 @@ jobs:
             docker compose --env-file .env build --pull
             docker compose --env-file .env up -d --wait
 
-            docker exec my-love-backend alembic upgrade head
+            docker exec elyria-backend alembic upgrade head
           EOF

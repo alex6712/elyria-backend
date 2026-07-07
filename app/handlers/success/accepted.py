@@ -3,11 +3,11 @@ from fastapi.responses import JSONResponse
 
 from app.core.enums import APICode
 from app.core.exceptions.media import FileUploadPendingException
-from app.main import my_love_backend
+from app.main import elyria_backend
 from app.schemas.v1.responses.standard import StandardResponse
 
 
-@my_love_backend.exception_handler(FileUploadPendingException)
+@elyria_backend.exception_handler(FileUploadPendingException)
 async def file_upload_pending_exception_handler(
     request: Request,
     exc: FileUploadPendingException,

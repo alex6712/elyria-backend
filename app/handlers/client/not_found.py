@@ -10,11 +10,11 @@ from app.core.exceptions.media import (
     MediaNotFoundException,
     UploadNotCompletedException,
 )
-from app.main import my_love_backend
+from app.main import elyria_backend
 from app.schemas.v1.responses.standard import StandardResponse
 
 
-@my_love_backend.exception_handler(status.HTTP_404_NOT_FOUND)
+@elyria_backend.exception_handler(status.HTTP_404_NOT_FOUND)
 async def not_found_exception_handler(
     request: Request,
     _: StarletteHTTPException,
@@ -44,7 +44,7 @@ async def not_found_exception_handler(
     )
 
 
-@my_love_backend.exception_handler(NotFoundException)
+@elyria_backend.exception_handler(NotFoundException)
 async def domain_not_found_exception_handler(
     request: Request,
     exc: NotFoundException,
@@ -91,7 +91,7 @@ async def domain_not_found_exception_handler(
     )
 
 
-@my_love_backend.exception_handler(UploadNotCompletedException)
+@elyria_backend.exception_handler(UploadNotCompletedException)
 async def upload_not_completed_exception_handler(
     request: Request,
     exc: UploadNotCompletedException,

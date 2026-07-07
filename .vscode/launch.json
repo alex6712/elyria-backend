@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "My Love Backend (Debug)",
+            "name": "Elyria Backend (Debug)",
             "type": "debugpy",
             "request": "launch",
             "module": "fastapi",

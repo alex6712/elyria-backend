@@ -133,7 +133,7 @@ def construct_payload(
     token_type: TokenType,
     exp: datetime | None = None,
     jti: UUID | None = None,
-    iss: str = "my-love-backend",
+    iss: str = "elyria-backend",
     expires_delta: timedelta | None = None,
 ) -> AnyTokenPayload:
     """Формирует и возвращает payload JWT-токена.
@@ -163,7 +163,7 @@ def construct_payload(
         Уникальный идентификатор токена.
         Если не передан - генерируется автоматически через `uuid.uuid4()`.
     iss : str, optional
-        Издатель токена. По умолчанию `"my-love-backend"`.
+        Издатель токена. По умолчанию `"elyria-backend"`.
     expires_delta : timedelta | None, optional
         Время жизни токена относительно `iat`.
         Имеет приоритет над `exp`, если передан.
@@ -254,7 +254,7 @@ def create_jwt(
     token_type: TokenType,
     exp: datetime | None = None,
     jti: UUID | None = None,
-    iss: str = "my-love-backend",
+    iss: str = "elyria-backend",
     expires_delta: timedelta | None = None,
 ) -> str:
     """Создаёт и возвращает подписанный JWT.
@@ -288,7 +288,7 @@ def create_jwt(
         Уникальный идентификатор токена.
         Если не передан - генерируется автоматически через `uuid.uuid4()`.
     iss : str, optional
-        Издатель токена. По умолчанию `"my-love-backend"`.
+        Издатель токена. По умолчанию `"elyria-backend"`.
     expires_delta : timedelta | None, optional
         Время жизни токена относительно `iat`.
         Имеет приоритет над `exp`, если передан.
