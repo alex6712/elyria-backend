@@ -1,25 +1,31 @@
 services:
-  elyria-backend:
-    container_name: elyria-backend
+  elyria-http-app:
+    container_name: elyria-http-app
     build: .
     environment:
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
-      elyria-database:
+      elyria-postgres:
         condition: service_healthy
       elyria-redis:
         condition: service_healthy
       elyria-minio:
         condition: service_healthy
     networks:
-      - elyria-application-net
+      - elyria-network
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
-  elyria-database:
+  elyria-postgres:
     image: postgres:17
-    container_name: elyria-database
+    container_name: elyria-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -29,7 +35,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      - elyria-application-net
+      - elyria-network
     restart: unless-stopped
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}" ]
@@ -48,7 +54,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - elyria-application-net
+      - elyria-network
     command: >
       redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     restart: unless-stopped
@@ -70,7 +76,7 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      - elyria-application-net
+      - elyria-network
     command: server --console-address ":9001" /data
     restart: unless-stopped
     healthcheck:
@@ -85,5 +91,5 @@ volumes:
   minio_data:
 
 networks:
-  elyria-application-net:
+  elyria-network:
     driver: bridge

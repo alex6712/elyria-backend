@@ -62,11 +62,11 @@ chmod +x ./scripts/gen_keys.sh
 docker compose --env-file .env up -d --wait
 
 # Примените миграции
-docker exec elyria-backend alembic upgrade head
+docker exec elyria-http-app alembic upgrade head
 ```
 
 Сервисы будут доступны по следующим адресам:
-- Backend API: http://localhost:8000
+- FastAPI HTTP: http://localhost:8000
 - PostgreSQL: http://localhost:5432
 - Redis: http://localhost:6379
 - MinIO: http://localhost:9000
@@ -100,7 +100,7 @@ chmod +x ./scripts/gen_keys.sh
 ./scripts/gen_keys.sh
 
 # Настройте свои сервисы PostgreSQL, Redis и MinIO или запустите готовые через Docker
-docker compose --env-file .env up elyria-database elyria-redis elyria-minio -d --wait
+docker compose --env-file .env up elyria-postgres elyria-redis elyria-minio -d --wait
 
 # Примените миграции
 alembic upgrade head
@@ -108,85 +108,18 @@ alembic upgrade head
 uv run alembic upgrade head
 
 # Запустите сервер
-fastapi dev ./app/main.py
+fastapi dev ./src/composition/http_app.py
 # или
-uv run fastapi dev ./app/main.py
+uv run fastapi dev ./src/composition/http_app.py
 ```
 
 ## 📁 Структура проекта
 
-```
-elyria-backend/                # FastAPI приложение
-├── .github/workflows/          # CI/CD workflow (тесты и деплой)
-├── alembic/                    # Alembic миграции
-├── app/
-│   ├── api/                    # Эндпоинты
-│   │   └── v1/
-│   ├── core/                   # Конфигурация, безопасность
-│   │   ├── dependencies/       # Зависимости для DI
-│   │   └── exceptions/         # Исключения приложения
-│   ├── handlers/               # Обработчики доменных исключений
-│   │   ├── client/
-│   │   ├── server/
-│   │   └── success/
-│   ├── infra/                  # Внешние инфраструктурные зависимости
-│   ├── repositories/           # Репозитории для работы с БД
-│   ├── schemas/                # Pydantic схемы
-│   │   ├── dto/                # Схемы DTO
-│   │   └── v1/
-│   │       ├── requests/       # Схемы запросов
-│   │       └── responses/      # Схемы ответов
-│   ├── services/               # Бизнес-логика
-│   └── tests/                  # Тестирование
-│   │   ├── test_api/
-│   │   ├── test_repositories/
-│   │   ├── test_security/
-│   │   └── test_services/
-├── keys/                       # Ключи шифрования и подписи
-├── scripts/                    # Утилиты для администрирования
-├── .env                        # Значения конфигурации приложения
-├── pyproject.toml              # Зависимости (uv)
-└── docker-compose.yml          # Контейнеры для разработки
-```
+На данный момент проводится реструктуризация проекта. Новая структура будет добавлена после завершения проекта.
 
 ## 🏗️ Архитектура приложения
 
-Проект построен как слоистый backend на FastAPI с чётким разделением ответственности между API, бизнес-логикой, доступом к данным и инфраструктурой.
-
-**Поток запроса:**
-`HTTP -> Router -> Dependencies -> Service -> Repository + UnitOfWork -> PostgreSQL/Redis/S3 -> Response schema`
-
-### Основные слои
-
-- **API (`app/api/...`)**
-  Роутеры и HTTP-контракты. Принимают запросы, валидируют входные данные и возвращают типизированные ответы.
-- **Services (`app/services/...`)**
-  Реализация use-case’ов и бизнес-правил. Здесь находятся сценарии приложения, а не SQL/HTTP-детали.
-- **Repositories (`app/repositories/...`)**
-  Изолированный доступ к данным через SQLAlchemy-модели (`app/models/...`).
-- **Infrastructure (`app/infra/...`)**
-  Адаптеры внешних систем: PostgreSQL, Redis, S3/MinIO, таблицы базы данных.
-- **Core (`app/core/...`)**
-  Базовые зависимости, безопасность, исключения, общие типы и вспомогательная логика.
-- **Schemas (`app/schemas/...`)**
-  DTO и API-схемы запросов/ответов, формализующие границы между слоями.
-
-### Ключевые принципы
-
-- **Request-scoped композиция зависимостей:** `ServiceManager` собирает сервисы на один запрос, но не заменяет архитектуру слоёв.
-- **Транзакционность через Unit of Work:** согласованная работа репозиториев в рамках одной сессии/транзакции.
-- **Явные контракты данных:** разделение DTO внутреннего слоя и публичных API-схем.
-- **Единая модель ошибок:** доменные исключения маппятся в предсказуемые HTTP-ответы через handlers.
-- **Security by design:** JWT, Argon2, безопасная работа с refresh-токенами и ключами подписи.
-
-### Как расширять систему
-
-1. Добавить endpoint в `app/api/v1/...`.
-2. Реализовать use-case в `app/services/...`.
-3. Добавить/обновить операции в `app/repositories/...` (и при необходимости таблицы в `app/infra/...`).
-4. Обновить схемы в `app/schemas/...`.
-5. Если меняется БД - добавить миграцию в `alembic/versions/...`.
-6. Покрыть изменения тестами соответствующего уровня (`test_api`, `test_services`, `test_repositories`, `test_security`).
+На данный момент проводится реструктуризация проекта. Новая архитектура будет добавлена после завершения проекта.
 
 ## 📚 API Документация
 
@@ -195,6 +128,8 @@ elyria-backend/                # FastAPI приложение
 - **ReDoc**: `http://localhost:8000/redoc`
 
 ## 🎯 Основные эндпоинты
+
+Список эндпоинтов предоставлен в ознакомительных целях. Во время выполнения реструктуризации некоторые из из них могут быть не реализованы или изменены.
 
 | Метод | Путь | Описание | Авторизация |
 |-------|------|----------|-------------|
@@ -218,38 +153,16 @@ elyria-backend/                # FastAPI приложение
 
 ## 🧪 Тестирование
 
-```bash
-# Запуск тестов
-uv run pytest ./app/tests/
-
-# С покрытием кода (отчёт будет в папке htmlcov)
-uv run pytest --cov=app --cov-report html ./app/tests/
-```
-
-## 📦 Деплой
-
-### На VPS (например, Ubuntu + Nginx)
-
-```bash
-# 1. Клонируйте репозиторий на сервер, например
-rsync -az --delete ./ {ssh_user}@{ssh_host}:~/elyria-backend
-
-# 2. Настройте .env для продакшена
-# 3. Запустите через Docker Compose
-docker compose --env-file .env up -d --wait
-
-# 4. Настройте Nginx как reverse proxy
-# 5. Настройте SSL через Let's Encrypt
-```
+На данный момент проводится реструктуризация проекта. Новая инструкция по тестированию будет добавлена после завершения проекта.
 
 ## 🌱 Планы по развитию
 
-- Мобильное приложение (React Native)
-- Push-уведомления (напоминания о датах)
-- End-to-end шифрование заметок
-- Генератор "истории любви" на основе данных
-- Интеграция с календарем (повторяющиеся события)
-- Экспорт данных (PDF-книга воспоминаний)
+- Мобильное приложение (Flutter);
+- Push-уведомления (напоминания о датах);
+- End-to-end шифрование заметок, альбомов и медиафайлов;
+- Генератор "истории любви" на основе данных;
+- Интеграция с календарем (повторяющиеся события);
+- Экспорт данных (PDF-книга воспоминаний).
 
 ## 💝 Особенности для пары
 
