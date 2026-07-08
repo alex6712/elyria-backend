@@ -6,43 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.composition.settings import get_settings
+from src.presentation.http.root import api_root_router
 
 _settings = get_settings()
-
-tags_metadata = [
-    {
-        "name": "root",
-        "description": "Получение информации о **приложении**.",
-    },
-    {
-        "name": "authorization",
-        "description": "Операции **регистрации** и **аутентификации**.",
-    },
-    {
-        "name": "couples",
-        "description": "Операции с **парами** между пользователями приложения.",
-    },
-    {
-        "name": "users",
-        "description": "Операции с **пользователями** приложения.",
-    },
-    {
-        "name": "media-files",
-        "description": "Операции с **медиафайлами**: загрузка, скачивание, presigned URLs.",
-    },
-    {
-        "name": "media-albums",
-        "description": "Операции с **медиаальбомами**: создание, получение, привязка файлов.",
-    },
-    {
-        "name": "notes",
-        "description": "Операции с пользовательскими **заметками**.",
-    },
-    {
-        "name": "dashboard",
-        "description": "Операции по получению агрегированных данных для **главной страницы** приложения.",
-    },
-]
 
 
 @asynccontextmanager
@@ -72,7 +38,31 @@ elyria_http_app = FastAPI(
     summary=_settings.APP_SUMMARY,
     description=_settings.APP_DESCRIPTION,
     version=_settings.APP_VERSION,
-    openapi_tags=tags_metadata,
+    openapi_tags=[
+        {"name": "root", "description": "Получение информации о **приложении**."},
+        {
+            "name": "authorization",
+            "description": "Операции **регистрации** и **аутентификации**.",
+        },
+        {
+            "name": "couples",
+            "description": "Операции с **парами** между пользователями приложения.",
+        },
+        {"name": "users", "description": "Операции с **пользователями** приложения."},
+        {
+            "name": "media-files",
+            "description": "Операции с **медиафайлами**: загрузка, скачивание, presigned URLs.",
+        },
+        {
+            "name": "media-albums",
+            "description": "Операции с **медиаальбомами**: создание, получение, привязка файлов.",
+        },
+        {"name": "notes", "description": "Операции с пользовательскими **заметками**."},
+        {
+            "name": "dashboard",
+            "description": "Операции по получению агрегированных данных для **главной страницы** приложения.",
+        },
+    ],
     lifespan=lifespan,
     contact={"name": _settings.ADMIN_NAME, "email": _settings.ADMIN_EMAIL},
 )
@@ -84,3 +74,5 @@ elyria_http_app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+elyria_http_app.include_router(api_root_router)
