@@ -8,7 +8,7 @@
             "module": "fastapi",
             "args": [
                 "dev",
-                "./app/main.py"
+                "./src/composition/http_app.py"
             ],
             "jinja": true
         }
