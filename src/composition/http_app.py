@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.composition.settings import get_settings
+from src.composition.signature_keys import get_signature_keys
 from src.presentation.http.root import api_root_router
 
 _settings = get_settings()
@@ -15,20 +16,30 @@ _settings = get_settings()
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
     """Менеджер срока службы FastAPI-приложения.
 
-    Используется для менеджмента самого приложения в процессе
-    его работы.
+    Выполняет инициализацию и освобождение глобальных ресурсов приложения.
+
+    Во время запуска:
+
+    * фиксирует время старта приложения;
+    * загружает и кеширует пару ключей подписи JWT.
+
+    Если какой-либо ресурс не удалось инициализировать, приложение
+    завершит запуск с ошибкой.
 
     Parameters
     ----------
     app : FastAPI
-        Объект приложения для менеджмента.
+        Экземпляр FastAPI-приложения.
 
     Yields
     ------
     None
-        При успешном выполнении ничего не возвращает.
+        Управление передаётся приложению после успешной инициализации
+        всех ресурсов.
     """
     app.state.startup_at = datetime.now(timezone.utc)
+
+    get_signature_keys()
 
     yield
 

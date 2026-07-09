@@ -1,36 +1,18 @@
 from functools import lru_cache
-from pathlib import Path
-from typing import Any, Literal, Self
+from typing import Any, Literal
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePublicKey,
-)
 from pydantic import (
     AnyHttpUrl,
     EmailStr,
     PostgresDsn,
     RedisDsn,
-    SkipValidation,
     TypeAdapter,
     ValidationError,
     field_validator,
-    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-"""Абсолютный путь к корню проекта.
-
-Вычисляется от расположения текущего модуля (``src/composition/settings.py``),
-а не от текущей рабочей директории процесса (``os.getcwd()``). Это гарантирует
-корректное разрешение путей до ``.env`` и файлов ключей независимо от того,
-откуда запущен процесс (напрямую, через systemd с другим ``WorkingDirectory``,
-из Docker-контейнера или из тестов).
-
-Используется как база для построения путей к ``.env`` и директории ``keys/``.
-"""
+from src.composition.paths import BASE_DIR
 
 _CORS_LIST_ADAPTER = TypeAdapter(list[str])
 """Валидатор для приведения сырых данных к ``list[str]``.
@@ -313,78 +295,6 @@ class Settings(BaseSettings):
         enable_decoding=False,
         extra="ignore",
     )
-
-    PRIVATE_SIGNATURE_KEY: SkipValidation[EllipticCurvePrivateKey] = None  # type: ignore
-    """Приватный ключ подписи JWT (EC P-256).
-
-    Загружается из ``keys/private_key.pem.enc`` в ``load_keys``.
-    Расшифровывается с использованием ``PRIVATE_SIGNATURE_KEY_PASSWORD``.
-    """
-
-    PUBLIC_SIGNATURE_KEY: SkipValidation[EllipticCurvePublicKey] = None  # type: ignore
-    """Публичный ключ подписи JWT (EC P-256).
-
-    Загружается из ``keys/public_key.pem`` в ``load_keys``.
-    """
-
-    @model_validator(mode="after")
-    def load_keys(self) -> Self:
-        """Загружает и дешифрует ключи подписи JWT с диска.
-
-        Выполняется после инициализации всех полей модели:
-
-        1. Читает публичный ключ из ``keys/public_key.pem``;
-        2. Читает и дешифрует приватный ключ из ``keys/private_key.pem.enc``
-           с использованием ``PRIVATE_SIGNATURE_KEY_PASSWORD``;
-        3. Сохраняет полученные объекты ключей в соответствующие поля.
-
-        Оба файла должны существовать и содержать корректные ключи
-        в формате PEM (алгоритм EC P-256). Зашифрованный приватный ключ
-        должен быть зашифрован алгоритмом, поддерживаемым OpenSSL.
-
-        Raises
-        ------
-        ValueError
-            Если файл ключа не найден, не удалось расшифровать приватный
-            ключ или тип загруженного ключа не соответствует ожидаемому
-            (``EllipticCurvePrivateKey`` / ``EllipticCurvePublicKey``).
-        """
-        public_key_path = BASE_DIR / "keys" / "public_key.pem"
-
-        with open(public_key_path, "rb") as public_key_file:
-            public_key = serialization.load_pem_public_key(public_key_file.read())
-
-            if not isinstance(public_key, EllipticCurvePublicKey):
-                raise ValueError(
-                    f"Expected EC public key, got {type(public_key).__name__}"
-                )
-
-        self.PUBLIC_SIGNATURE_KEY = public_key  # type: ignore
-
-        if not self.PRIVATE_SIGNATURE_KEY_PASSWORD:
-            raise ValueError(
-                "PRIVATE_SIGNATURE_KEY_PASSWORD is required to load the private key"
-            )
-
-        private_key_path = BASE_DIR / "keys" / "private_key.pem.enc"
-
-        with open(private_key_path, "rb") as private_key_file:
-            try:
-                private_key = serialization.load_pem_private_key(
-                    private_key_file.read(),
-                    password=self.PRIVATE_SIGNATURE_KEY_PASSWORD.encode("utf-8"),
-                )
-            except Exception as e:
-                raise ValueError(f"Failed to decrypt private key: {e}")
-
-            if not isinstance(private_key, EllipticCurvePrivateKey):
-                raise ValueError(
-                    f"Expected EC private key, got {type(private_key).__name__}"
-                )
-
-        self.PRIVATE_SIGNATURE_KEY = private_key  # type: ignore
-
-        return self
 
 
 @lru_cache
