@@ -27,3 +27,13 @@ class InvalidUsernameLengthException(UserException):
     """
 
     pass
+
+
+class InvalidUsernameFormatException(UserException):
+    """Недопустимый формат имени пользователя.
+
+    Возникает, если имя пользователя содержит недопустимые символы
+    (например, пробелы) или не соответствует разрешённому паттерну.
+    """
+
+    pass

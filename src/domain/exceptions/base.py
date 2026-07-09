@@ -27,11 +27,11 @@ class BaseDomainException(Exception):
 
 
 class NotFoundException(BaseDomainException):
-    """Базовое исключение для группировки всех исключений типа `NotFound`.
+    """Базовое исключение для группировки всех исключений типа ``NotFound``.
 
     Notes
     -----
-    Все исключения, связанные с логикой обработки `NotFound`
+    Все исключения, связанные с логикой обработки ``NotFound``
     различных доменов должны наследоваться от этого исключения.
     """
 
@@ -39,11 +39,11 @@ class NotFoundException(BaseDomainException):
 
 
 class AlreadyExistsException(BaseDomainException):
-    """Базовое исключение для группировки всех исключений типа `AlreadyExists`.
+    """Базовое исключение для группировки всех исключений типа ``AlreadyExists``.
 
     Notes
     -----
-    Все исключения, связанные с логикой обработки `AlreadyExists`
+    Все исключения, связанные с логикой обработки ``AlreadyExists``
     различных доменов должны наследоваться от этого исключения.
     """
 

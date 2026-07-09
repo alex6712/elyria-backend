@@ -42,7 +42,7 @@ async def coffee() -> StandardResponse:
     Returns
     -------
     StandardResponse
-        Объект ответа с кодом ошибки `APICode.I_AM_A_TEAPOT` и сообщением
+        Объект ответа с кодом ошибки ``APICode.I_AM_A_TEAPOT`` и сообщением
         'I cannot brew coffee, I am a teapot.'.
     """
     return StandardResponse(

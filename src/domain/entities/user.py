@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from src.domain.exceptions.user import InvalidUsernameLengthException
+from src.domain.value_objects.username import Username
 
 
 class User:
@@ -20,9 +20,10 @@ class User:
     ----------
     id : UUID
         Уникальный идентификатор пользователя.
-    username : str
-        Уникальное имя пользователя, используемое для входа в систему.
-        Должно содержать от 3 до 32 символов.
+    username : Username
+        Value object с уникальным именем пользователя для входа в систему.
+        Должно содержать от 3 до 32 символов и соответствовать паттерну
+        ``^[a-zA-Z0-9_-]+$``.
     password_hash : str
         Хэш пароля пользователя.
     public_key : bytes
@@ -44,6 +45,9 @@ class User:
 
     Raises
     ------
+    InvalidUsernameFormatException
+        Если имя пользователя содержит недопустимые символы
+        (включая пробельные).
     InvalidUsernameLengthException
         Если длина имени пользователя выходит за допустимые пределы.
     """
@@ -51,7 +55,7 @@ class User:
     def __init__(
         self,
         id: UUID,
-        username: str,
+        username: Username,
         password_hash: str,
         public_key: bytes,
         encrypted_private_key: bytes,
@@ -61,10 +65,6 @@ class User:
         display_name: str,
         created_at: datetime,
     ) -> None:
-        if not 3 <= len(username) <= 32:
-            raise InvalidUsernameLengthException(
-                "Username must contain from 3 to 32 characters."
-            )
 
         self.id = id
         self.username = username
