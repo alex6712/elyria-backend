@@ -82,6 +82,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "Generated public signature key: $PUBLIC_KEY"
+echo "Generated public key: $PUBLIC_KEY"
 
 echo "Ed25519 signature keys generated successfully!"
