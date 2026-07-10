@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePublicKey,
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
 )
 
 from src.composition.paths import (
@@ -20,14 +20,14 @@ class SignatureKeys:
 
     Attributes
     ----------
-    private : EllipticCurvePrivateKey
-        Приватный EC P-256 ключ, используемый для подписи JWT.
-    public : EllipticCurvePublicKey
-        Публичный EC P-256 ключ, используемый для проверки подписи JWT.
+    private : Ed25519PrivateKey
+        Приватный ключ Ed25519, используемый для подписи JWT.
+    public : Ed25519PublicKey
+        Публичный ключ Ed25519, используемый для проверки подписи JWT.
     """
 
-    private: EllipticCurvePrivateKey
-    public: EllipticCurvePublicKey
+    private: Ed25519PrivateKey
+    public: Ed25519PublicKey
 
 
 @lru_cache
@@ -63,8 +63,10 @@ def get_signature_keys() -> SignatureKeys:
     with PUBLIC_SIGNATURE_KEY_PATH.open("rb") as file:
         public_key = serialization.load_pem_public_key(file.read())
 
-    if not isinstance(public_key, EllipticCurvePublicKey):
-        raise ValueError(f"Expected EC public key, got {type(public_key).__name__}.")
+    if not isinstance(public_key, Ed25519PublicKey):
+        raise ValueError(
+            f"Expected Ed25519 public key, got {type(public_key).__name__}."
+        )
 
     with PRIVATE_SIGNATURE_KEY_PATH.open("rb") as file:
         try:
@@ -75,7 +77,9 @@ def get_signature_keys() -> SignatureKeys:
         except Exception as e:
             raise ValueError(f"Failed to decrypt private key: {e}") from e
 
-    if not isinstance(private_key, EllipticCurvePrivateKey):
-        raise ValueError(f"Expected EC private key, got {type(private_key).__name__}.")
+    if not isinstance(private_key, Ed25519PrivateKey):
+        raise ValueError(
+            f"Expected Ed25519 private key, got {type(private_key).__name__}."
+        )
 
     return SignatureKeys(private=private_key, public=public_key)

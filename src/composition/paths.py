@@ -14,7 +14,7 @@ KEYS_DIR = BASE_DIR / "keys"
 """Директория с криптографическими ключами."""
 
 PUBLIC_SIGNATURE_KEY_PATH = KEYS_DIR / "public_key.pem"
-"""Путь к публичному EC-ключу подписи JWT."""
+"""Путь к публичному ключу подписи JWT."""
 
-PRIVATE_SIGNATURE_KEY_PATH = KEYS_DIR / "private_key.pem.enc"
-"""Путь к зашифрованному приватному EC-ключу подписи JWT."""
+PRIVATE_SIGNATURE_KEY_PATH = KEYS_DIR / "private_key.pem"
+"""Путь к зашифрованному приватному ключу подписи JWT."""

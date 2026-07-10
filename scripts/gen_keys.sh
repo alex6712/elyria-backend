@@ -24,12 +24,9 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-echo "Generating EC signature keys"
+echo "Generating Ed25519 signature keys..."
 
-if [ ! -d "$KEYS_DIR" ]; then
-    echo "Creating keys directory: $KEYS_DIR"
-    mkdir -p "$KEYS_DIR"
-fi
+mkdir -p "$KEYS_DIR"
 
 PRIVATE_SIGNATURE_KEY_PASSWORD=$(
     grep -m1 '^PRIVATE_SIGNATURE_KEY_PASSWORD=' "$ENV_FILE" \
@@ -42,7 +39,7 @@ if [ -z "$PRIVATE_SIGNATURE_KEY_PASSWORD" ]; then
     exit 1
 fi
 
-PRIVATE_KEY="$KEYS_DIR/private_key.pem.enc"
+PRIVATE_KEY="$KEYS_DIR/private_key.pem"
 PUBLIC_KEY="$KEYS_DIR/public_key.pem"
 
 if [ -f "$PRIVATE_KEY" ] || [ -f "$PUBLIC_KEY" ]; then
@@ -55,22 +52,30 @@ fi
 
 cd "$KEYS_DIR" || exit 1
 
-echo "Generating encrypted private signature key..."
-openssl ecparam -name prime256v1 -genkey | openssl ec -aes256 -passout pass:"$PRIVATE_SIGNATURE_KEY_PASSWORD" -out private_key.pem.enc
+echo "Generating encrypted private key..."
+
+openssl genpkey \
+    -algorithm Ed25519 \
+    | openssl pkcs8 \
+        -topk8 \
+        -v2 aes-256-cbc \
+        -passout pass:"$PRIVATE_SIGNATURE_KEY_PASSWORD" \
+        -out $PRIVATE_KEY
 
 if [ $? -ne 0 ]; then
     echo "Error while generating encrypted private signature key"
     exit 1
 fi
 
-echo "Generated private signature key: $PRIVATE_KEY"
+echo "Generated private key: $PRIVATE_KEY"
 
-echo "Generating public signature verification key..."
-openssl ec \
+echo "Generating public key..."
+
+openssl pkey \
     -passin pass:"$PRIVATE_SIGNATURE_KEY_PASSWORD" \
-    -in private_key.pem.enc \
+    -in $PRIVATE_KEY \
     -pubout \
-    -out public_key.pem
+    -out $PUBLIC_KEY
 
 if [ $? -ne 0 ]; then
     echo "Error while generating public signature key"
@@ -78,6 +83,5 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Generated public signature key: $PUBLIC_KEY"
-echo "Signature keys generated successfully!"
 
-cd - > /dev/null
+echo "Ed25519 signature keys generated successfully!"
