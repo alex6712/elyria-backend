@@ -177,8 +177,8 @@ class Settings(BaseSettings):
     PRIVATE_SIGNATURE_KEY_PASSWORD: str
     """Пароль для дешифровки зашифрованного приватного ключа подписи JWT."""
 
-    JWT_ALGORITHM: str
-    """Алгоритм кодирования JWT."""
+    JWS_ALGORITHM: str
+    """Алгоритм подписи JWT."""
 
     ACCESS_TOKEN_LIFETIME_MINUTES: int
     """Время жизни access-токена в минутах."""

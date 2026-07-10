@@ -12,8 +12,9 @@ from alembic import context
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from app.config import get_settings
-from app.infra.postgres.tables import metadata as target_metadata
+from src.composition.settings import get_settings
+
+target_metadata = None  # TODO: временная заглушка, заменить после реализации таблиц
 
 config = context.config
 settings = get_settings()

@@ -42,7 +42,7 @@ docker-compose.yml
 .dockerignore
 
 # Тесты и покрытие
-app/tests/
+tests/
 pytest.ini
 .coverage
 htmlcov/

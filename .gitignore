@@ -209,16 +209,6 @@ __marimo__/
 # Security keys
 keys/
 *.pem
-*.pem.enc
 
 # Private scripts
 scripts/private/
-
-# Ansible stuff:
-ansible/inventory/*.yml
-!ansible/inventory/production.yml.example
-*.retry
-.ansible_vault/
-ansible/.vault_pass
-*.key
-!.j2
