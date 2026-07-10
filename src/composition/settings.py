@@ -3,7 +3,6 @@ from typing import Any, Literal
 
 from pydantic import (
     AnyHttpUrl,
-    EmailStr,
     PostgresDsn,
     RedisDsn,
     TypeAdapter,
@@ -33,8 +32,6 @@ class Settings(BaseSettings):
     Загружает и валидирует настройки из ``.env``-файла в корне проекта.
     Разделена на логические группы:
 
-    * **Application** - метаданные приложения (имя, версия, описание);
-    * **Administration** - контактная информация ответственного лица;
     * **API** - CORS, текущий путь версии API;
     * **Database** - параметры подключения к PostgreSQL;
     * **Cache** - параметры подключения к Redis;
@@ -50,27 +47,6 @@ class Settings(BaseSettings):
     get_settings : Фабрика с кешированием для получения единственного
                    экземпляра настроек.
     """
-
-    APP_NAME: str
-    """Название приложения."""
-
-    APP_VERSION: str
-    """Текущая версия приложения."""
-
-    APP_DESCRIPTION: str
-    """Полное описание приложения."""
-
-    APP_SUMMARY: str
-    """Краткое описание приложения."""
-
-    ADMIN_NAME: str
-    """Имя ответственного лица."""
-
-    ADMIN_EMAIL: EmailStr
-    """Email для связи с ответственным лицом."""
-
-    ROBOTS_CONTENT: str
-    """Текст файла robots.txt."""
 
     BACKEND_CORS_ORIGINS: list[str]
     """Список источников для CORS Middleware.
