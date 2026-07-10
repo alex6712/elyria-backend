@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from src.domain.value_objects.display_name import DisplayName
 from src.domain.value_objects.username import Username
 
 
@@ -22,8 +23,6 @@ class User:
         Уникальный идентификатор пользователя.
     username : Username
         Value object с уникальным именем пользователя для входа в систему.
-        Должно содержать от 3 до 32 символов и соответствовать паттерну
-        ``^[a-zA-Z0-9_-]+$``.
     password_hash : str
         Хэш пароля пользователя.
     public_key : bytes
@@ -38,18 +37,10 @@ class User:
     kdf_params : dict[str, Any]
         Параметры алгоритма KDF (например, Argon2id), необходимые
         для повторного получения мастер-ключа.
-    display_name : str
-        Отображаемое имя пользователя.
+    display_name : DisplayName
+        Value object с отображаемым именем пользователя.
     created_at : datetime
         Дата и время регистрации пользователя.
-
-    Raises
-    ------
-    InvalidUsernameFormatException
-        Если имя пользователя содержит недопустимые символы
-        (включая пробельные).
-    InvalidUsernameLengthException
-        Если длина имени пользователя выходит за допустимые пределы.
     """
 
     def __init__(
@@ -62,10 +53,9 @@ class User:
         private_key_nonce: bytes,
         kdf_salt: bytes,
         kdf_params: dict[str, Any],
-        display_name: str,
+        display_name: DisplayName,
         created_at: datetime,
     ) -> None:
-
         self.id = id
         self.username = username
         self.password_hash = password_hash

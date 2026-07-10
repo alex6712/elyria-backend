@@ -50,29 +50,7 @@ elyria_http_app = FastAPI(
     description=_settings.APP_DESCRIPTION,
     version=_settings.APP_VERSION,
     openapi_tags=[
-        {"name": "root", "description": "Получение информации о **приложении**."},
-        {
-            "name": "authorization",
-            "description": "Операции **регистрации** и **аутентификации**.",
-        },
-        {
-            "name": "couples",
-            "description": "Операции с **парами** между пользователями приложения.",
-        },
-        {"name": "users", "description": "Операции с **пользователями** приложения."},
-        {
-            "name": "media-files",
-            "description": "Операции с **медиафайлами**: загрузка, скачивание, presigned URLs.",
-        },
-        {
-            "name": "media-albums",
-            "description": "Операции с **медиаальбомами**: создание, получение, привязка файлов.",
-        },
-        {"name": "notes", "description": "Операции с пользовательскими **заметками**."},
-        {
-            "name": "dashboard",
-            "description": "Операции по получению агрегированных данных для **главной страницы** приложения.",
-        },
+        {"name": "root", "description": "Получение информации о **приложении**."}
     ],
     lifespan=lifespan,
     contact={"name": _settings.ADMIN_NAME, "email": _settings.ADMIN_EMAIL},

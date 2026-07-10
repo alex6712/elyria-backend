@@ -37,3 +37,13 @@ class InvalidUsernameFormatException(UserException):
     """
 
     pass
+
+
+class InvalidDisplayNameLengthException(UserException):
+    """Недопустимая длина отображаемого имени.
+
+    Возникает, если длина отображаемого имени выходит за допустимые
+    пределы, установленные правилами предметной области.
+    """
+
+    pass

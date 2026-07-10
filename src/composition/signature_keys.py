@@ -58,7 +58,6 @@ def get_signature_keys() -> SignatureKeys:
         Если не удалось дешифровать приватный ключ либо загруженный
         ключ имеет неверный тип.
     """
-
     settings = get_settings()
 
     with PUBLIC_SIGNATURE_KEY_PATH.open("rb") as file:
