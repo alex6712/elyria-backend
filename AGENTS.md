@@ -1,4 +1,4 @@
-# AGENT_RULES.md
+# AGENTS.md
 
 ## Назначение
 
