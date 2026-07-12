@@ -1,0 +1,97 @@
+from datetime import datetime, timezone
+from uuid import UUID
+
+import jwt
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
+from src.application.dto.security.token_claims import TokenClaimsDTO
+from src.domain.exceptions.auth import (
+    TokenExpiredException,
+    TokenInvalidException,
+    TokenSignatureInvalidException,
+)
+
+
+class JwtTokenVerifier:
+    """Реализация порта ``TokenVerifier`` на основе JWT.
+
+    Выполняет проверку подписи и срока действия JWT-токенов
+    с использованием алгоритма асимметричной подписи Ed25519 (EdDSA).
+
+    Извлекает утверждения из валидного токена и возвращает их
+    в виде ``TokenClaimsDTO``.
+
+    Parameters
+    ----------
+    issuer : str
+        Издатель токена (значение утверждения ``iss``).
+    public_key : Ed25519PublicKey
+        Публичный ключ Ed25519 для проверки подписи токенов.
+    algorithm : str
+        Алгоритм подписи JWT (например, ``"EdDSA"``).
+    """
+
+    def __init__(
+        self, issuer: str, public_key: Ed25519PublicKey, algorithm: str
+    ) -> None:
+        self._issuer = issuer
+        self._public_key_bytes = public_key.public_bytes(
+            encoding=Encoding.PEM,
+            format=PublicFormat.SubjectPublicKeyInfo,
+        )
+        self._algorithm = algorithm
+
+    def verify(self, token: str) -> TokenClaimsDTO:
+        """Проверить подписанный JWT-токен и извлечь утверждения.
+
+        Выполняет проверку подписи токена с использованием публичного
+        ключа Ed25519, проверяет срок действия и наличие всех
+        обязательных утверждений.
+
+        Parameters
+        ----------
+        token : str
+            Подписанный JWT-токен в компактном сериализованном
+            формате.
+
+        Returns
+        -------
+        TokenClaimsDTO
+            Проверенные утверждения, содержащиеся в токене.
+
+        Raises
+        ------
+        TokenExpiredException
+            Если срок действия токена истёк.
+        TokenSignatureInvalidException
+            Если подпись токена не прошла проверку.
+        TokenInvalidException
+            Если в токене отсутствуют обязательные утверждения
+            либо токен имеет некорректный формат.
+        """
+        try:
+            payload = jwt.decode(
+                token,
+                self._public_key_bytes,
+                algorithms=[self._algorithm],
+                issuer=self._issuer,
+                options={"require": ["iss", "sub", "exp", "iat", "jti", "sid"]},
+            )
+        except jwt.ExpiredSignatureError:
+            raise TokenExpiredException()
+        except jwt.InvalidSignatureError:
+            raise TokenSignatureInvalidException()
+        except jwt.InvalidTokenError as e:
+            raise TokenInvalidException(str(e))
+
+        try:
+            return TokenClaimsDTO(
+                user_id=UUID(payload["sub"]),
+                expires_at=datetime.fromtimestamp(payload["exp"], tz=timezone.utc),
+                issued_at=datetime.fromtimestamp(payload["iat"], tz=timezone.utc),
+                token_id=UUID(payload["jti"]),
+                session_id=UUID(payload["sid"]),
+            )
+        except (ValueError, TypeError) as e:
+            raise TokenInvalidException(str(e)) from e

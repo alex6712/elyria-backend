@@ -42,7 +42,7 @@ class SessionExpiredException(AuthException):
     pass
 
 
-class SessionInvalidError(AuthException):
+class SessionInvalidException(AuthException):
     """Исключение, сигнализирующее о попытке изменить состояние
     отозванной или истёкшей сессии.
 
@@ -59,3 +59,42 @@ class SessionInvalidError(AuthException):
         )
 
         self.session_id = session_id
+
+
+class TokenExpiredException(AuthException):
+    """Срок действия токена истёк.
+
+    Возникает при попытке верификации токена, срок действия
+    которого истёк.
+    """
+
+    pass
+
+
+class TokenSignatureInvalidException(AuthException):
+    """Подпись токена недействительна.
+
+    Возникает при попытке верификации токена, подпись которого
+    не прошла проверку.
+    """
+
+    pass
+
+
+class TokenInvalidException(AuthException):
+    """Токен недействителен.
+
+    Возникает при попытке верификации токена, в котором
+    отсутствуют обязательные утверждения либо нарушен формат
+    данных.
+
+    Parameters
+    ----------
+    detail : str
+        Причина недействительности токена.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+
+        self.detail = detail

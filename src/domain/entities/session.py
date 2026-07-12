@@ -3,7 +3,7 @@ from typing import Self
 from uuid import UUID, uuid4
 
 from src.domain.entities._base import BaseEntity
-from src.domain.exceptions.auth import SessionInvalidError
+from src.domain.exceptions.auth import SessionInvalidException
 
 
 class Session(BaseEntity[UUID]):
@@ -46,7 +46,7 @@ class Session(BaseEntity[UUID]):
     Согласно решению, симметричному ADR-0004 (принятому для ``User``),
     методы ``extend`` и ``rotate_secret`` запрещены для отозванной
     или истёкшей сессии. При нарушении возбуждается
-    ``SessionInvalidError``. Это решение оформлено отдельным ADR-0005.
+    ``SessionInvalidException``. Это решение оформлено отдельным ADR-0005.
     """
 
     def __init__(
@@ -185,7 +185,7 @@ class Session(BaseEntity[UUID]):
 
         Raises
         ------
-        SessionInvalidError
+        SessionInvalidException
             Если сессия отозвана или истёк срок её действия.
         """
         self._ensure_valid()
@@ -204,7 +204,7 @@ class Session(BaseEntity[UUID]):
 
         Raises
         ------
-        SessionInvalidError
+        SessionInvalidException
             Если сессия отозвана или истёк срок её действия.
 
         Notes
@@ -239,7 +239,7 @@ class Session(BaseEntity[UUID]):
 
         Raises
         ------
-        SessionInvalidError
+        SessionInvalidException
             Если сессия отозвана или истёк срок её действия.
 
         Notes
@@ -249,7 +249,7 @@ class Session(BaseEntity[UUID]):
         сессии. Решение описано в ADR-0005.
         """
         if not self.is_valid():
-            raise SessionInvalidError(self.id)
+            raise SessionInvalidException(self.id)
 
     def __eq__(self, other: object) -> bool:
         """Сравнить сессии по идентификатору.

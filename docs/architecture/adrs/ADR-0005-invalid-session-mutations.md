@@ -36,7 +36,7 @@ Accepted
 
 #### Принцип работы
 
-Оба метода в начале выполнения проверяют `is_valid()` (то есть одновременно `is_revoked() == False` и `is_expired() == False`) и возбуждают `SessionInvalidError`, если сессия отозвана или истекла. `revoke()` и `mark_used()` в эту проверку не входят: `revoke()` должен быть выполним в любом состоянии, а `mark_used()` не изменяет секрет или срок действия.
+Оба метода в начале выполнения проверяют `is_valid()` (то есть одновременно `is_revoked() == False` и `is_expired() == False`) и возбуждают `SessionInvalidException`, если сессия отозвана или истекла. `revoke()` и `mark_used()` в эту проверку не входят: `revoke()` должен быть выполним в любом состоянии, а `mark_used()` не изменяет секрет или срок действия.
 
 ```python
 # Пример (не реализация)
@@ -60,12 +60,12 @@ def extend(self, new_expires_at: datetime) -> None:
 
 #### Ограничения
 
-- Требует, чтобы `SessionInvalidError` был определён и доступен в Domain Layer.
+- Требует, чтобы `SessionInvalidException` был определён и доступен в Domain Layer.
 - Любое расширение (например, grace period) потребует пересмотра ADR, а не тихого изменения кода.
 
 #### Влияние на архитектуру
 
-Полностью соответствует Clean Architecture: правило реализовано внутри Entity. Presentation Layer будет обязан замапить `SessionInvalidError` на HTTP-код (вне области текущего ADR).
+Полностью соответствует Clean Architecture: правило реализовано внутри Entity. Presentation Layer будет обязан замапить `SessionInvalidException` на HTTP-код (вне области текущего ADR).
 
 #### Влияние на тестируемость
 
@@ -147,7 +147,7 @@ def rotate_secret(self, new_session_secret: str, new_expires_at: datetime) -> No
 # Пример (не реализация)
 def rotate_secret(self, new_session_secret: str, new_expires_at: datetime) -> None:
     if self.is_revoked():
-        raise SessionInvalidError(self.id)
+        raise SessionInvalidException(self.id)
     # истечение expires_at не блокирует rotate_secret
     self.session_secret = new_session_secret
     self.expires_at = new_expires_at
@@ -222,7 +222,7 @@ def rotate_secret(self, new_session_secret: str, new_expires_at: datetime) -> No
 
 Принят **Вариант A: полный запрет `extend`/`rotate_secret` для отозванной или истёкшей сессии**.
 
-Оба метода проверяют `is_valid()` через `_ensure_valid()` и возбуждают `SessionInvalidError`, если сессия отозвана или истёк срок её действия. Методы `revoke()` и `mark_used()` данной проверке не подчиняются: `revoke()` выполним в любом состоянии сессии, `mark_used()` не изменяет чувствительные поля (`session_secret`, `expires_at`).
+Оба метода проверяют `is_valid()` через `_ensure_valid()` и возбуждают `SessionInvalidException`, если сессия отозвана или истёк срок её действия. Методы `revoke()` и `mark_used()` данной проверке не подчиняются: `revoke()` выполним в любом состоянии сессии, `mark_used()` не изменяет чувствительные поля (`session_secret`, `expires_at`).
 
 Варианты B и C отклонены по причинам, изложенным в разделе «Рекомендация».
 
