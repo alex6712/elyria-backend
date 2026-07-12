@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Self
 from uuid import UUID, uuid4
 
-from src.domain.entities.base import BaseEntity
+from src.domain.entities._base import BaseEntity
 from src.domain.exceptions.user import InactiveUserException
 from src.domain.value_objects import DisplayName, E2EECredentials, Username
 

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Self
 from uuid import UUID, uuid4
 
-from src.domain.entities.base import BaseEntity
+from src.domain.entities._base import BaseEntity
 from src.domain.exceptions.auth import SessionInvalidError
 
 
@@ -139,8 +139,7 @@ class Session(BaseEntity[UUID]):
         bool
             ``True``, если срок действия сессии истёк.
         """
-        moment = now or datetime.now(timezone.utc)
-        return moment >= self.expires_at
+        return (now or datetime.now(timezone.utc)) >= self.expires_at
 
     def is_valid(self, now: datetime | None = None) -> bool:
         """Проверить, что сессия активна: не отозвана и не истекла.

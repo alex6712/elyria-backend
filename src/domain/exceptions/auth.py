@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from src.domain.domain_context import DomainContext
-from src.domain.exceptions.base import BaseDomainException
+from src.domain.exceptions._base import BaseDomainException
 
 
 class AuthException(BaseDomainException):
