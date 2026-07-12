@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from src.domain.domain_context import DomainContext
 from src.domain.exceptions.base import BaseDomainException
 
@@ -38,3 +40,22 @@ class SessionExpiredException(AuthException):
     """
 
     pass
+
+
+class SessionInvalidError(AuthException):
+    """Исключение, сигнализирующее о попытке изменить состояние
+    отозванной или истёкшей сессии.
+
+    Parameters
+    ----------
+    session_id : UUID
+        Идентификатор сессии, для которой была предпринята
+        запрещённая операция.
+    """
+
+    def __init__(self, session_id: UUID) -> None:
+        super().__init__(
+            f"Session {session_id} is revoked or expired and cannot be modified"
+        )
+
+        self.session_id = session_id

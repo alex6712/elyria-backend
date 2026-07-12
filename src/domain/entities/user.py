@@ -2,11 +2,12 @@ from datetime import datetime, timezone
 from typing import Self
 from uuid import UUID, uuid4
 
+from src.domain.entities.base import BaseEntity
 from src.domain.exceptions.user import InactiveUserException
 from src.domain.value_objects import DisplayName, E2EECredentials, Username
 
 
-class User:
+class User(BaseEntity[UUID]):
     """Доменная сущность пользователя.
 
     Представляет зарегистрированного пользователя системы и содержит
@@ -33,7 +34,7 @@ class User:
         URL изображения аватара пользователя.
     is_active : bool
         Признак активности учётной записи.
-    updated_at : datetime
+    updated_at : datetime | None
         Дата и время последнего изменения данных пользователя.
     created_at : datetime
         Дата и время регистрации пользователя.
@@ -55,18 +56,17 @@ class User:
         display_name: DisplayName,
         avatar_url: str | None,
         is_active: bool,
-        updated_at: datetime,
+        updated_at: datetime | None,
         created_at: datetime,
     ) -> None:
-        self.id = id
+        super().__init__(id=id, updated_at=updated_at, created_at=created_at)
+
         self.username = username
         self.password_hash = password_hash
         self.e2ee_credentials = e2ee_credentials
         self.display_name = display_name
         self.avatar_url = avatar_url
         self.is_active = is_active
-        self.updated_at = updated_at
-        self.created_at = created_at
 
     @classmethod
     def register(
@@ -247,16 +247,6 @@ class User:
             иначе ``False``.
         """
         return self.e2ee_credentials is not None
-
-    def _touch(self) -> None:
-        """Обновить временную метку последнего изменения.
-
-        Notes
-        -----
-        Вызывается всеми методами изменения состояния сущности
-        для поддержания консистентности ``updated_at``.
-        """
-        self.updated_at = datetime.now(timezone.utc)
 
     def _ensure_active(self) -> None:
         """Проверить, что пользователь активен.
