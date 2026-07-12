@@ -16,7 +16,7 @@ class Argon2PasswordHasher:
 
     _context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-    async def hash(self, password: str) -> str:
+    def hash(self, password: str) -> str:
         """Вычисляет хеш пароля с использованием Argon2id.
 
         Parameters
@@ -31,7 +31,7 @@ class Argon2PasswordHasher:
         """
         return self._context.hash(password)
 
-    async def verify(self, password: str, hash: str) -> bool:
+    def verify(self, password: str, hash: str) -> bool:
         """Проверяет соответствие пароля хешу Argon2id.
 
         Parameters

@@ -14,7 +14,7 @@ class PasswordHasher(Protocol):
     Выбор алгоритма является ответственностью Infrastructure Layer.
     """
 
-    async def hash(self, password: str) -> str:
+    def hash(self, password: str) -> str:
         """Вычисляет хеш пароля.
 
         Parameters
@@ -29,7 +29,7 @@ class PasswordHasher(Protocol):
         """
         ...
 
-    async def verify(self, password: str, hash: str) -> bool:
+    def verify(self, password: str, hash: str) -> bool:
         """Проверяет соответствие пароля хешу.
 
         Parameters
