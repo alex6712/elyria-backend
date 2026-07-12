@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from src.domain.domain_context import DomainContext
 from src.domain.exceptions.base import BaseDomainException
 
@@ -44,6 +46,73 @@ class InvalidDisplayNameLengthException(UserException):
 
     Возникает, если длина отображаемого имени выходит за допустимые
     пределы, установленные правилами предметной области.
+    """
+
+    pass
+
+
+class InactiveUserException(UserException):
+    """Исключение, сигнализирующее о попытке изменить состояние
+    неактивного пользователя.
+
+    Parameters
+    ----------
+    user_id : UUID
+        Идентификатор пользователя, для которого была предпринята
+        запрещённая операция.
+    """
+
+    def __init__(self, user_id: UUID) -> None:
+        super().__init__(f"User {user_id} is inactive and cannot be modified")
+
+        self.user_id = user_id
+
+
+class EmptyPublicKeyException(UserException):
+    """Пустой публичный ключ E2EE.
+
+    Возникает, если публичный ключ, входящий в состав криптографических
+    учётных данных пользователя, пуст.
+    """
+
+    pass
+
+
+class EmptyEncryptedPrivateKeyException(UserException):
+    """Пустой зашифрованный приватный ключ E2EE.
+
+    Возникает, если зашифрованный приватный ключ, входящий в состав
+    криптографических учётных данных пользователя, пуст.
+    """
+
+    pass
+
+
+class EmptyPrivateKeyNonceException(UserException):
+    """Пустой nonce приватного ключа E2EE.
+
+    Возникает, если nonce, использованный при шифровании приватного
+    ключа, пуст.
+    """
+
+    pass
+
+
+class EmptyKdfSaltException(UserException):
+    """Пустая соль KDF.
+
+    Возникает, если соль, использованная функцией деривации ключа
+    при защите приватного ключа пользователя, пуста.
+    """
+
+    pass
+
+
+class EmptyKdfParamsException(UserException):
+    """Пустые параметры KDF.
+
+    Возникает, если параметры функции деривации ключа, использованной
+    для защиты приватного ключа пользователя, не заданы.
     """
 
     pass
