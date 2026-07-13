@@ -56,29 +56,14 @@ class JwtTokenIssuer:
             формате (три части, разделённые точками).
         """
         return jwt.encode(
-            self._build_payload(claims),
+            {
+                "iss": self._issuer,
+                "sub": str(claims.user_id),
+                "exp": int(claims.expires_at.timestamp()),
+                "iat": int(claims.issued_at.timestamp()),
+                "jti": str(claims.token_id),
+                "sid": str(claims.session_id),
+            },
             self._private_key_bytes,
             algorithm=self._algorithm,
         )
-
-    def _build_payload(self, claims: TokenClaimsDTO) -> dict[str, str | int]:
-        """Формирует словарь JWT-утверждений из DTO.
-
-        Parameters
-        ----------
-        claims : TokenClaimsDTO
-            Исходные утверждения.
-
-        Returns
-        -------
-        dict[str, str | int]
-            Словарь утверждений для передачи в ``jwt.encode``.
-        """
-        return {
-            "iss": self._issuer,
-            "sub": str(claims.user_id),
-            "exp": int(claims.expires_at.timestamp()),
-            "iat": int(claims.issued_at.timestamp()),
-            "jti": str(claims.token_id),
-            "sid": str(claims.session_id),
-        }

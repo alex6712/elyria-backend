@@ -1,10 +1,10 @@
-from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict
 
-@dataclass(frozen=True, slots=True)
-class TokenClaimsDTO:
+
+class TokenClaimsDTO(BaseModel):
     """Утверждения, содержащиеся в токене аутентификации.
 
     Представляет сведения, необходимые для идентификации пользователя,
@@ -33,3 +33,5 @@ class TokenClaimsDTO:
     issued_at: datetime
     token_id: UUID
     session_id: UUID
+
+    model_config = ConfigDict(frozen=True)

@@ -3,11 +3,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 """Абсолютный путь к корню проекта.
 
-Вычисляется от расположения текущего модуля (``src/composition/settings.py``),
+Вычисляется от расположения модуля (``src/composition/paths.py``),
 а не от текущей рабочей директории процесса (``os.getcwd()``). Это гарантирует
-корректное разрешение путей до ``.env`` и файлов ключей независимо от того,
-откуда запущен процесс (напрямую, через systemd с другим ``WorkingDirectory``,
-из Docker-контейнера или из тестов).
+корректное разрешение путей до ``.env``, файлов ключей, файлов статики и других
+частей приложения независимо от того, откуда запущен процесс (напрямую, через
+systemd с другим ``WorkingDirectory``, из Docker-контейнера или из тестов).
 """
 
 KEYS_DIR = BASE_DIR / "keys"
@@ -18,3 +18,6 @@ PUBLIC_SIGNATURE_KEY_PATH = KEYS_DIR / "public_key.pem"
 
 PRIVATE_SIGNATURE_KEY_PATH = KEYS_DIR / "private_key.pem"
 """Путь к зашифрованному приватному ключу подписи JWT."""
+
+HTTP_STATIC_FILES_PATH = BASE_DIR / "src" / "presentation" / "http" / "static"
+"""Абсолютный путь к директории со статическими файлами HTTP-сервиса."""

@@ -1,9 +1,7 @@
-from datetime import datetime, timezone
-from uuid import UUID
-
 import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from pydantic import ValidationError
 
 from src.application.dto.security.token_claims import TokenClaimsDTO
 from src.domain.exceptions.auth import (
@@ -37,8 +35,7 @@ class JwtTokenVerifier:
     ) -> None:
         self._issuer = issuer
         self._public_key_bytes = public_key.public_bytes(
-            encoding=Encoding.PEM,
-            format=PublicFormat.SubjectPublicKeyInfo,
+            encoding=Encoding.PEM, format=PublicFormat.SubjectPublicKeyInfo
         )
         self._algorithm = algorithm
 
@@ -79,19 +76,23 @@ class JwtTokenVerifier:
                 options={"require": ["iss", "sub", "exp", "iat", "jti", "sid"]},
             )
         except jwt.ExpiredSignatureError:
-            raise TokenExpiredException()
+            raise TokenExpiredException("Signature of passed token has expired.")
         except jwt.InvalidSignatureError:
-            raise TokenSignatureInvalidException()
+            raise TokenSignatureInvalidException(
+                "Signature of passed token is invalid or damaged."
+            )
         except jwt.InvalidTokenError as e:
             raise TokenInvalidException(str(e))
 
         try:
-            return TokenClaimsDTO(
-                user_id=UUID(payload["sub"]),
-                expires_at=datetime.fromtimestamp(payload["exp"], tz=timezone.utc),
-                issued_at=datetime.fromtimestamp(payload["iat"], tz=timezone.utc),
-                token_id=UUID(payload["jti"]),
-                session_id=UUID(payload["sid"]),
+            return TokenClaimsDTO.model_validate(
+                {
+                    "user_id": payload["sub"],
+                    "expires_at": payload["exp"],
+                    "issued_at": payload["iat"],
+                    "token_id": payload["jti"],
+                    "session_id": payload["sid"],
+                }
             )
-        except (ValueError, TypeError) as e:
+        except ValidationError as e:
             raise TokenInvalidException(str(e)) from e

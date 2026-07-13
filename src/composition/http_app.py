@@ -14,7 +14,7 @@ from src.composition.app_info import (
     APP_SUMMARY,
     APP_VERSION,
 )
-from src.composition.paths import BASE_DIR
+from src.composition.paths import HTTP_STATIC_FILES_PATH
 from src.composition.settings import get_settings
 from src.composition.signature_keys import get_signature_keys
 from src.presentation.http.root import api_root_router
@@ -77,9 +77,5 @@ elyria_http_app.add_middleware(
 elyria_http_app.include_router(api_root_router)
 
 elyria_http_app.mount(
-    "/",
-    StaticFiles(
-        directory=BASE_DIR / "src" / "presentation" / "http" / "static", html=True
-    ),
-    name="static",
+    "/", StaticFiles(directory=HTTP_STATIC_FILES_PATH, html=True), name="static"
 )
