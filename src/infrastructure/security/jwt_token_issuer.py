@@ -1,3 +1,5 @@
+from typing import Any
+
 import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import (
@@ -55,14 +57,19 @@ class JwtTokenIssuer:
             Подписанный JWT-токен в компактном сериализованном
             формате (три части, разделённые точками).
         """
+        payload: dict[str, Any] = {
+            "iss": self._issuer,
+            **claims.model_dump(mode="json"),
+        }
+
         return jwt.encode(
             {
-                "iss": self._issuer,
-                "sub": str(claims.user_id),
-                "exp": int(claims.expires_at.timestamp()),
-                "iat": int(claims.issued_at.timestamp()),
-                "jti": str(claims.token_id),
-                "sid": str(claims.session_id),
+                "iss": payload["iss"],
+                "sub": payload["user_id"],
+                "exp": payload["expires_at"],
+                "iat": payload["issued_at"],
+                "jti": payload["token_id"],
+                "sid": payload["session_id"],
             },
             self._private_key_bytes,
             algorithm=self._algorithm,
