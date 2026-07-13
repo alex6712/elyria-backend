@@ -52,7 +52,7 @@ class UserService:
         if user is None:
             raise UserNotFoundException(f"User with id={user_id} not found.")
 
-        return UserDTO.model_validate(user)
+        return UserDTO.model_validate(user.model_dump())
 
     async def update_profile(self, update_dto: UpdateUserDTO, user_id: UUID) -> None:
         """Частичное обновление атрибутов профиля пользователя по его UUID.

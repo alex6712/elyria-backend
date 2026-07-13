@@ -77,7 +77,7 @@ async def register(
     StandardResponse
         Ответ с кодом 201 и сообщением об успешной регистрации.
     """
-    await services.auth.register(CreateUserDTO.model_validate(body))
+    await services.auth.register(CreateUserDTO.model_validate(body.model_dump()))
 
     return StandardResponse(detail="User created successfully.")
 

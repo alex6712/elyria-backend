@@ -34,7 +34,7 @@ class BaseDTO(BaseModel):
         Self
             Объект публичного DTO.
         """
-        return cls.model_validate(internal_dto)
+        return cls.model_validate(internal_dto.model_dump())
 
     @classmethod
     def from_internals(cls, internal_dtos: Sequence[BaseDTO]) -> list[Self]:
@@ -53,7 +53,7 @@ class BaseDTO(BaseModel):
         list[Self]
             Список объектов публичных DTO.
         """
-        return [cls.model_validate(dto) for dto in internal_dtos]
+        return [cls.model_validate(dto.model_dump()) for dto in internal_dtos]
 
 
 class BaseSQLCoreDTO(BaseDTO):
