@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from pydantic import ValidationError
 
-from src.application.dto.security.token_claims import TokenClaimsDTO
+from src.application.dto.security import TokenClaimsDTO
 from src.domain.exceptions.auth import (
     TokenExpiredException,
     TokenInvalidException,

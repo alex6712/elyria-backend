@@ -2,8 +2,7 @@ from sqlalchemy import CheckConstraint, Column, Index, Table, UniqueConstraint, 
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.types import Boolean, LargeBinary, String
 
-from src.domain.constants.display_name import DISPLAY_NAME_MAX_LENGTH
-from src.domain.constants.username import USERNAME_MAX_LENGTH
+from src.domain.constants import DISPLAY_NAME_MAX_LENGTH, USERNAME_MAX_LENGTH
 from src.infrastructure.persistence.tables._columns import base_columns
 from src.infrastructure.persistence.tables.metadata import metadata
 

@@ -1,10 +1,7 @@
 import unicodedata
 from dataclasses import dataclass
 
-from src.domain.constants.display_name import (
-    DISPLAY_NAME_MAX_LENGTH,
-    DISPLAY_NAME_MIN_LENGTH,
-)
+from src.domain.constants import DISPLAY_NAME_MAX_LENGTH, DISPLAY_NAME_MIN_LENGTH
 from src.domain.exceptions.user import InvalidDisplayNameLengthException
 
 

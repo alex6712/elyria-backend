@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass
 
-from src.domain.constants.username import (
+from src.domain.constants import (
     USERNAME_MAX_LENGTH,
     USERNAME_MIN_LENGTH,
     USERNAME_PATTERN,

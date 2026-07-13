@@ -17,7 +17,7 @@ from src.composition.app_info import (
 from src.composition.paths import HTTP_STATIC_FILES_PATH
 from src.composition.settings import get_settings
 from src.composition.signature_keys import get_signature_keys
-from src.presentation.http.root import api_root_router
+from src.presentation.http import api_root_router
 
 _settings = get_settings()
 

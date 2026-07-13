@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives.serialization import (
     PrivateFormat,
 )
 
-from src.application.dto.security.token_claims import TokenClaimsDTO
+from src.application.dto.security import TokenClaimsDTO
 
 
 class JwtTokenIssuer:

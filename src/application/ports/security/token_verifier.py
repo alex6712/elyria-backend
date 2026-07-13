@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from src.application.dto.security.token_claims import TokenClaimsDTO
+from src.application.dto.security import TokenClaimsDTO
 
 
 @runtime_checkable

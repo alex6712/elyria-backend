@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from src.presentation.http.api_code import APICode
+from src.presentation.http import APICode
 
 
 class BaseResponse(BaseModel):

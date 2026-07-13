@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status
 
-from src.presentation.http.api_code import APICode
+from src.presentation.http import APICode
 from src.presentation.http.schemas.standard import StandardResponse
 
 api_root_router = APIRouter(tags=["root"])
