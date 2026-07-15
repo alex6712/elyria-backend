@@ -13,6 +13,7 @@ class IdentityRepository(BaseRepository[UUID, Identity], Protocol):
     учётных записей системы. Расширяет базовый репозиторий
     методом добавления новой учётной записи.
     """
+
     async def add(self, identity: Identity) -> None:
         """Сохранить новую учётную запись.
 
