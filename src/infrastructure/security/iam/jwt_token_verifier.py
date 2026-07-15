@@ -1,6 +1,5 @@
 import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from pydantic import ValidationError
 
 from src.application.iam.dto import TokenClaimsDTO
@@ -34,9 +33,7 @@ class JwtTokenVerifier:
         self, issuer: str, public_key: Ed25519PublicKey, algorithm: str
     ) -> None:
         self._issuer = issuer
-        self._public_key_bytes = public_key.public_bytes(
-            encoding=Encoding.PEM, format=PublicFormat.SubjectPublicKeyInfo
-        )
+        self._public_key = public_key
         self._algorithm = algorithm
 
     def verify(self, token: str) -> TokenClaimsDTO:
@@ -70,7 +67,7 @@ class JwtTokenVerifier:
         try:
             payload = jwt.decode(
                 token,
-                self._public_key_bytes,
+                self._public_key,
                 algorithms=[self._algorithm],
                 issuer=self._issuer,
                 options={"require": ["iss", "sub", "exp", "iat", "jti", "sid"]},

@@ -2,11 +2,6 @@ from typing import Any
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import (
-    Encoding,
-    NoEncryption,
-    PrivateFormat,
-)
 
 from src.application.iam.dto import TokenClaimsDTO
 
@@ -32,11 +27,7 @@ class JwtTokenIssuer:
         self, issuer: str, private_key: Ed25519PrivateKey, algorithm: str
     ) -> None:
         self._issuer = issuer
-        self._private_key_bytes = private_key.private_bytes(
-            encoding=Encoding.PEM,
-            format=PrivateFormat.PKCS8,
-            encryption_algorithm=NoEncryption(),
-        )
+        self._private_key = private_key
         self._algorithm = algorithm
 
     def issue(self, claims: TokenClaimsDTO) -> str:
@@ -71,6 +62,6 @@ class JwtTokenIssuer:
                 "jti": payload["token_id"],
                 "sid": payload["session_id"],
             },
-            self._private_key_bytes,
+            self._private_key,
             algorithm=self._algorithm,
         )
