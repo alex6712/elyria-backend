@@ -13,7 +13,7 @@ from alembic import context
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.composition.settings import get_settings
-from src.infrastructure.persistence.tables.metadata import metadata as target_metadata
+from src.infrastructure.persistence.shared.sqlalchemy import metadata as target_metadata
 
 config = context.config
 settings = get_settings()
