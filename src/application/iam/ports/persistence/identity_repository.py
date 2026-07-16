@@ -1,12 +1,11 @@
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
-from src.application.shared.ports.persistence import BaseRepository
 from src.domain.iam.entities import Identity
 
 
 @runtime_checkable
-class IdentityRepository(BaseRepository[UUID, Identity], Protocol):
+class IdentityRepository(Protocol):
     """Порт репозитория учётных записей (identity).
 
     Определяет контракт для операций сохранения и получения
@@ -28,3 +27,5 @@ class IdentityRepository(BaseRepository[UUID, Identity], Protocol):
             Если учётная запись с таким идентификатором уже существует.
         """
         ...
+
+    async def get_by_id(self, id: UUID) -> Identity: ...

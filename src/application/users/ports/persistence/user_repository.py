@@ -1,13 +1,12 @@
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
-from src.application.shared.ports.persistence import BaseRepository
 from src.domain.users.entities import User
 from src.domain.users.value_objects import DisplayName, Username
 
 
 @runtime_checkable
-class UserRepository(BaseRepository[UUID, User], Protocol):
+class UserRepository(Protocol):
     """Порт репозитория пользователей.
 
     Определяет контракт для операций сохранения и получения
@@ -36,6 +35,8 @@ class UserRepository(BaseRepository[UUID, User], Protocol):
             уже существует.
         """
         ...
+
+    async def get_by_id(self, id: UUID) -> User: ...
 
     async def get_by_username(self, username: Username) -> User:
         """Получить пользователя по имени пользователя.

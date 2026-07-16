@@ -4,8 +4,8 @@ from sqlalchemy.types import Boolean, LargeBinary, String
 
 from src.domain.users.value_objects.display_name import DISPLAY_NAME_MAX_LENGTH
 from src.domain.users.value_objects.username import USERNAME_MAX_LENGTH
-from src.infrastructure.persistence.shared.sqlalchemy import metadata
-from src.infrastructure.persistence.shared.sqlalchemy._columns import base_columns
+from src.infrastructure.shared.persistence.sqlalchemy import metadata
+from src.infrastructure.shared.persistence.sqlalchemy._columns import base_columns
 
 users_table = Table(
     "users",

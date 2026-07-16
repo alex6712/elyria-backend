@@ -1,8 +1,8 @@
 from sqlalchemy import Column, ForeignKey, Index, Table, UniqueConstraint, text
 from sqlalchemy.types import DateTime, String, Uuid
 
-from src.infrastructure.persistence.shared.sqlalchemy import metadata
-from src.infrastructure.persistence.shared.sqlalchemy._columns import base_columns
+from src.infrastructure.shared.persistence.sqlalchemy import metadata
+from src.infrastructure.shared.persistence.sqlalchemy._columns import base_columns
 
 sessions_table = Table(
     "sessions",
