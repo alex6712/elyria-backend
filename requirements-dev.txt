@@ -73,9 +73,9 @@ email-validator==2.3.0
     # via
     #   fastapi
     #   pydantic
-fastapi==0.139.0
+fastapi==0.139.2
     # via elyria-backend (pyproject.toml)
-fastapi-cli==0.0.30
+fastapi-cli==0.0.32
     # via fastapi
 fastapi-cloud-cli==0.22.2
     # via fastapi-cli
@@ -202,11 +202,11 @@ rich-toolkit==0.20.3
     #   fastapi-cloud-cli
 rignore==0.7.6
     # via fastapi-cloud-cli
-ruff==0.15.21
+ruff==0.15.22
     # via elyria-backend (pyproject.toml:dev)
 s3transfer==0.14.0
     # via boto3
-sentry-sdk==2.65.0
+sentry-sdk==2.66.0
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
