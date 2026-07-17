@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass
 
-from src.domain.users.exceptions import (
+from src.domain.iam.exceptions import (
     InvalidUsernameFormatException,
     InvalidUsernameLengthException,
 )

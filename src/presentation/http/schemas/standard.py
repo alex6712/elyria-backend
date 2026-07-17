@@ -10,7 +10,7 @@ class BaseResponse(BaseModel):
     любого запроса к этому приложению.
 
     Это означает, что любой ответ с сервера будет содержать
-    код ответа ``code``в теле ответа.
+    код ответа ``code`` в теле ответа.
 
     See Also
     --------
@@ -18,8 +18,8 @@ class BaseResponse(BaseModel):
 
     Attributes
     ----------
-    code : int
-        HTTP-код ответа сервера.
+    code : APICode
+        Код ответа API в виде перечисления ``APICode``.
     """
 
     code: APICode = Field(

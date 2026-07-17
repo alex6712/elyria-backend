@@ -16,7 +16,6 @@ from src.composition.app_info import (
 )
 from src.composition.paths import HTTP_STATIC_FILES_PATH
 from src.composition.settings import get_settings
-from src.composition.signature_keys import get_signature_keys
 from src.presentation.http import api_root_router
 
 _settings = get_settings()
@@ -30,8 +29,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
 
     Во время запуска:
 
-    * фиксирует время старта приложения;
-    * загружает и кеширует пару ключей подписи JWT.
+    * фиксирует время старта приложения.
 
     Если какой-либо ресурс не удалось инициализировать, приложение
     завершит запуск с ошибкой.
@@ -48,8 +46,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
         всех ресурсов.
     """
     app.state.startup_at = datetime.now(timezone.utc)
-
-    get_signature_keys()
 
     yield
 

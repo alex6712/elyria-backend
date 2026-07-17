@@ -4,15 +4,15 @@ from uuid import UUID, uuid4
 
 from src.domain.shared.entities import Auditable, Identifiable
 from src.domain.users.exceptions import InactiveUserException
-from src.domain.users.value_objects import DisplayName, E2EECredentials, Username
+from src.domain.users.value_objects import DisplayName, E2EECredentials
 
 
-class User(Identifiable[UUID], Auditable):
+class Profile(Identifiable[UUID], Auditable):
     """Доменная сущность пользователя.
 
     Представляет зарегистрированного пользователя системы и содержит
-    информацию, необходимую для аутентификации, криптографических
-    операций и отображения профиля.
+    информацию, необходимую для криптографических операций и отображения
+    профиля.
 
     Экземпляр класса гарантирует соблюдение доменных инвариантов при
     создании и изменении своего состояния. При нарушении инвариантов
@@ -22,10 +22,6 @@ class User(Identifiable[UUID], Auditable):
     ----------
     id : UUID
         Уникальный идентификатор пользователя.
-    username : Username
-        Value object с уникальным именем пользователя для входа в систему.
-    password_hash : str
-        Хэш пароля пользователя.
     e2ee_credentials : E2EECredentials | None
         Данные пользователя для сквозного шифрования.
     display_name : DisplayName
@@ -50,8 +46,6 @@ class User(Identifiable[UUID], Auditable):
     def __init__(
         self,
         id: UUID,
-        username: Username,
-        password_hash: str,
         e2ee_credentials: E2EECredentials | None,
         display_name: DisplayName,
         avatar_url: str | None,
@@ -60,8 +54,6 @@ class User(Identifiable[UUID], Auditable):
         updated_at: datetime | None,
     ) -> None:
         self.id = id
-        self.username = username
-        self.password_hash = password_hash
         self.e2ee_credentials = e2ee_credentials
         self.display_name = display_name
         self.avatar_url = avatar_url
@@ -70,22 +62,11 @@ class User(Identifiable[UUID], Auditable):
         self.updated_at = updated_at
 
     @classmethod
-    def register(
-        cls,
-        username: Username,
-        password_hash: str,
-        display_name: DisplayName,
-        avatar_url: str | None = None,
-    ) -> Self:
+    def create(cls, display_name: DisplayName, avatar_url: str | None = None) -> Self:
         """Создать нового пользователя со значениями по умолчанию.
 
         Parameters
         ----------
-        username : Username
-            Value object с именем пользователя для входа в систему.
-        password_hash : str
-            Хэш пароля, полученный из Infrastructure Layer
-            (Password Hash Service порт).
         display_name : DisplayName
             Value object с отображаемым именем пользователя.
         avatar_url : str | None, optional
@@ -93,7 +74,7 @@ class User(Identifiable[UUID], Auditable):
 
         Returns
         -------
-        User
+        Profile
             Новый экземпляр пользователя в активном состоянии,
             без E2EE-credentials.
 
@@ -105,8 +86,6 @@ class User(Identifiable[UUID], Auditable):
         """
         return cls(
             id=uuid4(),
-            username=username,
-            password_hash=password_hash,
             e2ee_credentials=None,
             display_name=display_name,
             avatar_url=avatar_url,
@@ -114,23 +93,6 @@ class User(Identifiable[UUID], Auditable):
             updated_at=(now := datetime.now(timezone.utc)),
             created_at=now,
         )
-
-    def change_password(self, new_password_hash: str) -> None:
-        """Изменить хэш пароля пользователя.
-
-        Parameters
-        ----------
-        new_password_hash : str
-            Новый хэш пароля, полученный из Infrastructure Layer.
-
-        Raises
-        ------
-        InactiveUserException
-            Если пользователь деактивирован.
-        """
-        self._ensure_active()
-        self.password_hash = new_password_hash
-        self._touch()
 
     def change_display_name(self, new_display_name: DisplayName) -> None:
         """Изменить отображаемое имя пользователя.
@@ -236,10 +198,10 @@ class User(Identifiable[UUID], Auditable):
         Returns
         -------
         bool
-            ``True``, если ``other`` является ``User`` с тем же
+            ``True``, если ``other`` является ``Profile`` с тем же
             ``id``, иначе ``False`` или ``NotImplemented``.
         """
-        if not isinstance(other, User):
+        if not isinstance(other, Profile):
             return NotImplemented
 
         return self.id == other.id
@@ -250,6 +212,6 @@ class User(Identifiable[UUID], Auditable):
         Returns
         -------
         str
-            Строка вида ``User(id=..., username=..., is_active=...)``.
+            Строка вида ``Profile(id=..., display_name=..., is_active=...)``.
         """
-        return f"User(id={self.id!r}, username={self.username!r}, is_active={self.is_active!r})"
+        return f"Profile(id={self.id!r}, display_name={self.display_name!r}, is_active={self.is_active!r})"

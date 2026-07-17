@@ -1,48 +1,27 @@
 from uuid import UUID
 
-from src.domain.shared.context import DomainContext
-from src.domain.shared.exceptions import BaseDomainException
 
+class InvalidUsernameLengthException(Exception):
+    """Недопустимая длина имени пользователя.
 
-class AuthException(BaseDomainException):
-    """Базовое исключение домена аутентификации.
-
-    Attributes
-    ----------
-    context : Literal[DomainContext.AUTH]
-        Bounded context предметной области, к которому относится
-        данный тип исключения.
-
-    Notes
-    -----
-    Все исключения категории аутентификации должны наследоваться
-    от этого класса.
-    """
-
-    context = DomainContext.IAM
-
-
-class SessionNotFoundException(AuthException):
-    """Сессия не найдена.
-
-    Возникает при попытке обращения к несуществующей сессии
-    пользователя.
+    Возникает, если длина имени пользователя выходит за допустимые
+    пределы, установленные правилами предметной области.
     """
 
     pass
 
 
-class SessionExpiredException(AuthException):
-    """Срок действия сессии истёк.
+class InvalidUsernameFormatException(Exception):
+    """Недопустимый формат имени пользователя.
 
-    Возникает при попытке использования сессии, срок действия
-    которой истёк.
+    Возникает, если имя пользователя содержит недопустимые символы
+    (например, пробелы) или не соответствует разрешённому паттерну.
     """
 
     pass
 
 
-class SessionInvalidException(AuthException):
+class SessionInvalidException(Exception):
     """Исключение, сигнализирующее о попытке изменить состояние
     отозванной или истёкшей сессии.
 
@@ -59,42 +38,3 @@ class SessionInvalidException(AuthException):
         )
 
         self.session_id = session_id
-
-
-class TokenExpiredException(AuthException):
-    """Срок действия токена истёк.
-
-    Возникает при попытке верификации токена, срок действия
-    которого истёк.
-    """
-
-    pass
-
-
-class TokenSignatureInvalidException(AuthException):
-    """Подпись токена недействительна.
-
-    Возникает при попытке верификации токена, подпись которого
-    не прошла проверку.
-    """
-
-    pass
-
-
-class TokenInvalidException(AuthException):
-    """Токен недействителен.
-
-    Возникает при попытке верификации токена, в котором
-    отсутствуют обязательные утверждения либо нарушен формат
-    данных.
-
-    Parameters
-    ----------
-    detail : str
-        Причина недействительности токена.
-    """
-
-    def __init__(self, detail: str) -> None:
-        super().__init__(detail)
-
-        self.detail = detail

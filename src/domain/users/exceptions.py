@@ -1,47 +1,7 @@
 from uuid import UUID
 
-from src.domain.shared.context import DomainContext
-from src.domain.shared.exceptions import BaseDomainException
 
-
-class UserException(BaseDomainException):
-    """Базовое исключение домена пользователей.
-
-    Attributes
-    ----------
-    context : Literal[DomainContext.USER]
-        Bounded context предметной области, к которому относится
-        данный тип исключения.
-
-    Notes
-    -----
-    Все исключения категории пользователей должны наследоваться от этого класса.
-    """
-
-    context = DomainContext.USER
-
-
-class InvalidUsernameLengthException(UserException):
-    """Недопустимая длина имени пользователя.
-
-    Возникает, если длина имени пользователя выходит за допустимые
-    пределы, установленные правилами предметной области.
-    """
-
-    pass
-
-
-class InvalidUsernameFormatException(UserException):
-    """Недопустимый формат имени пользователя.
-
-    Возникает, если имя пользователя содержит недопустимые символы
-    (например, пробелы) или не соответствует разрешённому паттерну.
-    """
-
-    pass
-
-
-class InvalidDisplayNameLengthException(UserException):
+class InvalidDisplayNameLengthException(Exception):
     """Недопустимая длина отображаемого имени.
 
     Возникает, если длина отображаемого имени выходит за допустимые
@@ -51,7 +11,7 @@ class InvalidDisplayNameLengthException(UserException):
     pass
 
 
-class InactiveUserException(UserException):
+class InactiveUserException(Exception):
     """Исключение, сигнализирующее о попытке изменить состояние
     неактивного пользователя.
 
@@ -68,7 +28,7 @@ class InactiveUserException(UserException):
         self.user_id = user_id
 
 
-class EmptyPublicKeyException(UserException):
+class EmptyPublicKeyException(Exception):
     """Пустой публичный ключ E2EE.
 
     Возникает, если публичный ключ, входящий в состав криптографических
@@ -78,7 +38,7 @@ class EmptyPublicKeyException(UserException):
     pass
 
 
-class EmptyEncryptedPrivateKeyException(UserException):
+class EmptyEncryptedPrivateKeyException(Exception):
     """Пустой зашифрованный приватный ключ E2EE.
 
     Возникает, если зашифрованный приватный ключ, входящий в состав
@@ -88,7 +48,7 @@ class EmptyEncryptedPrivateKeyException(UserException):
     pass
 
 
-class EmptyPrivateKeyNonceException(UserException):
+class EmptyPrivateKeyNonceException(Exception):
     """Пустой nonce приватного ключа E2EE.
 
     Возникает, если nonce, использованный при шифровании приватного
@@ -98,7 +58,7 @@ class EmptyPrivateKeyNonceException(UserException):
     pass
 
 
-class EmptyKdfSaltException(UserException):
+class EmptyKdfSaltException(Exception):
     """Пустая соль KDF.
 
     Возникает, если соль, использованная функцией деривации ключа
@@ -108,7 +68,7 @@ class EmptyKdfSaltException(UserException):
     pass
 
 
-class EmptyKdfParamsException(UserException):
+class EmptyKdfParamsException(Exception):
     """Пустые параметры KDF.
 
     Возникает, если параметры функции деривации ключа, использованной

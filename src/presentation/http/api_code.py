@@ -35,7 +35,9 @@ class APICode(StrEnum):
         last_values : list[str]
             Список уже сгенерированных значений (не используется).
 
-        Returns:
+        Returns
+        -------
+        str
             Строковое значение члена enum в верхнем регистре.
         """
         return name.upper()
