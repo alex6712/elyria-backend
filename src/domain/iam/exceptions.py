@@ -21,6 +21,23 @@ class InvalidUsernameFormatException(Exception):
     pass
 
 
+class InactiveUserException(Exception):
+    """Исключение, сигнализирующее о попытке изменить состояние
+    неактивного пользователя.
+
+    Parameters
+    ----------
+    user_id : UUID
+        Идентификатор пользователя, для которого была предпринята
+        запрещённая операция.
+    """
+
+    def __init__(self, user_id: UUID) -> None:
+        super().__init__(f"User {user_id} is inactive and cannot be modified")
+
+        self.user_id = user_id
+
+
 class SessionInvalidException(Exception):
     """Исключение, сигнализирующее о попытке изменить состояние
     отозванной или истёкшей сессии.

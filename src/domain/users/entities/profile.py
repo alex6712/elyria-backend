@@ -3,7 +3,6 @@ from typing import Self
 from uuid import UUID, uuid4
 
 from src.domain.shared.entities import Auditable, Identifiable
-from src.domain.users.exceptions import InactiveUserException
 from src.domain.users.value_objects import DisplayName, E2EECredentials
 
 
@@ -28,8 +27,6 @@ class Profile(Identifiable[UUID], Auditable):
         Value object с отображаемым именем пользователя.
     avatar_url : str | None
         URL изображения аватара пользователя.
-    is_active : bool
-        Признак активности учётной записи.
     created_at : datetime
         Дата и время регистрации пользователя.
     updated_at : datetime | None
@@ -49,7 +46,6 @@ class Profile(Identifiable[UUID], Auditable):
         e2ee_credentials: E2EECredentials | None,
         display_name: DisplayName,
         avatar_url: str | None,
-        is_active: bool,
         created_at: datetime,
         updated_at: datetime | None,
     ) -> None:
@@ -57,7 +53,6 @@ class Profile(Identifiable[UUID], Auditable):
         self.e2ee_credentials = e2ee_credentials
         self.display_name = display_name
         self.avatar_url = avatar_url
-        self.is_active = is_active
         self.created_at = created_at
         self.updated_at = updated_at
 
@@ -89,9 +84,8 @@ class Profile(Identifiable[UUID], Auditable):
             e2ee_credentials=None,
             display_name=display_name,
             avatar_url=avatar_url,
-            is_active=True,
-            updated_at=(now := datetime.now(timezone.utc)),
-            created_at=now,
+            created_at=datetime.now(timezone.utc),
+            updated_at=None,
         )
 
     def change_display_name(self, new_display_name: DisplayName) -> None:
@@ -101,13 +95,7 @@ class Profile(Identifiable[UUID], Auditable):
         ----------
         new_display_name : DisplayName
             Новое отображаемое имя.
-
-        Raises
-        ------
-        InactiveUserException
-            Если пользователь деактивирован.
         """
-        self._ensure_active()
         self.display_name = new_display_name
         self._touch()
 
@@ -118,45 +106,8 @@ class Profile(Identifiable[UUID], Auditable):
         ----------
         new_e2ee_credentials : E2EECredentials
             Новые E2EE-credentials пользователя.
-
-        Raises
-        ------
-        InactiveUserException
-            Если пользователь деактивирован.
         """
-        self._ensure_active()
         self.e2ee_credentials = new_e2ee_credentials
-        self._touch()
-
-    def deactivate(self) -> None:
-        """Деактивировать учётную запись пользователя.
-
-        Notes
-        -----
-        Операция идемпотентна: повторный вызов для уже неактивного
-        пользователя не изменяет состояние и не обновляет
-        ``updated_at``.
-        """
-        if not self.is_active:
-            return
-
-        self.is_active = False
-        self._touch()
-
-    def activate(self) -> None:
-        """Активировать учётную запись пользователя.
-
-        Notes
-        -----
-        Единственный метод изменения состояния, доступный для
-        неактивного пользователя (см. ADR-0004). Операция
-        идемпотентна: повторный вызов для уже активного пользователя
-        не изменяет состояние и не обновляет ``updated_at``.
-        """
-        if self.is_active:
-            return
-
-        self.is_active = True
         self._touch()
 
     def has_e2ee_enabled(self) -> bool:
@@ -169,23 +120,6 @@ class Profile(Identifiable[UUID], Auditable):
             иначе ``False``.
         """
         return self.e2ee_credentials is not None
-
-    def _ensure_active(self) -> None:
-        """Проверить, что пользователь активен.
-
-        Raises
-        ------
-        InactiveUserException
-            Если ``is_active`` равен ``False``.
-
-        Notes
-        -----
-        Реализует инвариант из ADR-0004: все методы изменения
-        состояния, кроме ``activate``, запрещены для неактивного
-        пользователя.
-        """
-        if not self.is_active:
-            raise InactiveUserException(self.id)
 
     def __eq__(self, other: object) -> bool:
         """Сравнить пользователей по идентификатору.
@@ -212,6 +146,6 @@ class Profile(Identifiable[UUID], Auditable):
         Returns
         -------
         str
-            Строка вида ``Profile(id=..., display_name=..., is_active=...)``.
+            Строка вида ``Profile(id=..., display_name=..., created_at=...)``.
         """
-        return f"Profile(id={self.id!r}, display_name={self.display_name!r}, is_active={self.is_active!r})"
+        return f"Profile(id={self.id!r}, display_name={self.display_name!r}, created_at={self.created_at!r})"
