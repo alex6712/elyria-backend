@@ -11,8 +11,25 @@ class Identity(Identifiable[UUID], Auditable):
     """Доменная сущность учётной записи пользователя.
 
     Представляет собой учётную запись (identity) пользователя
-    в системе. Содержит идентификатор и метки аудита,
-    наследуя функциональность от ``Identifiable`` и ``Auditable``.
+    в системе. Содержит идентификатор, имя пользователя, хэш пароля,
+    статус активности и метки аудита, наследуя функциональность
+    от ``Identifiable`` и ``Auditable``.
+
+    Attributes
+    ----------
+    id : UUID
+        Уникальный идентификатор учётной записи.
+    username : Username
+        Имя пользователя (value object).
+    password_hash : str
+        Хэш пароля пользователя.
+    is_active : bool
+        Флаг активности учётной записи.
+    created_at : datetime
+        Дата и время создания учётной записи.
+    updated_at : datetime | None
+        Дата и время последнего изменения учётной записи.
+        ``None``, если изменений не было.
     """
 
     def __init__(
@@ -33,6 +50,24 @@ class Identity(Identifiable[UUID], Auditable):
 
     @classmethod
     def register(cls, username: Username, password_hash: str) -> Self:
+        """Зарегистрировать новую учётную запись.
+
+        Создаёт учётную запись с уникальным идентификатором,
+        переданным именем пользователя и хэшем пароля. Учётная
+        запись создаётся активной.
+
+        Parameters
+        ----------
+        username : Username
+            Имя пользователя.
+        password_hash : str
+            Хэш пароля пользователя.
+
+        Returns
+        -------
+        Self
+            Новая учётная запись.
+        """
         return cls(
             id=uuid4(),
             username=username,

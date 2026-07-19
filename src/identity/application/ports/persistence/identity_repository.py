@@ -11,6 +11,11 @@ class IdentityRepository(Protocol):
 
     Определяет контракт для операций сохранения и получения
     учётных записей системы.
+
+    Notes
+    -----
+    Реализация данного порта должна гарантировать уникальность
+    имени пользователя.
     """
 
     async def add(self, identity: Identity) -> None:
@@ -23,7 +28,7 @@ class IdentityRepository(Protocol):
         """
         ...
 
-    async def get_by_id(self, id: UUID) -> Identity:
+    async def get_by_id(self, id: UUID) -> Identity | None:
         """Получить учётную запись по идентификатору.
 
         Parameters
@@ -33,12 +38,12 @@ class IdentityRepository(Protocol):
 
         Returns
         -------
-        Identity
-            Найденная учётная запись.
+        Identity | None
+            Найденная учётная запись или None.
         """
         ...
 
-    async def get_by_username(self, username: Username) -> Identity:
+    async def get_by_username(self, username: Username) -> Identity | None:
         """Получить учётную запись по имени пользователя.
 
         Parameters
@@ -48,8 +53,8 @@ class IdentityRepository(Protocol):
 
         Returns
         -------
-        Identity
-            Найденная учётная запись.
+        Identity | None
+            Найденная учётная запись или None.
         """
         ...
 

@@ -115,3 +115,14 @@ class SessionInvalidException(Exception):
         )
 
         self.session_id = session_id
+
+
+class UsernameAlreadyExistsException(Exception):
+    """Исключение при попытке создать пользователя с существующим username.
+
+    Возникает, если указанное имя пользователя уже занято
+    другой учётной записью. Содержит сообщение с указанием
+    конфликтующего имени пользователя.
+    """
+
+    pass
