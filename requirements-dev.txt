@@ -200,7 +200,7 @@ rich-toolkit==0.20.3
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
-rignore==0.7.6
+rignore==0.8.0
     # via fastapi-cloud-cli
 ruff==0.15.22
     # via elyria-backend (pyproject.toml:dev)
@@ -226,7 +226,7 @@ typer==0.27.0
     #   fastapi-cloud-cli
 types-aiobotocore==3.7.0
     # via elyria-backend (pyproject.toml:dev)
-types-aiobotocore-s3==3.7.0
+types-aiobotocore-s3==3.8.0
     # via elyria-backend (pyproject.toml:dev)
 types-awscrt==0.34.1
     # via botocore-stubs
@@ -259,7 +259,7 @@ uvloop==0.22.1
     # via uvicorn
 watchfiles==1.2.0
     # via uvicorn
-websockets==16.1
+websockets==16.1.1
     # via uvicorn
 wrapt==1.17.3
     # via
