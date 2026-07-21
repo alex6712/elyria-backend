@@ -5,9 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from src.identity.domain.entities import Identity
-from src.identity.domain.exceptions import UsernameAlreadyExistsException
+from src.identity.domain.exceptions import UsernameAlreadyExistsError
 from src.identity.domain.value_objects import Username
-from src.shared.infrastructure.persistence.sqlalchemy.tables import users_table
+from src.identity.infrastructure.persistence.tables import identities_table
 
 
 class SQLAlchemyIdentityRepository:
@@ -16,7 +16,7 @@ class SQLAlchemyIdentityRepository:
     Реализует полный набор операций CRUD для доменной сущности
     ``Identity`` над таблицей ``users``. Обрабатывает нарушение
     уникальности имени пользователя и транслирует его в доменное
-    исключение ``UsernameAlreadyExistsException``.
+    исключение ``UsernameAlreadyExistsError``.
 
     Parameters
     ----------
@@ -46,13 +46,13 @@ class SQLAlchemyIdentityRepository:
 
         Raises
         ------
-        UsernameAlreadyExistsException
+        UsernameAlreadyExistsError
             Если пользователь с таким ``username`` уже существует
             в базе данных.
         """
         try:
             await self._connection.execute(
-                insert(users_table).values(
+                insert(identities_table).values(
                     id=identity.id,
                     username=identity.username,
                     password_hash=identity.password_hash,
@@ -63,7 +63,7 @@ class SQLAlchemyIdentityRepository:
             )
         except IntegrityError as e:
             if "uq_users_username" in str(e):
-                raise UsernameAlreadyExistsException(
+                raise UsernameAlreadyExistsError(
                     f"User with username={identity.username} already exists."
                 ) from e
 
@@ -84,15 +84,7 @@ class SQLAlchemyIdentityRepository:
             с указанным идентификатором не существует.
         """
         result = await self._connection.execute(
-            select(
-                users_table,
-                users_table.c.id,
-                users_table.c.username,
-                users_table.c.password_hash,
-                users_table.c.is_active,
-                users_table.c.created_at,
-                users_table.c.updated_at,
-            ).where(users_table.c.id == id)
+            select(identities_table).where(identities_table.c.id == id)
         )
 
         if not (row := result.mappings().first()):
@@ -122,15 +114,9 @@ class SQLAlchemyIdentityRepository:
             с указанным именем пользователя не существует.
         """
         result = await self._connection.execute(
-            select(
-                users_table,
-                users_table.c.id,
-                users_table.c.username,
-                users_table.c.password_hash,
-                users_table.c.is_active,
-                users_table.c.created_at,
-                users_table.c.updated_at,
-            ).where(users_table.c.username == username)
+            select(identities_table, identities_table.c.id).where(
+                identities_table.c.username == username
+            )
         )
 
         if not (row := result.mappings().first()):
@@ -162,9 +148,9 @@ class SQLAlchemyIdentityRepository:
             ``False``, если пользователь с указанным идентификатором не найден.
         """
         result = await self._connection.execute(
-            update(users_table)
+            update(identities_table)
             .values(password_hash=new_password_hash)
-            .where(users_table.c.id == id)
+            .where(identities_table.c.id == id)
         )
 
         return result.rowcount == 1

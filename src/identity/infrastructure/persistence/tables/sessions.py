@@ -1,17 +1,17 @@
 from sqlalchemy import Column, ForeignKey, Index, Table, UniqueConstraint, text
 from sqlalchemy.types import DateTime, String, Uuid
 
-from src.shared.infrastructure.persistence.sqlalchemy import metadata
-from src.shared.infrastructure.persistence.sqlalchemy._columns import base_columns
+from src.shared.infrastructure.persistence import metadata
+from src.shared.infrastructure.persistence.columns import base_columns
 
 sessions_table = Table(
     "sessions",
     metadata,
     *base_columns(),
     Column(
-        "user_id",
+        "identity_id",
         Uuid(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey("identities.id", ondelete="CASCADE"),
         nullable=False,
         comment="Уникальный идентификатор пользователя",
     ),
@@ -53,7 +53,7 @@ sessions_table = Table(
         comment="User-Agent клиента при создании сессии",
     ),
     UniqueConstraint("session_secret", name="uq_sessions_session_secret"),
-    Index("ix_sessions_user_id", "user_id"),
+    Index("ix_sessions_identity_id", "identity_id"),
     Index("ix_sessions_expires_at", "expires_at"),
     comment="Активные и завершённые пользовательские сессии",
 )
@@ -66,9 +66,9 @@ User-Agent), а также отметки о последнем продлени
 
 Notes
 -----
-Каждая сессия связана с пользователем через `user_id` и
+Каждая сессия связана с пользователем через `identity_id` и
 удаляется каскадно при удалении соответствующей записи в
-таблице `users`. Поле `revoked_at` остаётся пустым для
+таблице `identities`. Поле `revoked_at` остаётся пустым для
 активных сессий и заполняется при их принудительном
 завершении (например, при выходе пользователя из системы
 или отзыве доступа администратором).

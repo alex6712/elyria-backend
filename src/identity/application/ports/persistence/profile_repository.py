@@ -28,30 +28,31 @@ class ProfileRepository(Protocol):
         """
         ...
 
-    async def get_by_id(self, id: UUID) -> Profile:
-        """Получить профиль пользователя по идентификатору.
+    async def get_by_identity_id(self, identity_id: UUID) -> Profile | None:
+        """Получить профиль пользователя по идентификатору учётной записи.
 
         Parameters
         ----------
-        id : UUID
-            Идентификатор пользователя.
+        identity_id : UUID
+            Идентификатор учётной записи пользователя.
 
         Returns
         -------
-        Profile
-            Найденный профиль пользователя.
+        Profile | None
+            Найденный профиль пользователя либо ``None``, если профиль
+            с указанным идентификатором учётной записи не существует.
         """
         ...
 
     async def change_display_name(
-        self, id: UUID, new_display_name: DisplayName
+        self, identity_id: UUID, new_display_name: DisplayName
     ) -> bool:
         """Изменить отображаемое имя пользователя.
 
         Parameters
         ----------
-        id : UUID
-            Идентификатор пользователя.
+        identity_id : UUID
+            Идентификатор учётной записи пользователя.
         new_display_name : DisplayName
             Новое отображаемое имя.
 
