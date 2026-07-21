@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Self
 from uuid import UUID, uuid4
 
-from src.identity.domain.exceptions import SessionInvalidException
+from src.identity.domain.exceptions import SessionInvalidError
 from src.shared.domain.entities import Auditable, Identifiable
 
 
@@ -21,8 +21,8 @@ class Session(Identifiable[UUID], Auditable):
     ----------
     id : UUID
         Уникальный идентификатор сессии.
-    user_id : UUID
-        Идентификатор пользователя, которому принадлежит сессия.
+    identity_id : UUID
+        Идентификатор учётной записи, которой принадлежит сессия.
     session_secret : str
         Уникальный секрет сессии, используемый для обновления сессии.
     expires_at : datetime
@@ -32,9 +32,9 @@ class Session(Identifiable[UUID], Auditable):
     revoked_at : datetime | None
         Дата и время принудительного завершения сессии.
         ``None``, если сессия не была отозвана.
-    ip_address : str
+    ip_address : str | None
         IP-адрес, с которого была создана сессия.
-    user_agent : str
+    user_agent : str | None
         User-Agent клиента при создании сессии.
     created_at : datetime
         Дата и время создания сессии.
@@ -46,24 +46,24 @@ class Session(Identifiable[UUID], Auditable):
     Согласно решению, симметричному ADR-0004 (принятому для ``Profile``),
     методы ``extend`` и ``rotate_secret`` запрещены для отозванной
     или истёкшей сессии. При нарушении возбуждается
-    ``SessionInvalidException``. Это решение оформлено отдельным ADR-0005.
+    ``SessionInvalidError``. Это решение оформлено отдельным ADR-0005.
     """
 
     def __init__(
         self,
         id: UUID,
-        user_id: UUID,
+        identity_id: UUID,
         session_secret: str,
         expires_at: datetime,
         last_used_at: datetime,
         revoked_at: datetime | None,
-        ip_address: str,
-        user_agent: str,
+        ip_address: str | None,
+        user_agent: str | None,
         created_at: datetime,
         updated_at: datetime | None,
     ) -> None:
         self.id = id
-        self.user_id = user_id
+        self.identity_id = identity_id
         self.session_secret = session_secret
         self.expires_at = expires_at
         self.last_used_at = last_used_at
@@ -76,25 +76,25 @@ class Session(Identifiable[UUID], Auditable):
     @classmethod
     def issue(
         cls,
-        user_id: UUID,
+        identity_id: UUID,
         session_secret: str,
         expires_at: datetime,
-        ip_address: str,
-        user_agent: str,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
     ) -> Self:
         """Создать новую сессию пользователя.
 
         Parameters
         ----------
-        user_id : UUID
-            Идентификатор пользователя, которому принадлежит сессия.
+        identity_id : UUID
+            Идентификатор учётной записи, которой принадлежит сессия.
         session_secret : str
             Уникальный секрет сессии, выпущенный Infrastructure Layer.
         expires_at : datetime
             Момент истечения срока действия сессии.
-        ip_address : str
+        ip_address : str | None, optional
             IP-адрес клиента на момент создания сессии.
-        user_agent : str
+        user_agent : str | None, optional
             User-Agent клиента на момент создания сессии.
 
         Returns
@@ -104,10 +104,10 @@ class Session(Identifiable[UUID], Auditable):
         """
         return cls(
             id=uuid4(),
-            user_id=user_id,
+            identity_id=identity_id,
             session_secret=session_secret,
             expires_at=expires_at,
-            last_used_at=(now := datetime.now(timezone.utc)),
+            last_used_at=(now := datetime.now(UTC)),
             revoked_at=None,
             ip_address=ip_address,
             user_agent=user_agent,
@@ -139,7 +139,7 @@ class Session(Identifiable[UUID], Auditable):
         bool
             ``True``, если срок действия сессии истёк.
         """
-        return (now or datetime.now(timezone.utc)) >= self.expires_at
+        return (now or datetime.now(UTC)) >= self.expires_at
 
     def is_valid(self, now: datetime | None = None) -> bool:
         """Проверить, что сессия активна: не отозвана и не истекла.
@@ -172,7 +172,7 @@ class Session(Identifiable[UUID], Auditable):
         собственной проверки ``is_valid`` в рамках сценария
         аутентификации запроса.
         """
-        self.last_used_at = (moment := (at or datetime.now(timezone.utc)))
+        self.last_used_at = (moment := (at or datetime.now(UTC)))
         self._touch(moment)
 
     def rotate_secret(self, new_session_secret: str, new_expires_at: datetime) -> None:
@@ -187,7 +187,7 @@ class Session(Identifiable[UUID], Auditable):
 
         Raises
         ------
-        SessionInvalidException
+        SessionInvalidError
             Если сессия отозвана или истёк срок её действия.
 
         Notes
@@ -214,7 +214,7 @@ class Session(Identifiable[UUID], Auditable):
         if self.is_revoked():
             return
 
-        self.revoked_at = (moment := datetime.now(timezone.utc))
+        self.revoked_at = (moment := datetime.now(UTC))
         self._touch(moment)
 
     def _ensure_valid(self) -> None:
@@ -222,7 +222,7 @@ class Session(Identifiable[UUID], Auditable):
 
         Raises
         ------
-        SessionInvalidException
+        SessionInvalidError
             Если сессия отозвана или истёк срок её действия.
 
         Notes
@@ -232,36 +232,18 @@ class Session(Identifiable[UUID], Auditable):
         сессии. Решение описано в ADR-0005.
         """
         if not self.is_valid():
-            raise SessionInvalidException(self.id)
-
-    def __eq__(self, other: object) -> bool:
-        """Сравнить сессии по идентификатору.
-
-        Parameters
-        ----------
-        other : object
-            Объект для сравнения.
-
-        Returns
-        -------
-        bool
-            ``True``, если ``other`` является ``Session`` с тем же
-            ``id``, иначе ``False`` или ``NotImplemented``.
-        """
-        if not isinstance(other, Session):
-            return NotImplemented
-
-        return self.id == other.id
+            raise SessionInvalidError(self.id)
 
     def __repr__(self) -> str:
-        """Построить отладочное строковое представление сессии.
-
-        Returns
-        -------
-        str
-            Строка вида ``Session(id=..., user_id=..., revoked_at=...)``.
-        """
         return (
-            f"Session(id={self.id!r}, user_id={self.user_id!r}, "
-            f"revoked_at={self.revoked_at!r})"
+            "Session("
+            f"id={self.id!r}, "
+            f"identity_id={self.identity_id!r}, "
+            f"expires_at={self.expires_at!r}, "
+            f"last_used_at={self.last_used_at!r}, "
+            f"revoked_at={self.revoked_at!r}, "
+            f"ip_address={self.ip_address!r}, "
+            f"user_agent={self.user_agent!r}, "
+            f"created_at={self.created_at!r}, "
+            f"updated_at={self.updated_at!r})"
         )

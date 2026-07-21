@@ -49,7 +49,8 @@ class StandardResponse(BaseResponse):
         description="Сообщение о выполненных на сервере действиях",
         examples=[
             "Success!",
-            "Access token is missing. Provide it in the Authorization: Bearer <token> header.",
+            "Access token is missing. Provide it in the "
+            "Authorization: Bearer <token> header.",
         ],
     )
 

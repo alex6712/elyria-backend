@@ -1,0 +1,8 @@
+{
+    "typeCheckingMode": "strict",
+    "include": [
+        "src"
+    ],
+    "deprecateTypingAliases": true,
+    "reportImplicitRelativeImport": "error",
+}

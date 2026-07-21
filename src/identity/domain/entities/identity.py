@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Self
 from uuid import UUID, uuid4
 
-from src.identity.domain.exceptions import InactiveUserException
+from src.identity.domain.exceptions import InactiveUserError
 from src.identity.domain.value_objects import Username
 from src.shared.domain.entities import Auditable, Identifiable
 
@@ -73,7 +73,7 @@ class Identity(Identifiable[UUID], Auditable):
             username=username,
             password_hash=password_hash,
             is_active=True,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             updated_at=None,
         )
 
@@ -87,7 +87,7 @@ class Identity(Identifiable[UUID], Auditable):
 
         Raises
         ------
-        InactiveUserException
+        InactiveUserError
             Если пользователь деактивирован.
         """
         self._ensure_active()
@@ -130,7 +130,7 @@ class Identity(Identifiable[UUID], Auditable):
 
         Raises
         ------
-        InactiveUserException
+        InactiveUserError
             Если ``is_active`` равен ``False``.
 
         Notes
@@ -140,4 +140,14 @@ class Identity(Identifiable[UUID], Auditable):
         пользователя.
         """
         if not self.is_active:
-            raise InactiveUserException(self.id)
+            raise InactiveUserError(self.id)
+
+    def __repr__(self) -> str:
+        return (
+            "Identity("
+            f"id={self.id!r}, "
+            f"username={self.username!r}, "
+            f"is_active={self.is_active!r}, "
+            f"created_at={self.created_at!r}, "
+            f"updated_at={self.updated_at!r})"
+        )

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 class Auditable:
@@ -39,4 +39,4 @@ class Auditable:
             передача нужна там, где ``updated_at`` должен быть
             согласован с другим полем, изменяемым в том же вызове.
         """
-        self.updated_at = at or datetime.now(timezone.utc)
+        self.updated_at = at or datetime.now(UTC)

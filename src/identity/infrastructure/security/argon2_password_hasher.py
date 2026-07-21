@@ -1,20 +1,20 @@
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 
 
 class Argon2PasswordHasher:
     """Реализация порта ``PasswordHasher`` с использованием Argon2id.
 
-    Использует библиотеку Passlib с хеш-схемой Argon2id для
+    Использует библиотеку pwdlib с хеш-схемой Argon2id для
     хеширования и проверки паролей.
 
     Notes
     -----
     Параметры Argon2id используются по умолчанию, предоставляемые
-    Passlib. При необходимости могут быть переопределены через
+    pwdlib. При необходимости могут быть переопределены через
     конфигурацию приложения.
     """
 
-    _context = CryptContext(schemes=["argon2"], deprecated="auto")
+    _password_hash = PasswordHash.recommended()
 
     def hash(self, password: str) -> str:
         """Вычисляет хеш пароля с использованием Argon2id.
@@ -27,9 +27,9 @@ class Argon2PasswordHasher:
         Returns
         -------
         str
-            Строковое представление хеша пароля в формате Passlib.
+            Строковое представление хеша пароля.
         """
-        return self._context.hash(password)
+        return self._password_hash.hash(password)
 
     def verify(self, password: str, hash: str) -> bool:
         """Проверяет соответствие пароля хешу Argon2id.
@@ -39,11 +39,33 @@ class Argon2PasswordHasher:
         password : str
             Пароль в открытом виде для проверки.
         hash : str
-            Хеш в формате Passlib для сравнения.
+            Хеш, с которым требуется сравнить пароль.
 
         Returns
         -------
         bool
             ``True``, если пароль соответствует хешу, иначе ``False``.
         """
-        return self._context.verify(password, hash)
+        return self._password_hash.verify(password, hash)
+
+    def verify_and_update(self, password: str, hash: str) -> tuple[bool, str | None]:
+        """Проверяет соответствие пароля хешу и обновляет хеш
+        при необходимости.
+
+        Parameters
+        ----------
+        password : str
+            Пароль в открытом виде для проверки.
+        hash : str
+            Хеш, с которым требуется сравнить пароль.
+
+        Returns
+        -------
+        tuple[bool, str | None]
+            Кортеж из двух элементов:
+
+            - ``True``, если пароль соответствует хешу, иначе ``False``.
+            - Новый хеш, если алгоритм или параметры устарели,
+              иначе ``None``.
+        """
+        return self._password_hash.verify_and_update(password, hash)

@@ -1,7 +1,7 @@
 from uuid import UUID
 
 
-class InvalidDisplayNameLengthException(Exception):
+class InvalidDisplayNameLengthError(Exception):
     """Недопустимая длина отображаемого имени.
 
     Возникает, если длина отображаемого имени выходит за допустимые
@@ -11,7 +11,7 @@ class InvalidDisplayNameLengthException(Exception):
     pass
 
 
-class EmptyPublicKeyException(Exception):
+class EmptyPublicKeyError(Exception):
     """Пустой публичный ключ E2EE.
 
     Возникает, если публичный ключ, входящий в состав криптографических
@@ -21,7 +21,7 @@ class EmptyPublicKeyException(Exception):
     pass
 
 
-class EmptyEncryptedPrivateKeyException(Exception):
+class EmptyEncryptedPrivateKeyError(Exception):
     """Пустой зашифрованный приватный ключ E2EE.
 
     Возникает, если зашифрованный приватный ключ, входящий в состав
@@ -31,7 +31,7 @@ class EmptyEncryptedPrivateKeyException(Exception):
     pass
 
 
-class EmptyPrivateKeyNonceException(Exception):
+class EmptyPrivateKeyNonceError(Exception):
     """Пустой nonce приватного ключа E2EE.
 
     Возникает, если nonce, использованный при шифровании приватного
@@ -41,7 +41,7 @@ class EmptyPrivateKeyNonceException(Exception):
     pass
 
 
-class EmptyKdfSaltException(Exception):
+class EmptyKdfSaltError(Exception):
     """Пустая соль KDF.
 
     Возникает, если соль, использованная функцией деривации ключа
@@ -51,7 +51,7 @@ class EmptyKdfSaltException(Exception):
     pass
 
 
-class EmptyKdfParamsException(Exception):
+class EmptyKdfParamsError(Exception):
     """Пустые параметры KDF.
 
     Возникает, если параметры функции деривации ключа, использованной
@@ -61,7 +61,7 @@ class EmptyKdfParamsException(Exception):
     pass
 
 
-class InvalidUsernameLengthException(Exception):
+class InvalidUsernameLengthError(Exception):
     """Недопустимая длина имени пользователя.
 
     Возникает, если длина имени пользователя выходит за допустимые
@@ -71,7 +71,7 @@ class InvalidUsernameLengthException(Exception):
     pass
 
 
-class InvalidUsernameFormatException(Exception):
+class InvalidUsernameFormatError(Exception):
     """Недопустимый формат имени пользователя.
 
     Возникает, если имя пользователя содержит недопустимые символы
@@ -81,7 +81,7 @@ class InvalidUsernameFormatException(Exception):
     pass
 
 
-class InactiveUserException(Exception):
+class InactiveUserError(Exception):
     """Исключение, сигнализирующее о попытке изменить состояние
     неактивного пользователя.
 
@@ -98,7 +98,7 @@ class InactiveUserException(Exception):
         self.user_id = user_id
 
 
-class SessionInvalidException(Exception):
+class SessionInvalidError(Exception):
     """Исключение, сигнализирующее о попытке изменить состояние
     отозванной или истёкшей сессии.
 
@@ -117,7 +117,7 @@ class SessionInvalidException(Exception):
         self.session_id = session_id
 
 
-class UsernameAlreadyExistsException(Exception):
+class UsernameAlreadyExistsError(Exception):
     """Исключение при попытке создать пользователя с существующим username.
 
     Возникает, если указанное имя пользователя уже занято

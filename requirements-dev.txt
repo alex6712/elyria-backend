@@ -8,7 +8,7 @@ aiofiles==25.1.0
     # via aioboto3
 aiohappyeyeballs==2.7.1
     # via aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.2
     # via aiobotocore
 aioitertools==0.13.0
     # via aiobotocore
@@ -30,13 +30,15 @@ anyio==4.14.2
     #   starlette
     #   watchfiles
 argon2-cffi==25.1.0
-    # via passlib
+    # via pwdlib
 argon2-cffi-bindings==25.1.0
     # via argon2-cffi
 asyncpg==0.31.0
     # via elyria-backend (pyproject.toml)
 attrs==26.1.0
     # via aiohttp
+basedpyright==1.39.9
+    # via elyria-backend (pyproject.toml:dev)
 boto3==1.40.61
     # via aiobotocore
 botocore==1.40.61
@@ -133,12 +135,12 @@ multidict==6.7.1
     #   aiobotocore
     #   aiohttp
     #   yarl
+nodejs-wheel-binaries==24.16.0
+    # via basedpyright
 packaging==26.2
     # via
     #   limits
     #   pytest
-passlib==1.7.4
-    # via elyria-backend (pyproject.toml)
 pluggy==1.6.0
     # via
     #   pytest
@@ -147,6 +149,8 @@ propcache==0.5.2
     # via
     #   aiohttp
     #   yarl
+pwdlib==0.3.0
+    # via elyria-backend (pyproject.toml)
 pycparser==3.0
     # via cffi
 pydantic==2.13.4
@@ -224,7 +228,7 @@ typer==0.27.0
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
-types-aiobotocore==3.7.0
+types-aiobotocore==3.8.0
     # via elyria-backend (pyproject.toml:dev)
 types-aiobotocore-s3==3.8.0
     # via elyria-backend (pyproject.toml:dev)
@@ -265,5 +269,5 @@ wrapt==1.17.3
     # via
     #   aiobotocore
     #   deprecated
-yarl==1.24.2
+yarl==1.24.5
     # via aiohttp

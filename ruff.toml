@@ -1,2 +1,0 @@
-# Исключаем Alembic-ревизии из области работы ruff
-extend-exclude = ["./alembic/"]

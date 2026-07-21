@@ -1,6 +1,7 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from typing import Any, AsyncGenerator
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,7 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
         Управление передаётся приложению после успешной инициализации
         всех ресурсов.
     """
-    app.state.startup_at = datetime.now(timezone.utc)
+    app.state.startup_at = datetime.now(UTC)
 
     yield
 
