@@ -1,7 +1,7 @@
 from pwdlib import PasswordHash
 
 
-class Argon2PasswordHasher:
+class Argon2idPasswordHasher:
     """Реализация порта ``PasswordHasher`` с использованием Argon2id.
 
     Использует библиотеку pwdlib с хеш-схемой Argon2id для

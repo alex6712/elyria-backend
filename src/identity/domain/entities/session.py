@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from typing import Self
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from src.identity.domain.exceptions import SessionInvalidError
 from src.shared.domain.entities import Auditable, Identifiable
@@ -76,6 +76,7 @@ class Session(Identifiable[UUID], Auditable):
     @classmethod
     def issue(
         cls,
+        id: UUID,
         identity_id: UUID,
         session_secret: str,
         expires_at: datetime,
@@ -86,6 +87,8 @@ class Session(Identifiable[UUID], Auditable):
 
         Parameters
         ----------
+        id : UUID
+            Уникальный идентификатор сессии пользователя.
         identity_id : UUID
             Идентификатор учётной записи, которой принадлежит сессия.
         session_secret : str
@@ -103,7 +106,7 @@ class Session(Identifiable[UUID], Auditable):
             Новая, не отозванная сессия.
         """
         return cls(
-            id=uuid4(),
+            id=id,
             identity_id=identity_id,
             session_secret=session_secret,
             expires_at=expires_at,

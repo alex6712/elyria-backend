@@ -8,7 +8,7 @@ from src.identity.domain.entities import Session
 from src.identity.infrastructure.persistence.tables import sessions_table
 
 
-class SQLAlchemySessionRepository:
+class SqlAlchemySessionRepository:
     """Репозиторий пользовательских сессий на основе SQLAlchemy Core.
 
     Реализует полный набор операций CRUD для доменной сущности

@@ -212,3 +212,7 @@ keys/
 
 # Private scripts
 scripts/private/
+
+# Import linter stuff:
+.grimp_cache/
+.import_linter_cache/

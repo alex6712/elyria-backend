@@ -25,6 +25,12 @@ class IdentityRepository(Protocol):
         ----------
         identity : Identity
             Доменная сущность учётной записи для сохранения.
+
+        Raises
+        ------
+        UsernameAlreadyExistsError
+            Если пользователь с таким ``username`` уже существует
+            в базе данных.
         """
         ...
 

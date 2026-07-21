@@ -21,6 +21,7 @@ dependencies = [
 dev = [
     "aiosqlite>=0.22.1",
     "basedpyright>=1.39.9",
+    "import-linter>=2.13",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
@@ -45,3 +46,49 @@ extend-exclude = ["./alembic/"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "N", "W", "B", "SIM", "ARG", "RUF"]
 ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.importlinter]
+root_package = "src"
+
+[[tool.importlinter.contracts]]
+name = "identity-clean-architecture"
+type = "layers"
+layers = [
+    "src.identity.presentation",
+    "src.identity.infrastructure",
+    "src.identity.application",
+    "src.identity.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "shared-clean-architecture"
+type = "layers"
+layers = [
+    "src.shared.presentation",
+    "src.shared.infrastructure",
+    "src.shared.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "domain-does-not-depend-on-infrastructure"
+type = "forbidden"
+source_modules = ["src.identity.domain", "src.shared.domain"]
+forbidden_modules = ["src.shared.infrastructure", "src.shared.presentation"]
+
+[[tool.importlinter.contracts]]
+name = "application-does-not-depend-on-infrastructure"
+type = "forbidden"
+source_modules = ["src.identity.application"]
+forbidden_modules = ["src.shared.infrastructure", "src.shared.presentation"]
+
+[[tool.importlinter.contracts]]
+name = "shared-does-not-depend-on-bounded-contexts"
+type = "forbidden"
+source_modules = ["src.shared"]
+forbidden_modules = ["src.identity", "src.composition"]
+
+[[tool.importlinter.contracts]]
+name = "identity-does-not-depend-on-composition"
+type = "forbidden"
+source_modules = ["src.identity"]
+forbidden_modules = ["src.composition"]

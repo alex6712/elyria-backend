@@ -8,7 +8,7 @@ from src.identity.domain.value_objects import DisplayName
 from src.identity.infrastructure.persistence.tables import profiles_table
 
 
-class SQLAlchemyProfileRepository:
+class SqlAlchemyProfileRepository:
     """Репозиторий профилей пользователей на основе SQLAlchemy Core.
 
     Реализует полный набор операций CRUD для доменной сущности

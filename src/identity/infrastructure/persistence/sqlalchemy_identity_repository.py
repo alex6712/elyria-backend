@@ -10,7 +10,7 @@ from src.identity.domain.value_objects import Username
 from src.identity.infrastructure.persistence.tables import identities_table
 
 
-class SQLAlchemyIdentityRepository:
+class SqlAlchemyIdentityRepository:
     """Репозиторий учётных записей на основе SQLAlchemy Core.
 
     Реализует полный набор операций CRUD для доменной сущности

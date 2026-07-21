@@ -59,7 +59,7 @@ class APICode(StrEnum):
 
     NOTHING_TO_UPDATE = auto()
     """Вызывается, когда PATCH-запрос не содержит ни одного поля
-    для обновления — все поля DTO остались ``UNSET``."""
+    для обновления - все поля DTO остались ``UNSET``."""
 
     INCORRECT_USERNAME_PASSWORD = auto()
     """Если по ``username`` не найден пользователь или ``password``

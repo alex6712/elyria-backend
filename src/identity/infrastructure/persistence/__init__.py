@@ -1,9 +1,9 @@
-from .sqlalchemy_identity_repository import SQLAlchemyIdentityRepository
-from .sqlalchemy_profile_repository import SQLAlchemyProfileRepository
-from .sqlalchemy_session_repository import SQLAlchemySessionRepository
+from .sqlalchemy_identity_repository import SqlAlchemyIdentityRepository
+from .sqlalchemy_profile_repository import SqlAlchemyProfileRepository
+from .sqlalchemy_session_repository import SqlAlchemySessionRepository
 
 __all__ = [
-    "SQLAlchemyIdentityRepository",
-    "SQLAlchemyProfileRepository",
-    "SQLAlchemySessionRepository",
+    "SqlAlchemyIdentityRepository",
+    "SqlAlchemyProfileRepository",
+    "SqlAlchemySessionRepository",
 ]
