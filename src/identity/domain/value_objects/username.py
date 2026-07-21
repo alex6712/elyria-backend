@@ -2,8 +2,8 @@ import re
 from dataclasses import dataclass
 
 from src.identity.domain.exceptions import (
-    InvalidUsernameFormatException,
-    InvalidUsernameLengthException,
+    InvalidUsernameFormatError,
+    InvalidUsernameLengthError,
 )
 
 USERNAME_MIN_LENGTH = 3
@@ -34,10 +34,10 @@ class Username:
 
     Raises
     ------
-    InvalidUsernameLengthException
+    InvalidUsernameLengthError
         Если длина имени пользователя выходит за допустимые пределы.
 
-    InvalidUsernameFormatException
+    InvalidUsernameFormatError
         Если имя пользователя содержит недопустимые символы.
 
     Notes
@@ -54,14 +54,14 @@ class Username:
 
     def __post_init__(self) -> None:
         if not USERNAME_MIN_LENGTH <= len(self.value) <= USERNAME_MAX_LENGTH:
-            raise InvalidUsernameLengthException(
+            raise InvalidUsernameLengthError(
                 "Username must contain from "
                 f"{USERNAME_MIN_LENGTH} to "
                 f"{USERNAME_MAX_LENGTH} characters."
             )
 
         if not re.fullmatch(USERNAME_PATTERN, self.value):
-            raise InvalidUsernameFormatException(
+            raise InvalidUsernameFormatError(
                 "Username may only contain letters (a-z, A-Z), digits (0-9), "
                 "hyphens (-), and underscores (_)."
             )

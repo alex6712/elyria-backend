@@ -1,7 +1,7 @@
 import unicodedata
 from dataclasses import dataclass
 
-from src.identity.domain.exceptions import InvalidDisplayNameLengthException
+from src.identity.domain.exceptions import InvalidDisplayNameLengthError
 
 DISPLAY_NAME_MIN_LENGTH = 1
 """Минимальная длина отображаемого имени (включительно)."""
@@ -25,7 +25,7 @@ class DisplayName:
 
     Raises
     ------
-    InvalidDisplayNameLengthException
+    InvalidDisplayNameLengthError
         Если длина имени выходит за пределы от
         ``DISPLAY_NAME_MIN_LENGTH`` до ``DISPLAY_NAME_MAX_LENGTH``
         символов включительно.
@@ -40,7 +40,7 @@ class DisplayName:
             object.__setattr__(self, "value", normalized)
 
         if not DISPLAY_NAME_MIN_LENGTH <= len(self.value) <= DISPLAY_NAME_MAX_LENGTH:
-            raise InvalidDisplayNameLengthException(
+            raise InvalidDisplayNameLengthError(
                 "Display name must contain from "
                 f"{DISPLAY_NAME_MIN_LENGTH} to "
                 f"{DISPLAY_NAME_MAX_LENGTH} characters."

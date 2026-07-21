@@ -31,11 +31,11 @@ class TokenVerifier(Protocol):
 
         Raises
         ------
-        TokenExpiredException
+        TokenExpiredError
             Если срок действия токена истёк.
-        TokenSignatureInvalidException
+        TokenSignatureInvalidError
             Если подпись токена не прошла проверку.
-        TokenInvalidException
+        TokenInvalidError
             Если в токене отсутствуют обязательные утверждения
             либо токен имеет некорректный формат.
         """

@@ -4,9 +4,9 @@ from pydantic import ValidationError
 
 from src.identity.application.dto import TokenClaimsDTO
 from src.identity.application.exceptions import (
-    TokenExpiredException,
-    TokenInvalidException,
-    TokenSignatureInvalidException,
+    TokenExpiredError,
+    TokenInvalidError,
+    TokenSignatureInvalidError,
 )
 
 
@@ -56,11 +56,11 @@ class JwtTokenVerifier:
 
         Raises
         ------
-        TokenExpiredException
+        TokenExpiredError
             Если срок действия токена истёк.
-        TokenSignatureInvalidException
+        TokenSignatureInvalidError
             Если подпись токена не прошла проверку.
-        TokenInvalidException
+        TokenInvalidError
             Если в токене отсутствуют обязательные утверждения
             либо токен имеет некорректный формат.
         """
@@ -72,14 +72,14 @@ class JwtTokenVerifier:
                 issuer=self._issuer,
                 options={"require": ["iss", "sub", "exp", "iat", "jti", "sid"]},
             )
-        except jwt.ExpiredSignatureError:
-            raise TokenExpiredException("Signature of passed token has expired.")
-        except jwt.InvalidSignatureError:
-            raise TokenSignatureInvalidException(
+        except jwt.ExpiredSignatureError as e:
+            raise TokenExpiredError("Signature of passed token has expired.") from e
+        except jwt.InvalidSignatureError as e:
+            raise TokenSignatureInvalidError(
                 "Signature of passed token is invalid or damaged."
-            )
+            ) from e
         except jwt.InvalidTokenError as e:
-            raise TokenInvalidException(str(e))
+            raise TokenInvalidError(str(e)) from e
 
         try:
             return TokenClaimsDTO.model_validate(
@@ -92,4 +92,4 @@ class JwtTokenVerifier:
                 }
             )
         except ValidationError as e:
-            raise TokenInvalidException(str(e)) from e
+            raise TokenInvalidError(str(e)) from e

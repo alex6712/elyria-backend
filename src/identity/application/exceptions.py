@@ -1,4 +1,4 @@
-class SessionNotFoundException(Exception):
+class SessionNotFoundError(Exception):
     """Сессия не найдена.
 
     Возникает при попытке обращения к несуществующей сессии
@@ -8,7 +8,7 @@ class SessionNotFoundException(Exception):
     pass
 
 
-class SessionExpiredException(Exception):
+class SessionExpiredError(Exception):
     """Срок действия сессии истёк.
 
     Возникает при попытке использования сессии, срок действия
@@ -18,7 +18,7 @@ class SessionExpiredException(Exception):
     pass
 
 
-class TokenExpiredException(Exception):
+class TokenExpiredError(Exception):
     """Срок действия токена истёк.
 
     Возникает при попытке верификации токена, срок действия
@@ -28,7 +28,7 @@ class TokenExpiredException(Exception):
     pass
 
 
-class TokenSignatureInvalidException(Exception):
+class TokenSignatureInvalidError(Exception):
     """Подпись токена недействительна.
 
     Возникает при попытке верификации токена, подпись которого
@@ -38,7 +38,7 @@ class TokenSignatureInvalidException(Exception):
     pass
 
 
-class TokenInvalidException(Exception):
+class TokenInvalidError(Exception):
     """Токен недействителен.
 
     Возникает при попытке верификации токена, в котором
