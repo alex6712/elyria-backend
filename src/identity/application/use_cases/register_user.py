@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from src.identity.application.commands import RegisterCommand
+from src.identity.application.commands import RegisterUserCommand
 from src.identity.application.dto import TokenClaimsDTO
 from src.identity.application.ports import IdentityUnitOfWork
 from src.identity.application.ports.security import (
@@ -9,7 +9,7 @@ from src.identity.application.ports.security import (
     TokenHasher,
     TokenIssuer,
 )
-from src.identity.application.results import RegisterResult
+from src.identity.application.results import RegisterUserResult
 from src.identity.domain.entities import Identity, Profile, Session
 from src.identity.domain.value_objects import DisplayName, Username
 
@@ -59,7 +59,7 @@ class RegisterUserUseCase:
         self._at_lifetime_minutes = at_lifetime_minutes
         self._rt_lifetime_days = rt_lifetime_days
 
-    async def execute(self, request: RegisterCommand) -> RegisterResult:
+    async def execute(self, request: RegisterUserCommand) -> RegisterUserResult:
         """Зарегистрировать нового пользователя.
 
         Создаёт учётную запись, профиль и начальную пользовательскую
@@ -67,12 +67,12 @@ class RegisterUserUseCase:
 
         Parameters
         ----------
-        request : RegisterCommand
+        request : RegisterUserCommand
             Данные для регистрации пользователя.
 
         Returns
         -------
-        RegisterResult
+        RegisterUserResult
             Идентификатор созданного пользователя и выпущенные
             access- и refresh-токены.
 
@@ -123,6 +123,6 @@ class RegisterUserUseCase:
                 )
             )
 
-        return RegisterResult(
+        return RegisterUserResult(
             user_id=identity.id, access_token=access_token, refresh_token=refresh_token
         )

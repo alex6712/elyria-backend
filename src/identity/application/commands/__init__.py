@@ -1,3 +1,4 @@
-from .register import RegisterCommand
+from .login import LoginCommand
+from .register_user import RegisterUserCommand
 
-__all__ = ["RegisterCommand"]
+__all__ = ["LoginCommand", "RegisterUserCommand"]

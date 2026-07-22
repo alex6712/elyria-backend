@@ -55,3 +55,15 @@ class TokenInvalidError(Exception):
         super().__init__(detail)
 
         self.detail = detail
+
+
+class IncorrectUsernameOrPasswordError(Exception):
+    """Исключение при ошибке обработки запроса логина.
+
+    Notes
+    -----
+    Используется для обработки случаев, когда не получилось
+    аутентифицировать пользователя по предоставленным учётным данным.
+    """
+
+    pass

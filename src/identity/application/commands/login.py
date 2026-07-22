@@ -1,9 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.identity.domain.value_objects.display_name import (
-    DISPLAY_NAME_MAX_LENGTH,
-    DISPLAY_NAME_MIN_LENGTH,
-)
 from src.identity.domain.value_objects.username import (
     USERNAME_MAX_LENGTH,
     USERNAME_MIN_LENGTH,
@@ -11,11 +7,11 @@ from src.identity.domain.value_objects.username import (
 )
 
 
-class RegisterCommand(BaseModel):
-    """Запрос на регистрацию нового пользователя.
+class LoginCommand(BaseModel):
+    """Запрос на вход в систему.
 
-    Содержит данные, необходимые для создания учётной записи,
-    профиля и первой пользовательской сессии.
+    Содержит данные, необходимые для аутентификации пользователя,
+    и создания новой пользовательской сессии.
 
     Attributes
     ----------
@@ -27,10 +23,6 @@ class RegisterCommand(BaseModel):
         Пароль пользователя в открытом виде.
         Минимальная длина определяется требованиями политики
         безопасности приложения.
-    display_name : str
-        Отображаемое имя пользователя. Длина от
-        ``DISPLAY_NAME_MIN_LENGTH`` до
-        ``DISPLAY_NAME_MAX_LENGTH`` символов.
     """
 
     username: str = Field(
@@ -44,12 +36,6 @@ class RegisterCommand(BaseModel):
         description="Пароль пользователя в открытом виде",
         examples=["secureP@ss1"],
         min_length=12,
-    )
-    display_name: str = Field(
-        description="Отображаемое имя пользователя",
-        examples=["John Doe"],
-        min_length=DISPLAY_NAME_MIN_LENGTH,
-        max_length=DISPLAY_NAME_MAX_LENGTH,
     )
 
     model_config = ConfigDict(frozen=True)
