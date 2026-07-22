@@ -3,11 +3,7 @@ from uuid import uuid4
 
 from src.identity.application.commands import RegisterCommand
 from src.identity.application.dto import TokenClaimsDTO
-from src.identity.application.ports.persistence import (
-    IdentityRepository,
-    ProfileRepository,
-    SessionRepository,
-)
+from src.identity.application.ports import IdentityUnitOfWork
 from src.identity.application.ports.security import (
     PasswordHasher,
     TokenHasher,
@@ -31,45 +27,37 @@ class RegisterUserUseCase:
 
     Parameters
     ----------
-    identity_repo : IdentityRepository
-        Репозиторий учётных записей.
-    profile_repo : ProfileRepository
-        Репозиторий профилей.
-    session_repo : SessionRepository
-        Репозиторий пользовательских сессий.
+    uow : IdentityUnitOfWork
+        Единица работы с вложенными репозиториями.
     password_hasher : PasswordHasher
         Сервис хеширования паролей.
     token_issuer : TokenIssuer
         Сервис выпуска JWT-токенов.
     token_hasher : TokenHasher
         Сервис криптографического хеширования токенов.
-    access_token_lifetime_minutes : int
+    at_lifetime_minutes : int
         Время жизни access-токена в минутах.
-    refresh_token_lifetime_days : int
+    rt_lifetime_days : int
         Время жизни refresh-токена и пользовательской сессии в днях.
     """
 
     def __init__(
         self,
-        identity_repo: IdentityRepository,
-        profile_repo: ProfileRepository,
-        session_repo: SessionRepository,
+        uow: IdentityUnitOfWork,
         password_hasher: PasswordHasher,
         token_issuer: TokenIssuer,
         token_hasher: TokenHasher,
         hmac_secret_key: str,
-        access_token_lifetime_minutes: int,
-        refresh_token_lifetime_days: int,
+        at_lifetime_minutes: int,
+        rt_lifetime_days: int,
     ) -> None:
-        self._identity_repo = identity_repo
-        self._profile_repo = profile_repo
-        self._session_repo = session_repo
+        self._uow = uow
         self._password_hasher = password_hasher
         self._token_issuer = token_issuer
         self._token_hasher = token_hasher
         self._hmac_secret_key = hmac_secret_key
-        self._access_token_lifetime_minutes = access_token_lifetime_minutes
-        self._refresh_token_lifetime_days = refresh_token_lifetime_days
+        self._at_lifetime_minutes = at_lifetime_minutes
+        self._rt_lifetime_days = rt_lifetime_days
 
     async def execute(self, request: RegisterCommand) -> RegisterResult:
         """Зарегистрировать нового пользователя.
@@ -93,46 +81,47 @@ class RegisterUserUseCase:
         UsernameAlreadyExistsError
             Если пользователь с указанным именем уже существует.
         """
-        identity = Identity.register(
-            Username(request.username), self._password_hasher.hash(request.password)
-        )
+        async with self._uow:
+            identity = Identity.register(
+                Username(request.username), self._password_hasher.hash(request.password)
+            )
 
-        await self._identity_repo.add(identity)
+            await self._uow.identities.add(identity)
 
-        profile = Profile.create(identity.id, DisplayName(request.display_name))
+            profile = Profile.create(identity.id, DisplayName(request.display_name))
 
-        now = datetime.now(UTC)
-        refresh_expires_at = now + timedelta(days=self._refresh_token_lifetime_days)
+            now = datetime.now(UTC)
+            refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)
 
-        refresh_token = self._token_issuer.issue(
-            TokenClaimsDTO(
-                user_id=identity.id,
+            refresh_token = self._token_issuer.issue(
+                TokenClaimsDTO(
+                    user_id=identity.id,
+                    expires_at=refresh_expires_at,
+                    issued_at=now,
+                    token_id=uuid4(),
+                    session_id=(session_id := uuid4()),
+                )
+            )
+
+            session = Session.issue(
+                id=session_id,
+                identity_id=identity.id,
+                session_secret=self._token_hasher.hash(refresh_token),
                 expires_at=refresh_expires_at,
-                issued_at=now,
-                token_id=uuid4(),
-                session_id=(session_id := uuid4()),
             )
-        )
 
-        session = Session.issue(
-            id=session_id,
-            identity_id=identity.id,
-            session_secret=self._token_hasher.hash(refresh_token),
-            expires_at=refresh_expires_at,
-        )
+            await self._uow.profiles.add(profile)
+            await self._uow.sessions.add(session)
 
-        await self._profile_repo.add(profile)
-        await self._session_repo.add(session)
-
-        access_token = self._token_issuer.issue(
-            TokenClaimsDTO(
-                user_id=identity.id,
-                expires_at=now + timedelta(minutes=self._access_token_lifetime_minutes),
-                issued_at=now,
-                token_id=uuid4(),
-                session_id=session.id,
+            access_token = self._token_issuer.issue(
+                TokenClaimsDTO(
+                    user_id=identity.id,
+                    expires_at=now + timedelta(minutes=self._at_lifetime_minutes),
+                    issued_at=now,
+                    token_id=uuid4(),
+                    session_id=session.id,
+                )
             )
-        )
 
         return RegisterResult(
             user_id=identity.id, access_token=access_token, refresh_token=refresh_token

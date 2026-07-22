@@ -48,7 +48,7 @@ botocore==1.40.61
     #   s3transfer
 botocore-stubs==1.43.14
     # via types-aiobotocore
-certifi==2026.6.17
+certifi==2026.7.22
     # via
     #   httpcore
     #   httpx
@@ -90,7 +90,7 @@ frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-greenlet==3.5.3
+greenlet==3.5.4
     # via sqlalchemy
 grimp==3.15
     # via import-linter
@@ -216,7 +216,7 @@ ruff==0.15.22
     # via elyria-backend (pyproject.toml:dev)
 s3transfer==0.14.0
     # via boto3
-sentry-sdk==2.66.0
+sentry-sdk==2.66.1
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
