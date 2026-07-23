@@ -79,7 +79,11 @@ class SessionRepository(Protocol):
         ...
 
     async def rotate_secret(
-        self, id: UUID, new_session_secret: str, new_expires_at: datetime
+        self,
+        id: UUID,
+        session_secret: str,
+        new_session_secret: str,
+        new_expires_at: datetime,
     ) -> bool:
         """Заменить секрет сессии и продлить срок её действия.
 
@@ -87,6 +91,8 @@ class SessionRepository(Protocol):
         ----------
         id : UUID
             Идентификатор сессии.
+        session_secret : str
+            Текущий секрет сессии.
         new_session_secret : str
             Новый секрет сессии.
         new_expires_at : datetime
@@ -96,7 +102,12 @@ class SessionRepository(Protocol):
         -------
         bool
             ``True``, если секрет был изменён,
-            ``False``, если сессия с указанным идентификатором не найдена.
+            ``False``, если сессия с указанными идентификатором и секретом не найдена.
+
+        Notes
+        -----
+        Реализация обязана проверить соответствие секрета сессии и идентификатора
+        сессии внутри одной операции перед установкой нового секрета сессии.
         """
         ...
 

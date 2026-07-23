@@ -124,14 +124,26 @@ class SqlAlchemySessionRepository:
         return result.rowcount == 1
 
     async def rotate_secret(
-        self, id: UUID, new_session_secret: str, new_expires_at: datetime
+        self,
+        id: UUID,
+        session_secret: str,
+        new_session_secret: str,
+        new_expires_at: datetime,
     ) -> bool:
         """Заменить секрет сессии и продлить срок её действия.
+
+        Производит поиск по таблице с использованием пары условий, объединённых
+        оператором ``AND``: по идентификатору и секрету сессии, таким образом
+        атомарно проверяя принадлежность предоставленного секрета сессии с
+        предоставленным идентификатором. Обновляет секрет при нахождении сессии
+        с заданными значениями.
 
         Parameters
         ----------
         id : UUID
             Идентификатор сессии.
+        session_secret : str
+            Текущий секрет сессии.
         new_session_secret : str
             Новый секрет сессии.
         new_expires_at : datetime
@@ -149,7 +161,10 @@ class SqlAlchemySessionRepository:
                 session_secret=new_session_secret,
                 expires_at=new_expires_at,
             )
-            .where(sessions_table.c.id == id)
+            .where(
+                sessions_table.c.id == id,
+                sessions_table.c.session_secret == session_secret,
+            )
         )
 
         return result.rowcount == 1

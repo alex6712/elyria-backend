@@ -32,13 +32,13 @@ class RegisterUserUseCase:
     password_hasher : PasswordHasher
         Сервис хеширования паролей.
     token_issuer : TokenIssuer
-        Сервис выпуска JWT-токенов.
+        Сервис выпуска новых токенов.
     token_hasher : TokenHasher
-        Сервис криптографического хеширования токенов.
+        Сервис криптографического хеширования сырых токенов.
     at_lifetime_minutes : int
-        Время жизни access-токена в минутах.
+        Время жизни выдаваемого access-токена в минутах.
     rt_lifetime_days : int
-        Время жизни refresh-токена и пользовательской сессии в днях.
+        Время жизни выдаваемого refresh-токена и связанной с ним сессии в днях.
     """
 
     def __init__(
@@ -47,7 +47,6 @@ class RegisterUserUseCase:
         password_hasher: PasswordHasher,
         token_issuer: TokenIssuer,
         token_hasher: TokenHasher,
-        hmac_secret_key: str,
         at_lifetime_minutes: int,
         rt_lifetime_days: int,
     ) -> None:
@@ -55,11 +54,10 @@ class RegisterUserUseCase:
         self._password_hasher = password_hasher
         self._token_issuer = token_issuer
         self._token_hasher = token_hasher
-        self._hmac_secret_key = hmac_secret_key
         self._at_lifetime_minutes = at_lifetime_minutes
         self._rt_lifetime_days = rt_lifetime_days
 
-    async def execute(self, request: RegisterUserCommand) -> RegisterUserResult:
+    async def execute(self, command: RegisterUserCommand) -> RegisterUserResult:
         """Зарегистрировать нового пользователя.
 
         Создаёт учётную запись, профиль и начальную пользовательскую
@@ -67,7 +65,7 @@ class RegisterUserUseCase:
 
         Parameters
         ----------
-        request : RegisterUserCommand
+        command : RegisterUserCommand
             Данные для регистрации пользователя.
 
         Returns
@@ -83,12 +81,12 @@ class RegisterUserUseCase:
         """
         async with self._uow:
             identity = Identity.register(
-                Username(request.username), self._password_hasher.hash(request.password)
+                Username(command.username), self._password_hasher.hash(command.password)
             )
 
             await self._uow.identities.add(identity)
 
-            profile = Profile.create(identity.id, DisplayName(request.display_name))
+            profile = Profile.create(identity.id, DisplayName(command.display_name))
 
             now = datetime.now(UTC)
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)

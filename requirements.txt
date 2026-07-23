@@ -8,7 +8,7 @@ aiofiles==25.1.0
     # via aioboto3
 aiohappyeyeballs==2.7.1
     # via aiohttp
-aiohttp==3.14.2
+aiohttp==3.14.3
     # via aiobotocore
 aioitertools==0.13.0
     # via aiobotocore

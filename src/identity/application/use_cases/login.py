@@ -30,16 +30,13 @@ class LoginUseCase:
     password_hasher : PasswordHasher
         Сервис хеширования паролей для проверки учётных данных.
     token_issuer : TokenIssuer
-        Сервис выпуска JWT токенов.
+        Сервис выпуска новых токенов.
     token_hasher : TokenHasher
-        Сервис криптографического хеширования токенов для получения
-        секрета сессии.
-    hmac_secret_key : str
-        Секретный ключ для HMAC refresh-токена.
+        Сервис криптографического хеширования сырых токенов.
     at_lifetime_minutes : int
-        Время жизни access-токена в минутах.
+        Время жизни выдаваемого access-токена в минутах.
     rt_lifetime_days : int
-        Время жизни refresh-токена (и сессии) в днях.
+        Время жизни выдаваемого refresh-токена и связанной с ним сессии в днях.
     """
 
     def __init__(
@@ -48,7 +45,6 @@ class LoginUseCase:
         password_hasher: PasswordHasher,
         token_issuer: TokenIssuer,
         token_hasher: TokenHasher,
-        hmac_secret_key: str,
         at_lifetime_minutes: int,
         rt_lifetime_days: int,
     ) -> None:
@@ -56,11 +52,10 @@ class LoginUseCase:
         self._password_hasher = password_hasher
         self._token_issuer = token_issuer
         self._token_hasher = token_hasher
-        self._hmac_secret_key = hmac_secret_key
         self._at_lifetime_minutes = at_lifetime_minutes
         self._rt_lifetime_days = rt_lifetime_days
 
-    async def execute(self, request: LoginCommand) -> LoginResult:
+    async def execute(self, command: LoginCommand) -> LoginResult:
         """Аутентифицировать пользователя и выпустить токены.
 
         Выполняет поиск учётной записи по имени пользователя,
@@ -69,7 +64,7 @@ class LoginUseCase:
 
         Parameters
         ----------
-        request : LoginCommand
+        command : LoginCommand
             Данные для входа: имя пользователя и пароль.
 
         Returns
@@ -85,11 +80,11 @@ class LoginUseCase:
         """
         async with self._uow:
             identity = await self._uow.identities.get_by_username(
-                Username(request.username)
+                Username(command.username)
             )
 
             if identity is None or not self._password_hasher.verify(
-                request.password, identity.password_hash
+                command.password, identity.password_hash
             ):
                 raise IncorrectUsernameOrPasswordError(
                     "Incorrect username or password."
