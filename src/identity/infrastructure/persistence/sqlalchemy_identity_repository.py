@@ -8,6 +8,7 @@ from src.identity.domain.entities import Identity
 from src.identity.domain.exceptions import UsernameAlreadyExistsError
 from src.identity.domain.value_objects import Username
 from src.identity.infrastructure.persistence.tables import identities_table
+from src.shared.domain.exceptions import ConcurrentModificationError
 
 
 class SqlAlchemyIdentityRepository:
@@ -57,6 +58,7 @@ class SqlAlchemyIdentityRepository:
                     username=identity.username,
                     password_hash=identity.password_hash,
                     is_active=identity.is_active,
+                    version=identity.version,
                     created_at=identity.created_at,
                     updated_at=identity.updated_at,
                 )
@@ -95,6 +97,7 @@ class SqlAlchemyIdentityRepository:
             username=row["username"],
             password_hash=row["password_hash"],
             is_active=row["is_active"],
+            version=row["version"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
@@ -127,30 +130,46 @@ class SqlAlchemyIdentityRepository:
             username=row["username"],
             password_hash=row["password_hash"],
             is_active=row["is_active"],
+            version=row["version"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
 
-    async def change_password_hash(self, id: UUID, new_password_hash: str) -> bool:
-        """Изменить хэш пароля пользователя.
+    async def save_password_hash(self, identity: Identity) -> None:
+        """Сохранить изменённый хэш пароля учётной записи.
+
+        Обновляет хэш пароля в базе данных с проверкой версии
+        агрегата.
+
+        После успешного обновления вызывает ``identity.upgrade()``
+        для синхронизации версии объекта Python с базой данных.
 
         Parameters
         ----------
-        id : UUID
-            Идентификатор пользователя.
-        new_password_hash : str
-            Новый хэш пароля.
+        identity : Identity
+            Доменная сущность учётной записи с изменённым хэшем
+            пароля и актуальной версией.
 
-        Returns
-        -------
-        bool
-            ``True``, если хэш пароля был изменён,
-            ``False``, если пользователь с указанным идентификатором не найден.
+        Raises
+        ------
+        ConcurrentModificationError
+            Если версия ``identity`` не совпадает с версией
+            в базе данных.
         """
         result = await self._connection.execute(
             update(identities_table)
-            .values(password_hash=new_password_hash)
-            .where(identities_table.c.id == id)
+            .values(
+                password_hash=identity.password_hash,
+                version=identities_table.c.version + 1,
+                updated_at=identity.updated_at,
+            )
+            .where(
+                identities_table.c.id == identity.id,
+                identities_table.c.version == identity.version,
+            )
         )
 
-        return result.rowcount == 1
+        if result.rowcount != 1:
+            raise ConcurrentModificationError(identity.id, "Identity")
+
+        identity.upgrade()

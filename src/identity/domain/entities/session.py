@@ -3,10 +3,10 @@ from typing import Self
 from uuid import UUID
 
 from src.identity.domain.exceptions import SessionInvalidError
-from src.shared.domain.entities import Auditable, Identifiable
+from src.shared.domain.entities import Auditable, Identifiable, Versioned
 
 
-class Session(Identifiable[UUID], Auditable):
+class Session(Identifiable[UUID], Auditable, Versioned):
     """Доменная сущность пользовательской сессии.
 
     Представляет собой одну аутентифицированную сессию пользователя
@@ -36,6 +36,9 @@ class Session(Identifiable[UUID], Auditable):
         IP-адрес, с которого была создана сессия.
     user_agent : str | None
         User-Agent клиента при создании сессии.
+    version : int
+        Версия агрегата для optimistic locking. Увеличивается на 1
+        при каждом успешном сохранении изменений через репозиторий.
     created_at : datetime
         Дата и время создания сессии.
     updated_at : datetime | None
@@ -59,6 +62,7 @@ class Session(Identifiable[UUID], Auditable):
         revoked_at: datetime | None,
         ip_address: str | None,
         user_agent: str | None,
+        version: int,
         created_at: datetime,
         updated_at: datetime | None,
     ) -> None:
@@ -70,6 +74,7 @@ class Session(Identifiable[UUID], Auditable):
         self.revoked_at = revoked_at
         self.ip_address = ip_address
         self.user_agent = user_agent
+        self.version = version
         self.created_at = created_at
         self.updated_at = updated_at
 
@@ -114,6 +119,7 @@ class Session(Identifiable[UUID], Auditable):
             revoked_at=None,
             ip_address=ip_address,
             user_agent=user_agent,
+            version=1,
             updated_at=None,
             created_at=now,
         )
@@ -175,10 +181,19 @@ class Session(Identifiable[UUID], Auditable):
         собственной проверки ``is_valid`` в рамках сценария
         аутентификации запроса.
         """
-        self.last_used_at = (moment := (at or datetime.now(UTC)))
-        self._touch(moment)
+        if at is None:
+            at = datetime.now(UTC)
 
-    def rotate_secret(self, new_session_secret: str, new_expires_at: datetime) -> None:
+        self.last_used_at = at
+        self._touch(at)
+
+    def rotate_secret(
+        self,
+        new_session_secret: str,
+        new_expires_at: datetime,
+        *,
+        at: datetime | None = None,
+    ) -> None:
         """Заменить секрет сессии и продлить срок её действия.
 
         Parameters
@@ -187,6 +202,8 @@ class Session(Identifiable[UUID], Auditable):
             Новый секрет сессии.
         new_expires_at : datetime
             Новый момент истечения срока действия сессии.
+        at : datetime | None, optional
+            Временная метка ротации секрета сессии.
 
         Raises
         ------
@@ -199,13 +216,18 @@ class Session(Identifiable[UUID], Auditable):
         когда старый секрет должен быть инвалидирован в пользу
         нового, а не создания новой сессии с нуля.
         """
-        self._ensure_valid()
+        self._ensure_valid(at)
         self.session_secret = new_session_secret
         self.expires_at = new_expires_at
-        self._touch()
+        self._touch(at)
 
-    def revoke(self) -> None:
+    def revoke(self, at: datetime | None = None) -> None:
         """Принудительно завершить сессию.
+
+        Parameters
+        ----------
+        at : datetime | None, optional
+            Временная метка отзыва пользовательской сессии.
 
         Notes
         -----
@@ -217,11 +239,19 @@ class Session(Identifiable[UUID], Auditable):
         if self.is_revoked():
             return
 
-        self.revoked_at = (moment := datetime.now(UTC))
-        self._touch(moment)
+        if at is None:
+            at = datetime.now(UTC)
 
-    def _ensure_valid(self) -> None:
+        self.revoked_at = at
+        self._touch(at)
+
+    def _ensure_valid(self, at: datetime | None = None) -> None:
         """Проверить, что сессия не отозвана и не истекла.
+
+        Parameters
+        ----------
+        at : datetime | None, optional
+            Временная метка для проверки отзыва сессии.
 
         Raises
         ------
@@ -234,7 +264,7 @@ class Session(Identifiable[UUID], Auditable):
         ``extend`` и ``rotate_secret`` запрещены для невалидной
         сессии. Решение описано в ADR-0005.
         """
-        if not self.is_valid():
+        if not self.is_valid(at):
             raise SessionInvalidError(self.id)
 
     def __repr__(self) -> str:
@@ -247,6 +277,7 @@ class Session(Identifiable[UUID], Auditable):
             f"revoked_at={self.revoked_at!r}, "
             f"ip_address={self.ip_address!r}, "
             f"user_agent={self.user_agent!r}, "
+            f"version={self.version!r}, "
             f"created_at={self.created_at!r}, "
             f"updated_at={self.updated_at!r})"
         )

@@ -4,16 +4,17 @@ from uuid import UUID, uuid4
 
 from src.identity.domain.exceptions import InactiveUserError
 from src.identity.domain.value_objects import Username
-from src.shared.domain.entities import Auditable, Identifiable
+from src.shared.domain.entities import Auditable, Identifiable, Versioned
 
 
-class Identity(Identifiable[UUID], Auditable):
+class Identity(Identifiable[UUID], Auditable, Versioned):
     """Доменная сущность учётной записи пользователя.
 
     Представляет собой учётную запись (identity) пользователя
     в системе. Содержит идентификатор, имя пользователя, хэш пароля,
-    статус активности и метки аудита, наследуя функциональность
-    от ``Identifiable`` и ``Auditable``.
+    статус активности, версию для optimistic locking и метки аудита,
+    наследуя функциональность от ``Identifiable``, ``Auditable``
+    и ``Versioned``.
 
     Attributes
     ----------
@@ -25,6 +26,9 @@ class Identity(Identifiable[UUID], Auditable):
         Хэш пароля пользователя.
     is_active : bool
         Флаг активности учётной записи.
+    version : int
+        Версия агрегата для optimistic locking. Увеличивается на 1
+        при каждом успешном сохранении изменений через репозиторий.
     created_at : datetime
         Дата и время создания учётной записи.
     updated_at : datetime | None
@@ -38,6 +42,7 @@ class Identity(Identifiable[UUID], Auditable):
         username: Username,
         password_hash: str,
         is_active: bool,
+        version: int,
         created_at: datetime,
         updated_at: datetime | None,
     ) -> None:
@@ -45,6 +50,7 @@ class Identity(Identifiable[UUID], Auditable):
         self.username = username
         self.password_hash = password_hash
         self.is_active = is_active
+        self.version = version
         self.created_at = created_at
         self.updated_at = updated_at
 
@@ -73,17 +79,22 @@ class Identity(Identifiable[UUID], Auditable):
             username=username,
             password_hash=password_hash,
             is_active=True,
+            version=1,
             created_at=datetime.now(UTC),
             updated_at=None,
         )
 
-    def change_password(self, new_password_hash: str) -> None:
+    def change_password_hash(
+        self, new_password_hash: str, *, at: datetime | None = None
+    ) -> None:
         """Изменить хэш пароля пользователя.
 
         Parameters
         ----------
         new_password_hash : str
             Новый хэш пароля, полученный из Infrastructure Layer.
+        at : datetime | None, optional
+            Временная метка изменения хеша пароля.
 
         Raises
         ------
@@ -92,10 +103,15 @@ class Identity(Identifiable[UUID], Auditable):
         """
         self._ensure_active()
         self.password_hash = new_password_hash
-        self._touch()
+        self._touch(at)
 
-    def deactivate(self) -> None:
+    def deactivate(self, at: datetime | None = None) -> None:
         """Деактивировать учётную запись пользователя.
+
+        Parameters
+        ----------
+        at : datetime | None, optional
+            Временная метка деактивации учётной записи пользователя.
 
         Notes
         -----
@@ -107,10 +123,15 @@ class Identity(Identifiable[UUID], Auditable):
             return
 
         self.is_active = False
-        self._touch()
+        self._touch(at)
 
-    def activate(self) -> None:
+    def activate(self, at: datetime | None = None) -> None:
         """Активировать учётную запись пользователя.
+
+        Parameters
+        ----------
+        at : datetime | None, optional
+            Временная метка активации учётной записи пользователя.
 
         Notes
         -----
@@ -123,7 +144,7 @@ class Identity(Identifiable[UUID], Auditable):
             return
 
         self.is_active = True
-        self._touch()
+        self._touch(at)
 
     def _ensure_active(self) -> None:
         """Проверить, что пользователь активен.
@@ -148,6 +169,7 @@ class Identity(Identifiable[UUID], Auditable):
             f"id={self.id!r}, "
             f"username={self.username!r}, "
             f"is_active={self.is_active!r}, "
+            f"version={self.version!r}, "
             f"created_at={self.created_at!r}, "
             f"updated_at={self.updated_at!r})"
         )

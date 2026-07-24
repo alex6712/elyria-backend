@@ -59,18 +59,22 @@ class RefreshSessionUseCase:
 
         Алгоритм выполнения:
         1. Проверяет структуру и подпись переданного refresh-токена
-           через `TokenVerifier`.
-        2. Вычисляет время истечения новой сессии.
-        3. Выпускает новый refresh-токен через `TokenIssuer` с
-           обновленным идентификатором токена.
-        4. Вызывает ротацию секрета сессии в хранилище (`sessions.rotate_secret`).
-           Если сессия не найдена или её текущий сохраненный хеш не совпадает с
-           хешем переданного токена, выбрасывается `SessionNotFoundError`.
-           Это защищает от повторного использования отозванных токенов.
-        5. Выпускает новый short-lived access-токен.
+           через ``TokenVerifier``.
+        2. Загружает сессию по идентификатору из claims токена.
+        3. Проверяет, что сессия валидна и хеш переданного токена
+           совпадает с сохранённым секретом сессии.
+        4. Вычисляет время истечения новой сессии.
+        5. Выпускает новый refresh-токен через ``TokenIssuer``.
+        6. Вызывает ``session.rotate_secret()`` - метод доменной
+           сущности, проверяющий доменные инварианты (сессия не
+           отозвана и не истекла, согласно ADR-0005).
+        7. Сохраняет изменения через ``sessions.save_rotation()``
+           с проверкой версии агрегата (optimistic locking).
+        8. Выпускает новый short-lived access-токен.
 
-        В случае любой ошибки до коммита контекста транзакция будет отменена благодаря
-        использованию асинхронного контекст-менеджера единицы работы.
+        В случае любой ошибки до коммита транзакция будет отменена
+        благодаря использованию асинхронного контекст-менеджера
+        единицы работы.
 
         Parameters
         ----------
@@ -85,8 +89,9 @@ class RefreshSessionUseCase:
         Raises
         ------
         SessionNotFoundError
-            Если сессия с указанным ID отсутствует, была отозвана или сохраненный
-            хеш секрета не соответствует переданному токену (защита от кражи токена).
+            Если сессия с указанным ID отсутствует, была отозвана,
+            истекла или сохранённый хеш секрета не соответствует
+            хешу переданного токена (защита от кражи токена).
         TokenExpiredError
             Если срок действия токена истёк.
         TokenSignatureInvalidError
@@ -94,9 +99,21 @@ class RefreshSessionUseCase:
         TokenInvalidError
             Если в токене отсутствуют обязательные утверждения
             либо токен имеет некорректный формат.
+        ConcurrentModificationError
+            Если другой concurrent запрос изменил сессию между
+            её загрузкой и сохранением (пробрасывается на уровень
+            представления как 409 Conflict).
         """
         async with self._uow:
             claims = self._token_verifier.verify(command.refresh_token)
+
+            session = await self._uow.sessions.get_by_id(claims.session_id)
+            if session is None:
+                raise SessionNotFoundError("Session with passed id not found.")
+            if session.session_secret != self._token_hasher.hash(command.refresh_token):
+                raise SessionNotFoundError(
+                    "Session with passed id and session secret not found."
+                )
 
             now = datetime.now(UTC)
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)
@@ -111,15 +128,10 @@ class RefreshSessionUseCase:
                 )
             )
 
-            if not await self._uow.sessions.rotate_secret(
-                claims.session_id,
-                self._token_hasher.hash(command.refresh_token),
-                self._token_hasher.hash(new_refresh_token),
-                refresh_expires_at,
-            ):
-                raise SessionNotFoundError(
-                    "Session with passed id and session secret not found."
-                )
+            session.rotate_secret(
+                self._token_hasher.hash(new_refresh_token), refresh_expires_at, at=now
+            )
+            await self._uow.sessions.save_rotation(session)
 
             access_token = self._token_issuer.issue(
                 TokenClaimsDTO(

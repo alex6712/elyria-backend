@@ -2,7 +2,6 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from src.identity.domain.entities import Profile
-from src.identity.domain.value_objects import DisplayName
 
 
 @runtime_checkable
@@ -44,22 +43,26 @@ class ProfileRepository(Protocol):
         """
         ...
 
-    async def change_display_name(
-        self, identity_id: UUID, new_display_name: DisplayName
-    ) -> bool:
-        """Изменить отображаемое имя пользователя.
+    async def save_display_name(self, profile: Profile) -> None:
+        """Сохранить изменённое отображаемое имя профиля.
+
+        Выполняет атомарное обновление отображаемого имени с проверкой
+        версии агрегата. Перед вызовом этого метода необходимо изменить
+        отображаемое имя через метод доменной сущности.
+
+        После успешного обновления репозиторий увеличивает версию
+        переданной сущности через ``profile.upgrade()``.
 
         Parameters
         ----------
-        identity_id : UUID
-            Идентификатор учётной записи пользователя.
-        new_display_name : DisplayName
-            Новое отображаемое имя.
+        profile : Profile
+            Доменная сущность профиля с уже изменённым отображаемым
+            именем и актуальной версией.
 
-        Returns
-        -------
-        bool
-            ``True``, если отображаемое имя было изменено,
-            ``False``, если пользователь с указанным идентификатором не найден.
+        Raises
+        ------
+        ConcurrentModificationError
+            Если версия ``profile`` не совпадает с версией
+            в хранилище.
         """
         ...

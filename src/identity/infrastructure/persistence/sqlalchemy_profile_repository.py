@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from src.identity.domain.entities import Profile
 from src.identity.domain.value_objects import DisplayName
 from src.identity.infrastructure.persistence.tables import profiles_table
+from src.shared.domain.exceptions import ConcurrentModificationError
 
 
 class SqlAlchemyProfileRepository:
@@ -42,6 +43,7 @@ class SqlAlchemyProfileRepository:
                 identity_id=profile.identity_id,
                 display_name=profile.display_name.value,
                 avatar_url=profile.avatar_url,
+                version=profile.version,
                 created_at=profile.created_at,
                 updated_at=profile.updated_at,
             )
@@ -73,32 +75,46 @@ class SqlAlchemyProfileRepository:
             identity_id=row["identity_id"],
             display_name=DisplayName(row["display_name"]),
             avatar_url=row["avatar_url"],
+            version=row["version"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
 
-    async def change_display_name(
-        self, identity_id: UUID, new_display_name: DisplayName
-    ) -> bool:
-        """Изменить отображаемое имя пользователя.
+    async def save_display_name(self, profile: Profile) -> None:
+        """Сохранить изменённое отображаемое имя профиля.
+
+        Обновляет отображаемое имя в базе данных с проверкой
+        версии агрегата.
+
+        После успешного обновления вызывает ``profile.upgrade()``
+        для синхронизации версии объекта Python с базой данных.
 
         Parameters
         ----------
-        identity_id : UUID
-            Идентификатор учётной записи пользователя.
-        new_display_name : DisplayName
-            Новое отображаемое имя.
+        profile : Profile
+            Доменная сущность профиля с изменённым отображаемым
+            именем и актуальной версией.
 
-        Returns
-        -------
-        bool
-            ``True``, если отображаемое имя было изменено,
-            ``False``, если пользователь с указанным идентификатором не найден.
+        Raises
+        ------
+        ConcurrentModificationError
+            Если версия ``profile`` не совпадает с версией
+            в базе данных.
         """
         result = await self._connection.execute(
             update(profiles_table)
-            .values(display_name=new_display_name.value)
-            .where(profiles_table.c.identity_id == identity_id)
+            .values(
+                display_name=profile.display_name.value,
+                version=profiles_table.c.version + 1,
+                updated_at=profile.updated_at,
+            )
+            .where(
+                profiles_table.c.id == profile.id,
+                profiles_table.c.version == profile.version,
+            )
         )
 
-        return result.rowcount == 1
+        if result.rowcount != 1:
+            raise ConcurrentModificationError(profile.id, "Profile")
+
+        profile.upgrade()

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from src.identity.domain.entities import Session
 from src.identity.infrastructure.persistence.tables import sessions_table
+from src.shared.domain.exceptions import ConcurrentModificationError
 
 
 class SqlAlchemySessionRepository:
@@ -46,6 +47,7 @@ class SqlAlchemySessionRepository:
                 revoked_at=session.revoked_at,
                 ip_address=session.ip_address,
                 user_agent=session.user_agent,
+                version=session.version,
                 created_at=session.created_at,
                 updated_at=session.updated_at,
             )
@@ -108,6 +110,8 @@ class SqlAlchemySessionRepository:
             Идентификатор сессии.
         at : datetime
             Момент использования.
+        at : datetime | None, optional
+            Временная метка использования пользовательской сессии.
 
         Returns
         -------
@@ -123,73 +127,84 @@ class SqlAlchemySessionRepository:
 
         return result.rowcount == 1
 
-    async def rotate_secret(
-        self,
-        id: UUID,
-        session_secret: str,
-        new_session_secret: str,
-        new_expires_at: datetime,
-    ) -> bool:
-        """Заменить секрет сессии и продлить срок её действия.
+    async def save_rotation(self, session: Session) -> None:
+        """Сохранить ротированный секрет сессии и обновлённый срок действия.
 
-        Производит поиск по таблице с использованием пары условий, объединённых
-        оператором ``AND``: по идентификатору и секрету сессии, таким образом
-        атомарно проверяя принадлежность предоставленного секрета сессии с
-        предоставленным идентификатором. Обновляет секрет при нахождении сессии
-        с заданными значениями.
+        Обновляет секрет сессии и срок её действия в базе данных
+        с проверкой версии агрегата.
+
+        После успешного обновления вызывает ``session.upgrade()``
+        для синхронизации версии объекта Python с базой данных.
 
         Parameters
         ----------
-        id : UUID
-            Идентификатор сессии.
-        session_secret : str
-            Текущий секрет сессии.
-        new_session_secret : str
-            Новый секрет сессии.
-        new_expires_at : datetime
-            Новый момент истечения срока действия сессии.
+        session : Session
+            Доменная сущность сессии с уже ротированным секретом
+            и актуальной версией.
 
-        Returns
-        -------
-        bool
-            ``True``, если секрет был изменён,
-            ``False``, если сессия с указанным идентификатором не найдена.
+        Raises
+        ------
+        ConcurrentModificationError
+            Если версия ``session`` не совпадает с версией
+            в базе данных.
         """
         result = await self._connection.execute(
             update(sessions_table)
             .values(
-                session_secret=new_session_secret,
-                expires_at=new_expires_at,
+                session_secret=session.session_secret,
+                expires_at=session.expires_at,
+                version=sessions_table.c.version + 1,
+                updated_at=session.updated_at,
             )
             .where(
-                sessions_table.c.id == id,
-                sessions_table.c.session_secret == session_secret,
+                sessions_table.c.id == session.id,
+                sessions_table.c.version == session.version,
             )
         )
 
-        return result.rowcount == 1
+        if result.rowcount != 1:
+            raise ConcurrentModificationError(session.id, "Session")
 
-    async def revoke(self, id: UUID) -> bool:
-        """Принудительно завершить сессию.
+        session.upgrade()
+
+    async def save_revocation(self, session: Session) -> None:
+        """Сохранить отзыв сессии.
+
+        Обновляет признак отзыва сессии (``revoked_at``) в базе данных
+        с проверкой версии агрегата.
+
+        После успешного обновления вызывает ``session.upgrade()``
+        для синхронизации версии объекта Python с базой данных.
 
         Parameters
         ----------
-        id : UUID
-            Идентификатор сессии.
+        session : Session
+            Доменная сущность сессии с уже установленным ``revoked_at``
+            и актуальной версией.
 
-        Returns
-        -------
-        bool
-            ``True``, если сессия была отозвана,
-            ``False``, если сессия с указанным идентификатором не найдена.
+        Raises
+        ------
+        ConcurrentModificationError
+            Если версия ``session`` не совпадает с версией
+            в базе данных.
         """
         result = await self._connection.execute(
             update(sessions_table)
-            .values(revoked_at=datetime.now())
-            .where(sessions_table.c.id == id)
+            .values(
+                revoked_at=session.revoked_at,
+                version=sessions_table.c.version + 1,
+                updated_at=session.updated_at,
+            )
+            .where(
+                sessions_table.c.id == session.id,
+                sessions_table.c.version == session.version,
+            )
         )
 
-        return result.rowcount == 1
+        if result.rowcount != 1:
+            raise ConcurrentModificationError(session.id, "Session")
+
+        session.upgrade()
 
     async def revoke_all_by_identity_id(self, identity_id: UUID) -> int:
         """Принудительно завершить все сессии учётной записи.
@@ -235,6 +250,7 @@ class SqlAlchemySessionRepository:
             revoked_at=row["revoked_at"],
             ip_address=row["ip_address"],
             user_agent=row["user_agent"],
+            version=row["version"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
