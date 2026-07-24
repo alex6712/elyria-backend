@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from src.identity.application.commands import RefreshCommand
+from src.identity.application.commands import RefreshSessionCommand
 from src.identity.application.dto import TokenClaimsDTO
 from src.identity.application.exceptions import SessionNotFoundError
 from src.identity.application.ports import IdentityUnitOfWork
@@ -10,10 +10,10 @@ from src.identity.application.ports.security import (
     TokenIssuer,
     TokenVerifier,
 )
-from src.identity.application.results import RefreshResult
+from src.identity.application.results import RefreshSessionResult
 
 
-class RefreshUseCase:
+class RefreshSessionUseCase:
     """Use case обновления пары access/refresh токенов.
 
     Валидирует предоставленный refresh-токен, проверяет
@@ -54,7 +54,7 @@ class RefreshUseCase:
         self._at_lifetime_minutes = at_lifetime_minutes
         self._rt_lifetime_days = rt_lifetime_days
 
-    async def execute(self, command: RefreshCommand) -> RefreshResult:
+    async def execute(self, command: RefreshSessionCommand) -> RefreshSessionResult:
         """Обновить access и refresh токены по валидному refresh-токену.
 
         Алгоритм выполнения:
@@ -74,12 +74,12 @@ class RefreshUseCase:
 
         Parameters
         ----------
-        command : RefreshCommand
+        command : RefreshSessionCommand
             Команда, содержащая текущий refresh-токен пользователя.
 
         Returns
         -------
-        RefreshResult
+        RefreshSessionResult
             Результат операции, содержащий новые access и refresh токены.
 
         Raises
@@ -111,13 +111,12 @@ class RefreshUseCase:
                 )
             )
 
-            refreshed = await self._uow.sessions.rotate_secret(
+            if not await self._uow.sessions.rotate_secret(
                 claims.session_id,
                 self._token_hasher.hash(command.refresh_token),
                 self._token_hasher.hash(new_refresh_token),
                 refresh_expires_at,
-            )
-            if not refreshed:
+            ):
                 raise SessionNotFoundError(
                     "Session with passed id and session secret not found."
                 )
@@ -132,4 +131,6 @@ class RefreshUseCase:
                 )
             )
 
-        return RefreshResult(access_token=access_token, refresh_token=new_refresh_token)
+        return RefreshSessionResult(
+            access_token=access_token, refresh_token=new_refresh_token
+        )

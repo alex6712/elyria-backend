@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class RefreshCommand(BaseModel):
+class RefreshSessionCommand(BaseModel):
     """Запрос на обновление пары access/refresh токенов.
 
     Содержит текущий refresh-токен пользователя.
@@ -11,8 +11,8 @@ class RefreshCommand(BaseModel):
     Attributes
     ----------
     refresh_token : str
-        Refresh-токен (JWT). Состоит из трех частей base64url, разделенных точкой.
-        Должен быть выдан ранее эндпоинтом аутентификации и не должен быть отозван.
+        Refresh-токен. Должен быть выдан ранее эндпоинтом
+        аутентификации и не должен быть отозван.
     """
 
     refresh_token: str = Field(description="Текущий refresh-токен пользователя")

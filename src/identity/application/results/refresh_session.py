@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class RefreshResult(BaseModel):
+class RefreshSessionResult(BaseModel):
     """Результат успешного продления сессии.
 
     Содержит access и refresh токены, возвращаемые пользователю
