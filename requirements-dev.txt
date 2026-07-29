@@ -18,11 +18,11 @@ aiosqlite==0.22.1
     # via elyria-backend (pyproject.toml:dev)
 alembic==1.18.5
     # via elyria-backend (pyproject.toml)
-annotated-doc==0.0.4
+annotated-doc==0.0.5
     # via
     #   fastapi
     #   typer
-annotated-types==0.7.0
+annotated-types==0.8.0
     # via pydantic
 anyio==4.14.2
     # via
@@ -76,11 +76,11 @@ email-validator==2.3.0
     # via
     #   fastapi
     #   pydantic
-fastapi==0.139.2
+fastapi==0.140.13
     # via elyria-backend (pyproject.toml)
 fastapi-cli==0.0.32
     # via fastapi
-fastapi-cloud-cli==0.22.2
+fastapi-cloud-cli==0.23.0
     # via fastapi-cli
 fastar==0.11.0
     # via
@@ -212,7 +212,7 @@ rich-toolkit==0.20.3
     #   fastapi-cloud-cli
 rignore==0.8.0
     # via fastapi-cloud-cli
-ruff==0.15.22
+ruff==0.16.0
     # via elyria-backend (pyproject.toml:dev)
 s3transfer==0.14.0
     # via boto3
@@ -261,7 +261,7 @@ urllib3==2.7.0
     # via
     #   botocore
     #   sentry-sdk
-uvicorn==0.51.0
+uvicorn==0.52.0
     # via
     #   fastapi
     #   fastapi-cli
