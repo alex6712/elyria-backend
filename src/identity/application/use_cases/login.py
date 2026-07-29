@@ -74,7 +74,7 @@ class LoginUseCase:
 
         Raises
         ------
-        Exception
+        IncorrectUsernameOrPasswordError
             Если пользователь с указанным именем не найден
             или пароль не соответствует сохранённому хешу.
         """
