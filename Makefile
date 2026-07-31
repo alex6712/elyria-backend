@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help keys keys-force requirements clean sync install-hooks dev migrate test lint format typecheck import-lint services services-down
+.PHONY: help keys keys-force requirements clean sync install-hooks dev migrate test test-integration lint format typecheck import-lint services services-down
 
 help: ## Показать список доступных целей
 	@echo "Доступные цели:"
@@ -31,8 +31,11 @@ dev: ## Запустить сервер разработки
 migrate: ## Применить миграции Alembic
 	uv run alembic upgrade head
 
-test: ## Запустить тесты
-	uv run pytest
+test: ## Запустить unit-тесты
+	uv run pytest -m "not integration"
+
+test-integration: ## Запустить интеграционные тесты (нужны make services)
+	uv run pytest -m integration
 
 lint: ## Проверить код линтером ruff
 	uv run ruff check .
