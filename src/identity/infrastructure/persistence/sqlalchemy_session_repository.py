@@ -37,7 +37,7 @@ class SqlAlchemySessionRepository:
         session : Session
             Доменная сущность сессии для сохранения.
         """
-        await self._connection.execute(
+        _ = await self._connection.execute(
             insert(sessions_table).values(
                 id=session.id,
                 identity_id=session.identity_id,

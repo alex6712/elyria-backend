@@ -57,7 +57,9 @@ class RedisTokenBlacklist:
         if ttl_seconds <= 0:
             return
 
-        await self._client.setex(self._build_blacklist_key(token_id), ttl_seconds, "1")
+        _ = await self._client.set(
+            self._build_blacklist_key(token_id), "1", ex=ttl_seconds
+        )
 
     async def is_revoked(self, token_id: UUID) -> bool:
         """Проверяет наличие токена в черном списке.

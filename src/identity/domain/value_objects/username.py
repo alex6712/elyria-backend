@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from typing import override
 
 from src.identity.domain.exceptions import (
     InvalidUsernameFormatError,
@@ -56,15 +57,16 @@ class Username:
         if not USERNAME_MIN_LENGTH <= len(self.value) <= USERNAME_MAX_LENGTH:
             raise InvalidUsernameLengthError(
                 "Username must contain from "
-                f"{USERNAME_MIN_LENGTH} to "
-                f"{USERNAME_MAX_LENGTH} characters."
+                + f"{USERNAME_MIN_LENGTH} to "
+                + f"{USERNAME_MAX_LENGTH} characters."
             )
 
         if not re.fullmatch(USERNAME_PATTERN, self.value):
             raise InvalidUsernameFormatError(
                 "Username may only contain letters (a-z, A-Z), digits (0-9), "
-                "hyphens (-), and underscores (_)."
+                + "hyphens (-), and underscores (_)."
             )
 
+    @override
     def __str__(self) -> str:
         return self.value

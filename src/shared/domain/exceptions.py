@@ -25,5 +25,5 @@ class ConcurrentModificationError(Exception):
 
         super().__init__(
             f"{entity_type} with id={entity_id} was modified concurrently. "
-            f"Reload the entity and retry the operation."
+            + "Reload the entity and retry the operation."
         )

@@ -225,7 +225,7 @@ class Settings(BaseSettings):
         if normalized not in {"lax", "strict", "none"}:
             raise ValueError(
                 "AUTH_COOKIE_SAMESITE must be one of 'lax', 'strict', "
-                f"'none'; got {value!r}."
+                + f"'none'; got {value!r}."
             )
 
         return normalized
@@ -261,7 +261,7 @@ class Settings(BaseSettings):
         if not isinstance(value, str):
             raise ValueError(
                 "AUTH_COOKIE_DOMAIN must be a string or null, "
-                f"got {type(value).__name__}."
+                + f"got {type(value).__name__}."
             )
 
         return value.strip() or None

@@ -50,7 +50,7 @@ class StandardResponse(BaseResponse):
         examples=[
             "Success!",
             "Access token is missing. Provide it in the "
-            "Authorization: Bearer <token> header.",
+            + "Authorization: Bearer <token> header.",
         ],
     )
 

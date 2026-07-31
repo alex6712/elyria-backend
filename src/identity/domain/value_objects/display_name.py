@@ -1,5 +1,6 @@
 import unicodedata
 from dataclasses import dataclass
+from typing import override
 
 from src.identity.domain.exceptions import InvalidDisplayNameLengthError
 
@@ -42,9 +43,10 @@ class DisplayName:
         if not DISPLAY_NAME_MIN_LENGTH <= len(self.value) <= DISPLAY_NAME_MAX_LENGTH:
             raise InvalidDisplayNameLengthError(
                 "Display name must contain from "
-                f"{DISPLAY_NAME_MIN_LENGTH} to "
-                f"{DISPLAY_NAME_MAX_LENGTH} characters."
+                + f"{DISPLAY_NAME_MIN_LENGTH} to "
+                + f"{DISPLAY_NAME_MAX_LENGTH} characters."
             )
 
+    @override
     def __str__(self) -> str:
         return self.value

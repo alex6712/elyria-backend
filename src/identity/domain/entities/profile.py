@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Self
+from typing import Self, override
 from uuid import UUID, uuid4
 
 from src.identity.domain.value_objects import DisplayName
@@ -101,6 +101,7 @@ class Profile(Identifiable[UUID], Auditable, Versioned):
         self.display_name = new_display_name
         self._touch(at)
 
+    @override
     def __repr__(self) -> str:
         return (
             "Profile("

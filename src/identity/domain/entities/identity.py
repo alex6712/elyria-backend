@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Self
+from typing import Self, override
 from uuid import UUID, uuid4
 
 from src.identity.domain.exceptions import InactiveUserError
@@ -163,6 +163,7 @@ class Identity(Identifiable[UUID], Auditable, Versioned):
         if not self.is_active:
             raise InactiveUserError(self.id)
 
+    @override
     def __repr__(self) -> str:
         return (
             "Identity("

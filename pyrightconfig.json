@@ -1,6 +1,18 @@
 {
+    "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/vscode-pyright/schemas/pyrightconfig.schema.json",
+
     "typeCheckingMode": "strict",
     "include": ["src"],
+    "pythonVersion": "3.14",
+
     "deprecateTypingAliases": true,
-    "reportImplicitRelativeImport": "error"
+
+    "reportImplicitOverride": "error",
+    "reportImplicitRelativeImport": "error",
+    "reportUninitializedInstanceVariable": "error",
+    "reportUnnecessaryTypeIgnoreComment": "error",
+    "reportImplicitStringConcatenation": "error",
+    "reportUnusedCallResult": "error",
+    "reportCallInDefaultInitializer": "error",
+    "reportMissingTypeStubs": "error"
 }

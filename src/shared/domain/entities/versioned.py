@@ -26,7 +26,8 @@ class Versioned:
     хранилища.
     """
 
-    version: int
+    def __init__(self, version: int) -> None:
+        self.version = version
 
     def upgrade(self) -> None:
         """Увеличить версию агрегата на 1.

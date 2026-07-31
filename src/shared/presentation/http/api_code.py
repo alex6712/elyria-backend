@@ -1,4 +1,5 @@
 from enum import StrEnum, auto
+from typing import override
 
 
 class APICode(StrEnum):
@@ -13,12 +14,10 @@ class APICode(StrEnum):
     совместимости с фронтендом, который хранит коды в верхнем регистре.
     """
 
+    @override
     @staticmethod
     def _generate_next_value_(
-        name: str,
-        start: int,  # noqa: ARG004
-        count: int,  # noqa: ARG004
-        last_values: list[str],  # noqa: ARG004
+        name: str, start: int, count: int, last_values: list[str]
     ) -> str:
         """Переопределяет генерацию значения для ``auto()``.
 

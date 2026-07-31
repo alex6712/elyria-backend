@@ -22,6 +22,7 @@ dev = [
     "aiosqlite>=0.22.1",
     "basedpyright>=1.39.9",
     "import-linter>=2.13",
+    "pre-commit>=4.6.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",

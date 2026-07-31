@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Self
+from typing import Self, override
 from uuid import UUID
 
 from src.identity.domain.exceptions import SessionInvalidError
@@ -267,6 +267,7 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         if not self.is_valid(at):
             raise SessionInvalidError(self.id)
 
+    @override
     def __repr__(self) -> str:
         return (
             "Session("

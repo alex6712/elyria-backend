@@ -52,7 +52,7 @@ class SqlAlchemyIdentityRepository:
             в базе данных.
         """
         try:
-            await self._connection.execute(
+            _ = await self._connection.execute(
                 insert(identities_table).values(
                     id=identity.id,
                     username=identity.username,

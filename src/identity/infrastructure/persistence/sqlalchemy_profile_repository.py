@@ -37,7 +37,7 @@ class SqlAlchemyProfileRepository:
         profile : Profile
             Доменная сущность профиля для сохранения.
         """
-        await self._connection.execute(
+        _ = await self._connection.execute(
             insert(profiles_table).values(
                 id=profile.id,
                 identity_id=profile.identity_id,

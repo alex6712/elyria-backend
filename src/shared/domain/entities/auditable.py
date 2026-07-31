@@ -25,8 +25,9 @@ class Auditable:
     классами, обеспечивающими идентичность.
     """
 
-    created_at: datetime
-    updated_at: datetime | None
+    def __init__(self, created_at: datetime, updated_at: datetime | None) -> None:
+        self.created_at = created_at
+        self.updated_at = updated_at
 
     def _touch(self, at: datetime | None = None) -> None:
         """Обновить временную метку последнего изменения.
