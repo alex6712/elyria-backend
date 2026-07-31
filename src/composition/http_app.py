@@ -14,7 +14,9 @@ from src.composition.app_info import (
     APP_SUMMARY,
     APP_VERSION,
 )
+from src.composition.engine import build_engine
 from src.composition.paths import HTTP_STATIC_FILES_PATH
+from src.composition.redis import build_redis_client
 from src.composition.settings import get_settings
 from src.shared.presentation.http import api_root_router
 
@@ -30,6 +32,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     Во время запуска:
 
     * фиксирует время старта приложения.
+
+    При завершении работы:
+
+    * освобождает пул соединений SQLAlchemy (``dispose``);
+    * закрывает асинхронный клиент Redis.
 
     Если какой-либо ресурс не удалось инициализировать, приложение
     завершит запуск с ошибкой.
@@ -48,6 +55,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.state.startup_at = datetime.now(UTC)
 
     yield
+
+    await build_engine().dispose()
+    await build_redis_client().aclose()
 
 
 elyria_http_app = FastAPI(

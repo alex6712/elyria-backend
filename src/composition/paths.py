@@ -19,5 +19,7 @@ PUBLIC_SIGNATURE_KEY_PATH = KEYS_DIR / "public_key.pem"
 PRIVATE_SIGNATURE_KEY_PATH = KEYS_DIR / "private_key.pem"
 """Путь к зашифрованному приватному ключу подписи JWT."""
 
-HTTP_STATIC_FILES_PATH = BASE_DIR / "src" / "presentation" / "http" / "static"
+HTTP_STATIC_FILES_PATH = (
+    BASE_DIR / "src" / "shared" / "presentation" / "http" / "static"
+)
 """Абсолютный путь к директории со статическими файлами HTTP-сервиса."""
