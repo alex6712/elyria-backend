@@ -280,11 +280,11 @@ Domain и Application не должны содержать сведений о �
 
 Общие схемы располагаются в:
 
-`src/presentation/http/schemas`
+`src/shared/presentation/http/schemas`
 
 Версионированные схемы располагаются в:
 
-`src/presentation/http/v{version}/schemas`
+`src/shared/presentation/http/v{version}/schemas`
 
 ---
 

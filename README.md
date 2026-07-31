@@ -157,7 +157,6 @@ Make доступен в Linux, macOS, а также в Windows через WSL �
 | Метод | Путь | Описание | Авторизация |
 |-------|------|----------|-------------|
 | GET | `/health` | Healthcheck | ❌ |
-| GET | `/app_info` | Информация о приложении | ❌ |
 | POST | `/v1/auth/register` | Регистрация | ❌ |
 | POST | `/v1/auth/login` | Вход в систему | ❌ |
 | POST | `/v1/auth/refresh` | Обновление токена | ✅ |
