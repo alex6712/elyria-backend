@@ -172,8 +172,7 @@ container.wire(modules=[...])
 async def create_user(
     use_case: CreateUserUseCase = Depends(get_create_user_use_case),
     body: CreateUserRequest = Body(...),
-) -> StandardResponse:
-    ...
+) -> StandardResponse: ...
 ```
 
 Где `get_create_user_use_case` — функция, создающая Use Case и все его зависимости.

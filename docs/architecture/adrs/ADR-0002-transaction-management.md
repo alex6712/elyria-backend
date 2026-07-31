@@ -154,7 +154,9 @@ Use Case:
 
 ```python
 class CreateUserUseCase:
-    def __init__(self, uow_factory: Callable[[], UnitOfWork], user_repo: UserRepository):
+    def __init__(
+        self, uow_factory: Callable[[], UnitOfWork], user_repo: UserRepository
+    ):
         self._uow_factory = uow_factory
         self._user_repo = user_repo
 

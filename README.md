@@ -55,8 +55,7 @@ cd elyria-backend
 cp .env.example .env
 
 # Сгенерируйте EC ключи подписи
-chmod +x ./scripts/gen_keys.sh
-./scripts/gen_keys.sh
+make keys
 
 # Запустите все сервисы
 docker compose --env-file .env up -d --wait
@@ -96,8 +95,7 @@ pip install -r requirements-dev.txt
 cp .env.example .env
 
 # Сгенерируйте EC ключи подписи
-chmod +x ./scripts/gen_keys.sh
-./scripts/gen_keys.sh
+make keys
 
 # Настройте свои сервисы PostgreSQL, Redis и MinIO или запустите готовые через Docker
 docker compose --env-file .env up elyria-postgres elyria-redis elyria-minio -d --wait
@@ -112,6 +110,30 @@ fastapi dev ./src/composition/http_app.py
 # или
 uv run fastapi dev ./src/composition/http_app.py
 ```
+
+### 🛠️ Команды Make
+
+Для Linux и macOS доступен Makefile с обёртками над скриптами и часто используемыми командами. Полный список выводит `make help`:
+
+| Команда | Описание |
+|---------|----------|
+| `make help` | Показать список доступных целей |
+| `make keys` | Сгенерировать Ed25519 ключи подписи (пароль берётся из `.env`) |
+| `make keys-force` | Перегенерировать ключи, перезаписав существующие |
+| `make requirements` | Сгенерировать `requirements.txt` и `requirements-dev.txt` |
+| `make clean` | Удалить все каталоги `__pycache__` |
+| `make sync` | Установить зависимости (`uv sync --group dev`) |
+| `make dev` | Запустить сервер разработки |
+| `make migrate` | Применить миграции Alembic |
+| `make test` | Запустить тесты |
+| `make lint` | Проверить код линтером (ruff) |
+| `make format` | Отформатировать код и исправить ошибки (ruff) |
+| `make typecheck` | Проверить типы (basedpyright) |
+| `make import-lint` | Проверить архитектурные контракты (import-linter) |
+| `make services` | Запустить PostgreSQL, Redis и MinIO в Docker |
+| `make services-down` | Остановить сервисы Docker |
+
+Make доступен в Linux, macOS, а также в Windows через WSL или Git Bash. Для Windows PowerShell используйте скрипты `scripts/*.ps1` напрямую (доступны для `clear_pycache` и `compile_pip`), `gen_keys.sh` запускайте через WSL/Git Bash.
 
 ## 📁 Структура проекта
 

@@ -16,8 +16,8 @@ Accepted
 # Загрузили
 identity = await repo.get_by_username(username)
 # ← в этот момент другой запрос вызвал identity.deactivate()
-identity.change_password(new_hash)   # проверка _ensure_active() пройдена
-await repo.change_password_hash(...) # перезатрёт изменения конкурента
+identity.change_password(new_hash)  # проверка _ensure_active() пройдена
+await repo.change_password_hash(...)  # перезатрёт изменения конкурента
 ```
 
 В проекте на момент написания ADR уже существует три use case (RegisterUserUseCase, LoginUseCase, RefreshSessionUseCase), и в двух из них проблема потенциально проявляется. При этом `RefreshSessionUseCase` осознанно отступает от "чистого" DDD-цикла: он не загружает сущность, а выполняет атомарный условный UPDATE в репозитории (`rotate_secret`). Такой разнобой в подходах требует архитектурной фиксации.

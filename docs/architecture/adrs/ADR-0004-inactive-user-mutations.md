@@ -147,6 +147,7 @@ def change_password(self, new_password_hash: str) -> None:
     self.password_hash = new_password_hash
     self._touch()
 
+
 def change_username(self, new_username: Username) -> None:
     self._ensure_active()
     ...
