@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help keys keys-force requirements clean sync dev migrate test lint format typecheck import-lint services services-down
+.PHONY: help keys keys-force requirements clean sync install-hooks dev migrate test lint format typecheck import-lint services services-down
 
 help: ## Показать список доступных целей
 	@echo "Доступные цели:"
@@ -21,6 +21,9 @@ clean: ## Удалить все каталоги __pycache__ в src/
 
 sync: ## Установить зависимости: uv sync --group dev
 	uv sync --group dev
+
+install-hooks: ## Установить git-хуки pre-commit
+	uv run pre-commit install
 
 dev: ## Запустить сервер разработки
 	uv run fastapi dev ./src/composition/http_app.py

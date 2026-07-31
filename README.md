@@ -123,6 +123,7 @@ uv run fastapi dev ./src/composition/http_app.py
 | `make requirements` | Сгенерировать `requirements.txt` и `requirements-dev.txt` |
 | `make clean` | Удалить все каталоги `__pycache__` |
 | `make sync` | Установить зависимости (`uv sync --group dev`) |
+| `make install-hooks` | Установить git-хуки pre-commit |
 | `make dev` | Запустить сервер разработки |
 | `make migrate` | Применить миграции Alembic |
 | `make test` | Запустить тесты |
@@ -196,5 +197,5 @@ Make доступен в Linux, macOS, а также в Windows через WSL �
 
 ---
 
-> _Сделано с ❤️ для одной особенной пары.  
+> _Сделано с ❤️ для одной особенной пары.
 > Код может быть неидеальным, но чувства - настоящие._
