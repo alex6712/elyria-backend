@@ -1,10 +1,84 @@
 {
-    "python.REPL.enableREPLSmartSend": false,
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        },
+        "editor.defaultFormatter": "charliermarsh.ruff"
+    },
+    "cSpell.language": "en,ru",
+    "cSpell.words": [
+        "атомарность",
+        "бакет",
+        "бакета",
+        "Валидирует",
+        "Декрементирует",
+        "инвалидации",
+        "Инвалидирует",
+        "инвалидируя",
+        "инкапсулирует",
+        "Инкрементирует",
+        "инстанс",
+        "инстансов",
+        "медиаальбома",
+        "медиаальбомами",
+        "медиаальбоме",
+        "медиаальбомов",
+        "медиафайла",
+        "медиафайлам",
+        "медиафайлами",
+        "медиафайлов",
+        "Сериализованный",
+        "Сериализует",
+        "сериализуется",
+        "токене",
+        "токену",
+        "триграммам",
+        "чанки",
+        "эндпоинтов",
+        "asyncpg",
+        "ciphertext",
+        "decryptor",
+        "encryptor",
+        "fastapi",
+        "ilike",
+        "ilikes",
+        "Pydantic",
+        "slowapi"
+    ],
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+        88
+    ],
+    "files.exclude": {
+        "**/.venv": true,
+        "**/__pycache__/": true,
+        ".grimp_cache": true,
+        ".import_linter_cache": true,
+        ".pytest_cache": true,
+        ".ruff_cache": true
+    },
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    "git.autofetch": true,
     "python-envs.pythonProjects": [
         {
             "path": ".",
             "envManager": "ms-python.python:venv",
             "packageManager": "ms-python.python:pip"
         }
-    ]
+    ],
+    "python.REPL.enableREPLSmartSend": false,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.pytestEnabled": true,
+    "search.exclude": {
+        "**/.venv": true,
+        "**/__pycache__/": true,
+        ".grimp_cache": true,
+        ".import_linter_cache": true,
+        ".pytest_cache": true,
+        ".ruff_cache": true
+    }
 }
