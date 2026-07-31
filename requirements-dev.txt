@@ -199,7 +199,7 @@ python-multipart==0.0.32
     # via fastapi
 pyyaml==6.0.3
     # via uvicorn
-redis==8.0.1
+redis==8.1.0
     # via elyria-backend (pyproject.toml)
 rich==15.0.0
     # via
@@ -212,7 +212,7 @@ rich-toolkit==0.20.3
     #   fastapi-cloud-cli
 rignore==0.8.0
     # via fastapi-cloud-cli
-ruff==0.16.0
+ruff==0.16.1
     # via elyria-backend (pyproject.toml:dev)
 s3transfer==0.14.0
     # via boto3
