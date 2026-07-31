@@ -18,7 +18,7 @@ def _load_app_version() -> str:
     _pyproject_path = BASE_DIR / "pyproject.toml"
     try:
         with open(_pyproject_path, "rb") as _f:
-            return tomllib.load(_f)["project"]["version"]
+            return str(tomllib.load(_f)["project"]["version"])
     except FileNotFoundError, KeyError:
         return "0.0.0-unknown"
 

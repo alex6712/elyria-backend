@@ -55,6 +55,7 @@ root_package = "src"
 name = "identity-clean-architecture"
 type = "layers"
 layers = [
+    "src.identity.composition",
     "src.identity.presentation",
     "src.identity.infrastructure",
     "src.identity.application",
@@ -91,5 +92,11 @@ forbidden_modules = ["src.identity", "src.composition"]
 [[tool.importlinter.contracts]]
 name = "identity-does-not-depend-on-composition"
 type = "forbidden"
-source_modules = ["src.identity"]
+source_modules = [
+    "src.identity.domain",
+    "src.identity.application",
+    "src.identity.infrastructure",
+    "src.identity.presentation",
+    "src.identity.composition",
+]
 forbidden_modules = ["src.composition"]

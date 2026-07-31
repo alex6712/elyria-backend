@@ -1,7 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +22,7 @@ _settings = get_settings()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Менеджер срока службы FastAPI-приложения.
 
     Выполняет инициализацию и освобождение глобальных ресурсов приложения.
