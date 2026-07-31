@@ -3,7 +3,7 @@ from sqlalchemy.types import String, Uuid
 
 from src.identity.domain.value_objects.display_name import DISPLAY_NAME_MAX_LENGTH
 from src.shared.infrastructure.persistence import metadata
-from src.shared.infrastructure.persistence.columns import base_columns
+from src.shared.infrastructure.persistence.columns import base_columns, version_column
 
 profiles_table = Table(
     "profiles",
@@ -30,13 +30,14 @@ profiles_table = Table(
         nullable=True,
         comment="URL изображения аватара пользователя",
     ),
+    version_column(),
     comment="Профили пользователей системы",
 )
 """Таблица профилей пользователей.
 
 Содержит профильную информацию пользователя: отображаемое имя
 и ссылку на изображение аватара. Связана с таблицей `identities`
-по внешнему ключу `user_id` (при удалении учётной записи профиль
+по внешнему ключу `identity_id` (при удалении учётной записи профиль
 удаляется каскадно).
 
 Notes

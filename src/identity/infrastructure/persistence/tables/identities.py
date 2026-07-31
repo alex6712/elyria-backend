@@ -3,7 +3,7 @@ from sqlalchemy.types import Boolean, String
 
 from src.identity.domain.value_objects.username import USERNAME_MAX_LENGTH
 from src.shared.infrastructure.persistence import metadata
-from src.shared.infrastructure.persistence.columns import base_columns
+from src.shared.infrastructure.persistence.columns import base_columns, version_column
 
 identities_table = Table(
     "identities",
@@ -28,6 +28,7 @@ identities_table = Table(
         server_default=text("true"),
         comment="Признак активности учётной записи",
     ),
+    version_column(),
     UniqueConstraint("username", name="uq_identities_username"),
     Index("ix_identities_is_active", "is_active"),
     comment="Учётные записи (идентификационные данные) пользователей",
@@ -41,5 +42,5 @@ Notes
 -----
 Профильная информация (отображаемое имя, аватар и т. п.) в этой
 таблице не хранится - она вынесена в таблицу `profiles`,
-связанную с `identities` по внешнему ключу `user_id`.
+связанную с `identities` по внешнему ключу `identity_id`.
 """

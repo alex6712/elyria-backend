@@ -2,7 +2,7 @@ from sqlalchemy import Column, ForeignKey, Index, Table, UniqueConstraint, text
 from sqlalchemy.types import DateTime, String, Uuid
 
 from src.shared.infrastructure.persistence import metadata
-from src.shared.infrastructure.persistence.columns import base_columns
+from src.shared.infrastructure.persistence.columns import base_columns, version_column
 
 sessions_table = Table(
     "sessions",
@@ -10,7 +10,7 @@ sessions_table = Table(
     *base_columns(),
     Column(
         "identity_id",
-        Uuid(as_uuid=True),
+        Uuid(),
         ForeignKey("identities.id", ondelete="CASCADE"),
         nullable=False,
         comment="Уникальный идентификатор пользователя",
@@ -52,6 +52,7 @@ sessions_table = Table(
         nullable=True,
         comment="User-Agent клиента при создании сессии",
     ),
+    version_column(),
     UniqueConstraint("session_secret", name="uq_sessions_session_secret"),
     Index("ix_sessions_identity_id", "identity_id"),
     Index("ix_sessions_expires_at", "expires_at"),

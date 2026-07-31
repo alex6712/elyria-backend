@@ -34,7 +34,7 @@ def ownership_columns() -> tuple[Column[UUID]]:
     return (
         Column(
             "owner_id",
-            Uuid(as_uuid=True),
+            Uuid(),
             nullable=False,
             comment="UUID пользователя-владельца ресурса",
         ),
