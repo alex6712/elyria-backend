@@ -5,7 +5,7 @@ from src.composition.engine import build_engine
 from src.composition.paths import PRIVATE_SIGNATURE_KEY_PATH, PUBLIC_SIGNATURE_KEY_PATH
 from src.composition.redis import build_redis_client
 from src.composition.settings import get_settings
-from src.identity.composition import IdentityContainer, build_identity_module
+from src.users.composition import UsersContainer, build_users_module
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,16 +14,16 @@ class ApplicationContainer:
 
     Неизменяемая структура, объединяющая собранные модули
     ограниченных контекстов. На текущем этапе содержит единственный
-    модуль Identity; при появлении новых контекстов (Media, Couples,
+    модуль Users; при появлении новых контекстов (Media, Couples,
     Notes) они добавляются соответствующими полями.
 
     Attributes
     ----------
-    identity : IdentityContainer
-        Собранный модуль контекста Identity.
+    users : UsersContainer
+        Собранный модуль контекста Users.
     """
 
-    identity: IdentityContainer
+    users: UsersContainer
 
 
 def build_application_container() -> ApplicationContainer:
@@ -40,7 +40,7 @@ def build_application_container() -> ApplicationContainer:
         Контейнер всех собранных модулей приложения.
     """
     return ApplicationContainer(
-        identity=build_identity_module(
+        users=build_users_module(
             engine=build_engine(),
             redis_client=build_redis_client(),
             issuer=APP_NAME,

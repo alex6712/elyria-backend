@@ -55,14 +55,14 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 root_package = "src"
 
 [[tool.importlinter.contracts]]
-name = "identity-clean-architecture"
+name = "users-clean-architecture"
 type = "layers"
 layers = [
-    "src.identity.composition",
-    "src.identity.presentation",
-    "src.identity.infrastructure",
-    "src.identity.application",
-    "src.identity.domain",
+    "src.users.composition",
+    "src.users.presentation",
+    "src.users.infrastructure",
+    "src.users.application",
+    "src.users.domain",
 ]
 
 [[tool.importlinter.contracts]]
@@ -77,29 +77,29 @@ layers = [
 [[tool.importlinter.contracts]]
 name = "domain-does-not-depend-on-infrastructure"
 type = "forbidden"
-source_modules = ["src.identity.domain", "src.shared.domain"]
+source_modules = ["src.users.domain", "src.shared.domain"]
 forbidden_modules = ["src.shared.infrastructure", "src.shared.presentation"]
 
 [[tool.importlinter.contracts]]
 name = "application-does-not-depend-on-infrastructure"
 type = "forbidden"
-source_modules = ["src.identity.application"]
+source_modules = ["src.users.application"]
 forbidden_modules = ["src.shared.infrastructure", "src.shared.presentation"]
 
 [[tool.importlinter.contracts]]
 name = "shared-does-not-depend-on-bounded-contexts"
 type = "forbidden"
 source_modules = ["src.shared"]
-forbidden_modules = ["src.identity", "src.composition"]
+forbidden_modules = ["src.users", "src.composition"]
 
 [[tool.importlinter.contracts]]
-name = "identity-does-not-depend-on-composition"
+name = "users-does-not-depend-on-composition"
 type = "forbidden"
 source_modules = [
-    "src.identity.domain",
-    "src.identity.application",
-    "src.identity.infrastructure",
-    "src.identity.presentation",
-    "src.identity.composition",
+    "src.users.domain",
+    "src.users.application",
+    "src.users.infrastructure",
+    "src.users.presentation",
+    "src.users.composition",
 ]
 forbidden_modules = ["src.composition"]
