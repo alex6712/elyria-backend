@@ -82,8 +82,12 @@ class InvalidUsernameFormatError(Exception):
 
 
 class InactiveUserError(Exception):
-    """Исключение, сигнализирующее о попытке изменить состояние
-    неактивного пользователя.
+    """Исключение, сигнализирующее о попытке операции, требующей
+    активной учётной записи, для неактивного пользователя.
+
+    Возникает при попытке изменить состояние неактивного
+    пользователя (ADR-0004) либо аутентифицировать его (вход
+    в систему или обновление сессии).
 
     Parameters
     ----------
@@ -93,7 +97,7 @@ class InactiveUserError(Exception):
     """
 
     def __init__(self, user_id: UUID) -> None:
-        super().__init__(f"User {user_id} is inactive and cannot be modified")
+        super().__init__(f"User {user_id} is inactive")
 
         self.user_id = user_id
 

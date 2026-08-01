@@ -12,6 +12,7 @@ from src.users.application.ports.security import (
 )
 from src.users.application.results import LoginResult
 from src.users.domain.entities import Session
+from src.users.domain.exceptions import InactiveUserError
 from src.users.domain.value_objects import Username
 
 
@@ -19,8 +20,8 @@ class LoginUseCase:
     """Use case аутентификации пользователя.
 
     Выполняет проверку учётных данных пользователя (имя пользователя
-    и пароль) и при успешной аутентификации создаёт новую сессию,
-    выпуская access и refresh токены.
+    и пароль) и активности учётной записи. При успешной аутентификации
+    создаёт новую сессию, выпуская access и refresh токены.
 
     Parameters
     ----------
@@ -77,6 +78,8 @@ class LoginUseCase:
         IncorrectUsernameOrPasswordError
             Если пользователь с указанным именем не найден
             или пароль не соответствует сохранённому хешу.
+        InactiveUserError
+            Если учётная запись пользователя деактивирована.
         """
         async with self._uow:
             identity = await self._uow.identities.get_by_username(
@@ -89,6 +92,9 @@ class LoginUseCase:
                 raise IncorrectUsernameOrPasswordError(
                     "Incorrect username or password."
                 )
+
+            if not identity.is_active:
+                raise InactiveUserError(identity.id)
 
             now = datetime.now(UTC)
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)

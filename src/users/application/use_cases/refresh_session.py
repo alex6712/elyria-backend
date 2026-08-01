@@ -11,6 +11,7 @@ from src.users.application.ports.security import (
     TokenVerifier,
 )
 from src.users.application.results import RefreshSessionResult
+from src.users.domain.exceptions import InactiveUserError
 
 
 class RefreshSessionUseCase:
@@ -63,14 +64,15 @@ class RefreshSessionUseCase:
         2. Загружает сессию по идентификатору из claims токена.
         3. Проверяет, что сессия валидна и хеш переданного токена
            совпадает с сохранённым секретом сессии.
-        4. Вычисляет время истечения новой сессии.
-        5. Выпускает новый refresh-токен через ``TokenIssuer``.
-        6. Вызывает ``session.rotate_secret()`` - метод доменной
+        4. Проверяет, что учётная запись владельца сессии активна.
+        5. Вычисляет время истечения новой сессии.
+        6. Выпускает новый refresh-токен через ``TokenIssuer``.
+        7. Вызывает ``session.rotate_secret()`` - метод доменной
            сущности, проверяющий доменные инварианты (сессия не
            отозвана и не истекла, согласно ADR-0005).
-        7. Сохраняет изменения через ``sessions.save_rotation()``
+        8. Сохраняет изменения через ``sessions.save_rotation()``
            с проверкой версии агрегата (optimistic locking).
-        8. Выпускает новый short-lived access-токен.
+        9. Выпускает новый short-lived access-токен.
 
         В случае любой ошибки до коммита транзакция будет отменена
         благодаря использованию асинхронного контекст-менеджера
@@ -92,6 +94,8 @@ class RefreshSessionUseCase:
             Если сессия с указанным ID отсутствует, была отозвана,
             истекла или сохранённый хеш секрета не соответствует
             хешу переданного токена (защита от кражи токена).
+        InactiveUserError
+            Если учётная запись владельца сессии деактивирована.
         TokenExpiredError
             Если срок действия токена истёк.
         TokenSignatureInvalidError
@@ -114,6 +118,12 @@ class RefreshSessionUseCase:
                 raise SessionNotFoundError(
                     "Session with passed id and session secret not found."
                 )
+
+            identity = await self._uow.identities.get_by_id(session.identity_id)
+            if identity is None:
+                raise SessionNotFoundError("Identity for session not found.")
+            if not identity.is_active:
+                raise InactiveUserError(identity.id)
 
             now = datetime.now(UTC)
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)
