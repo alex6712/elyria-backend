@@ -71,20 +71,34 @@ type = "layers"
 layers = [
     "src.shared.presentation",
     "src.shared.infrastructure",
+    "src.shared.application",
     "src.shared.domain",
 ]
 
 [[tool.importlinter.contracts]]
-name = "domain-does-not-depend-on-infrastructure"
+name = "domain-is-the-bottom-layer"
 type = "forbidden"
 source_modules = ["src.users.domain", "src.shared.domain"]
-forbidden_modules = ["src.shared.infrastructure", "src.shared.presentation"]
+forbidden_modules = [
+    "src.shared.application",
+    "src.shared.infrastructure",
+    "src.shared.presentation",
+]
 
 [[tool.importlinter.contracts]]
-name = "application-does-not-depend-on-infrastructure"
+name = "application-does-not-depend-on-upper-layers"
 type = "forbidden"
-source_modules = ["src.users.application"]
-forbidden_modules = ["src.shared.infrastructure", "src.shared.presentation"]
+source_modules = ["src.users.application", "src.shared.application"]
+forbidden_modules = [
+    "src.shared.infrastructure",
+    "src.shared.presentation",
+]
+
+[[tool.importlinter.contracts]]
+name = "infrastructure-does-not-depend-on-presentation"
+type = "forbidden"
+source_modules = ["src.users.infrastructure", "src.shared.infrastructure"]
+forbidden_modules = ["src.users.presentation", "src.shared.presentation"]
 
 [[tool.importlinter.contracts]]
 name = "shared-does-not-depend-on-bounded-contexts"
@@ -95,11 +109,5 @@ forbidden_modules = ["src.users", "src.composition"]
 [[tool.importlinter.contracts]]
 name = "users-does-not-depend-on-composition"
 type = "forbidden"
-source_modules = [
-    "src.users.domain",
-    "src.users.application",
-    "src.users.infrastructure",
-    "src.users.presentation",
-    "src.users.composition",
-]
+source_modules = ["src.users"]
 forbidden_modules = ["src.composition"]
