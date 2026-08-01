@@ -2,13 +2,17 @@ from sqlalchemy import Column, Index, Table, UniqueConstraint, text
 from sqlalchemy.types import Boolean, String
 
 from src.shared.infrastructure.persistence import metadata
-from src.shared.infrastructure.persistence.columns import base_columns, version_column
+from src.shared.infrastructure.persistence.columns import (
+    audit_columns,
+    identifier_column,
+    version_column,
+)
 from src.users.domain.value_objects.username import USERNAME_MAX_LENGTH
 
 identities_table = Table(
     "identities",
     metadata,
-    *base_columns(),
+    identifier_column(),
     Column(
         "username",
         String(USERNAME_MAX_LENGTH),
@@ -28,6 +32,7 @@ identities_table = Table(
         server_default=text("true"),
         comment="Признак активности учётной записи",
     ),
+    *audit_columns(),
     version_column(),
     UniqueConstraint("username", name="uq_identities_username"),
     Index("ix_identities_is_active", "is_active"),

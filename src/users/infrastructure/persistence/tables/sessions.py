@@ -2,12 +2,16 @@ from sqlalchemy import Column, ForeignKey, Index, Table, UniqueConstraint, text
 from sqlalchemy.types import DateTime, String, Uuid
 
 from src.shared.infrastructure.persistence import metadata
-from src.shared.infrastructure.persistence.columns import base_columns, version_column
+from src.shared.infrastructure.persistence.columns import (
+    audit_columns,
+    identifier_column,
+    version_column,
+)
 
 sessions_table = Table(
     "sessions",
     metadata,
-    *base_columns(),
+    identifier_column(),
     Column(
         "identity_id",
         Uuid(),
@@ -52,6 +56,7 @@ sessions_table = Table(
         nullable=True,
         comment="User-Agent клиента при создании сессии",
     ),
+    *audit_columns(),
     version_column(),
     UniqueConstraint("session_secret", name="uq_sessions_session_secret"),
     Index("ix_sessions_identity_id", "identity_id"),

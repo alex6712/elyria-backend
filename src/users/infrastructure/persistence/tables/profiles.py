@@ -2,13 +2,17 @@ from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.types import String, Uuid
 
 from src.shared.infrastructure.persistence import metadata
-from src.shared.infrastructure.persistence.columns import base_columns, version_column
+from src.shared.infrastructure.persistence.columns import (
+    audit_columns,
+    identifier_column,
+    version_column,
+)
 from src.users.domain.value_objects.display_name import DISPLAY_NAME_MAX_LENGTH
 
 profiles_table = Table(
     "profiles",
     metadata,
-    *base_columns(),
+    identifier_column(),
     Column(
         "identity_id",
         Uuid(),
@@ -30,6 +34,7 @@ profiles_table = Table(
         nullable=True,
         comment="URL изображения аватара пользователя",
     ),
+    *audit_columns(),
     version_column(),
     comment="Профили пользователей системы",
 )
