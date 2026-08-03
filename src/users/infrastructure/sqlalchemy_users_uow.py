@@ -3,7 +3,7 @@ from types import TracebackType
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncTransaction
 
 from src.shared.application.exception import UnitOfWorkNotEnteredError
-from src.users.application.ports.persistence import (
+from src.users.domain.repositories import (
     IdentityRepository,
     ProfileRepository,
     SessionRepository,
