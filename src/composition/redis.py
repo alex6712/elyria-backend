@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from redis.asyncio import Redis as AsyncRedis
+from redis.asyncio import from_url
 
 from src.composition.settings import get_settings
 
@@ -27,4 +28,4 @@ def build_redis_client() -> AsyncRedis:
     экземпляр на всё приложение. Закрытие клиента выполняется при
     завершении работы приложения в lifespan.
     """
-    return AsyncRedis.from_url(get_settings().REDIS_URL.encoded_string())  # type: ignore[reportUnknownMemberType]
+    return from_url(get_settings().REDIS_URL.encoded_string())
