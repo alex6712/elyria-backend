@@ -1,4 +1,21 @@
+from dataclasses import dataclass
 from uuid import UUID
+
+
+@dataclass(frozen=True, slots=True)
+class PasswordRuleViolation:
+    """Нарушенное правило парольной политики.
+
+    Parameters
+    ----------
+    rule_id : str
+        Идентификатор нарушенного правила.
+    message : str
+        Человекочитаемое описание требования, которое не выполнено.
+    """
+
+    rule_id: str
+    message: str
 
 
 class InvalidDisplayNameLengthError(Exception):
@@ -126,3 +143,34 @@ class UsernameAlreadyExistsError(Exception):
     """
 
     pass
+
+
+class InvalidPasswordError(Exception):
+    """Исключение, сигнализирующее о несоответствии пароля
+    парольной политике.
+
+    Агрегирует все нарушенные правила парольной политики, чтобы
+    пользователь мог исправить все нарушения за один раз.
+
+    Parameters
+    ----------
+    violations : tuple[PasswordRuleViolation, ...]
+        Нарушенные правила в виде объектов ``PasswordRuleViolation``.
+
+    Attributes
+    ----------
+    violations : tuple[PasswordRuleViolation, ...]
+        Нарушенные правила в виде объектов ``PasswordRuleViolation``.
+    rule_ids : tuple[str, ...]
+        Идентификаторы нарушенных правил в порядке их появления.
+    """
+
+    def __init__(self, violations: tuple[PasswordRuleViolation, ...]) -> None:
+        super().__init__(
+            "Password does not meet security requirements: "
+            + ", ".join(violation.rule_id for violation in violations)
+            + "."
+        )
+
+        self.violations = violations
+        self.rule_ids = tuple(violation.rule_id for violation in violations)

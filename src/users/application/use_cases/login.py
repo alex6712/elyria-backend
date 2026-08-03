@@ -12,7 +12,6 @@ from src.users.application.ports.security import (
 )
 from src.users.application.results import LoginResult
 from src.users.domain.entities import Session
-from src.users.domain.value_objects import Username
 
 
 class LoginUseCase:
@@ -79,9 +78,7 @@ class LoginUseCase:
             или пароль не соответствует сохранённому хешу.
         """
         async with self._uow:
-            identity = await self._uow.identities.get_by_username(
-                Username(command.username)
-            )
+            identity = await self._uow.identities.get_by_username(command.username)
 
             if identity is None or not self._password_hasher.verify(
                 command.password, identity.password_hash

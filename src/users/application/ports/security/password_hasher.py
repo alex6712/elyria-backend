@@ -1,5 +1,7 @@
 from typing import Protocol, runtime_checkable
 
+from src.users.domain.value_objects import Password
+
 
 @runtime_checkable
 class PasswordHasher(Protocol):
@@ -15,13 +17,13 @@ class PasswordHasher(Protocol):
     Выбор алгоритма является ответственностью Infrastructure Layer.
     """
 
-    def hash(self, password: str) -> str:
+    def hash(self, password: Password) -> str:
         """Вычисляет хеш пароля.
 
         Parameters
         ----------
-        password : str
-            Пароль в открытом виде для хеширования.
+        password : Password
+            Пароль в виде объект-значения для хеширования.
 
         Returns
         -------
@@ -30,13 +32,13 @@ class PasswordHasher(Protocol):
         """
         ...
 
-    def verify(self, password: str, hash: str) -> bool:
+    def verify(self, password: Password, hash: str) -> bool:
         """Проверяет соответствие пароля хешу.
 
         Parameters
         ----------
-        password : str
-            Пароль в открытом виде для проверки.
+        password : Password
+            Пароль в виде объект-значения для проверки.
         hash : str
             Хеш, с которым требуется сравнить пароль.
 
@@ -50,14 +52,16 @@ class PasswordHasher(Protocol):
     # TODO: Необходимо определить, как порт должен реагировать на
     #       случай, когда хеш не может быть распознан ни одним
     #       из доступных алгоритмов. Требуется проработка контракта.
-    def verify_and_update(self, password: str, hash: str) -> tuple[bool, str | None]:
+    def verify_and_update(
+        self, password: Password, hash: str
+    ) -> tuple[bool, str | None]:
         """Проверяет соответствие пароля хешу и при необходимости
         обновляет хеш до актуального алгоритма.
 
         Parameters
         ----------
-        password : str
-            Пароль в открытом виде для проверки.
+        password : Password
+            Пароль в виде объект-значения для проверки.
         hash : str
             Хеш, с которым требуется сравнить пароль.
 

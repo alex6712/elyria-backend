@@ -11,7 +11,6 @@ from src.users.application.ports.security import (
 )
 from src.users.application.results import RegisterUserResult
 from src.users.domain.entities import Identity, Profile, Session
-from src.users.domain.value_objects import DisplayName, Username
 
 
 class RegisterUserUseCase:
@@ -81,12 +80,12 @@ class RegisterUserUseCase:
         """
         async with self._uow:
             identity = Identity.register(
-                Username(command.username), self._password_hasher.hash(command.password)
+                command.username, self._password_hasher.hash(command.password)
             )
 
             await self._uow.identities.add(identity)
 
-            profile = Profile.create(identity.id, DisplayName(command.display_name))
+            profile = Profile.create(identity.id, command.display_name)
 
             now = datetime.now(UTC)
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)
