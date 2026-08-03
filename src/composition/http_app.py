@@ -58,10 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     yield
 
-    _ = await asyncio.gather(
-        build_engine().dispose(),
-        build_redis_client().aclose(close_connection_pool=True),
-    )
+    _ = await asyncio.gather(build_engine().dispose(), build_redis_client().aclose())
 
 
 elyria_http_app = FastAPI(

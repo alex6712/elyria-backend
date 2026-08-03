@@ -28,4 +28,6 @@ def build_redis_client() -> AsyncRedis:
     экземпляр на всё приложение. Закрытие клиента выполняется при
     завершении работы приложения в lifespan.
     """
-    return from_url(get_settings().REDIS_URL.encoded_string())
+    return from_url(
+        get_settings().REDIS_URL.encoded_string(), auto_close_connection_pool=True
+    )
