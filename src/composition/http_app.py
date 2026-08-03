@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -53,11 +54,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         всех ресурсов.
     """
     app.state.startup_at = datetime.now(UTC)
+    _ = build_engine(), build_redis_client()
 
     yield
 
-    await build_engine().dispose()
-    await build_redis_client().aclose()
+    _ = await asyncio.gather(
+        build_engine().dispose(),
+        build_redis_client().aclose(close_connection_pool=True),
+    )
 
 
 elyria_http_app = FastAPI(
