@@ -15,15 +15,14 @@ def _load_app_version() -> str:
         Версия из поля ``project.version`` или ``0.0.0-unknown``, если файл
         не найден или версия в нём отсутствует.
     """
-    _pyproject_path = BASE_DIR / "pyproject.toml"
     try:
-        with open(_pyproject_path, "rb") as _f:
-            return str(tomllib.load(_f)["project"]["version"])
+        with open(BASE_DIR / "pyproject.toml", "rb") as f:
+            return str(tomllib.load(f)["project"]["version"])
     except FileNotFoundError, KeyError:
         return "0.0.0-unknown"
 
 
-APP_VERSION: str = _load_app_version()
+APP_VERSION = _load_app_version()
 """Текущая версия приложения.
 
 Берётся из поля ``project.version`` в ``pyproject.toml``.
