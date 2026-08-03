@@ -8,7 +8,7 @@ from src.shared.domain.exceptions import ConcurrentModificationError
 from src.users.domain.entities import Identity
 from src.users.domain.exceptions import UsernameAlreadyExistsError
 from src.users.domain.value_objects import Username
-from src.users.infrastructure.persistence.tables import identities_table
+from src.users.infrastructure.tables import identities_table
 
 
 class SqlAlchemyIdentityRepository:
@@ -55,7 +55,7 @@ class SqlAlchemyIdentityRepository:
             _ = await self._connection.execute(
                 insert(identities_table).values(
                     id=identity.id,
-                    username=identity.username,
+                    username=identity.username.value,
                     password_hash=identity.password_hash,
                     is_active=identity.is_active,
                     version=identity.version,
@@ -118,7 +118,7 @@ class SqlAlchemyIdentityRepository:
         """
         result = await self._connection.execute(
             select(identities_table, identities_table.c.id).where(
-                identities_table.c.username == username
+                identities_table.c.username == username.value
             )
         )
 

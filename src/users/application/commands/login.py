@@ -1,10 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.users.domain.value_objects.username import (
-    USERNAME_MAX_LENGTH,
-    USERNAME_MIN_LENGTH,
-    USERNAME_PATTERN,
-)
+from src.users.domain.value_objects import Password, Username
 
 
 class LoginCommand(BaseModel):
@@ -16,26 +12,16 @@ class LoginCommand(BaseModel):
     Attributes
     ----------
     username : str
-        Имя пользователя (логин). Длина от
-        ``USERNAME_MIN_LENGTH`` до ``USERNAME_MAX_LENGTH`` символов.
-        Допускаются латинские буквы, цифры, дефис и подчёркивание.
+        Имя пользователя (логин).
     password : str
-        Пароль пользователя в открытом виде.
-        Минимальная длина определяется требованиями политики
-        безопасности приложения.
+        Пароль пользователя в виде объект-значения.
     """
 
-    username: str = Field(
-        description="Уникальное имя пользователя (логин)",
-        examples=["john_doe"],
-        pattern=USERNAME_PATTERN,
-        min_length=USERNAME_MIN_LENGTH,
-        max_length=USERNAME_MAX_LENGTH,
+    username: Username = Field(
+        description="Уникальное имя пользователя (логин)", examples=["john_doe"]
     )
-    password: str = Field(
-        description="Пароль пользователя в открытом виде",
-        examples=["secureP@ss1"],
-        min_length=12,
+    password: Password = Field(
+        description="Пароль пользователя в открытом виде", examples=["secureP@ss1"]
     )
 
     model_config = ConfigDict(frozen=True)

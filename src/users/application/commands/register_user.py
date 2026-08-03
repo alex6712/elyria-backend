@@ -1,14 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.users.domain.value_objects.display_name import (
-    DISPLAY_NAME_MAX_LENGTH,
-    DISPLAY_NAME_MIN_LENGTH,
-)
-from src.users.domain.value_objects.username import (
-    USERNAME_MAX_LENGTH,
-    USERNAME_MIN_LENGTH,
-    USERNAME_PATTERN,
-)
+from src.users.domain.value_objects import DisplayName, Password, Username
 
 
 class RegisterUserCommand(BaseModel):
@@ -19,37 +11,22 @@ class RegisterUserCommand(BaseModel):
 
     Attributes
     ----------
-    username : str
-        Имя пользователя (логин). Длина от
-        ``USERNAME_MIN_LENGTH`` до ``USERNAME_MAX_LENGTH`` символов.
-        Допускаются латинские буквы, цифры, дефис и подчёркивание.
-    password : str
+    username : Username
+        Имя пользователя (логин).
+    password : Password
         Пароль пользователя в открытом виде.
-        Минимальная длина определяется требованиями политики
-        безопасности приложения.
-    display_name : str
-        Отображаемое имя пользователя. Длина от
-        ``DISPLAY_NAME_MIN_LENGTH`` до
-        ``DISPLAY_NAME_MAX_LENGTH`` символов.
+    display_name : DisplayName
+        Отображаемое имя пользователя.
     """
 
-    username: str = Field(
-        description="Уникальное имя пользователя (логин)",
-        examples=["john_doe"],
-        pattern=USERNAME_PATTERN,
-        min_length=USERNAME_MIN_LENGTH,
-        max_length=USERNAME_MAX_LENGTH,
+    username: Username = Field(
+        description="Уникальное имя пользователя (логин)", examples=["john_doe"]
     )
-    password: str = Field(
-        description="Пароль пользователя в открытом виде",
-        examples=["secureP@ss1"],
-        min_length=12,
+    password: Password = Field(
+        description="Пароль пользователя в открытом виде", examples=["secureP@ss1"]
     )
-    display_name: str = Field(
-        description="Отображаемое имя пользователя",
-        examples=["John Doe"],
-        min_length=DISPLAY_NAME_MIN_LENGTH,
-        max_length=DISPLAY_NAME_MAX_LENGTH,
+    display_name: DisplayName = Field(
+        description="Отображаемое имя пользователя", examples=["John Doe"]
     )
 
     model_config = ConfigDict(frozen=True)

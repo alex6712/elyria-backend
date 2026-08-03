@@ -29,7 +29,7 @@ def build_register_user_use_case(
 
     Каждый вызов фабрики создаёт новый экземпляр Use Case
     и новую единицу работы (Unit of Work), что соответствует
-    transient-семантике: один вызов Use Case — одна транзакция
+    transient-семантике: один вызов Use Case - одна транзакция
     (ADR-0002, п. 1 ответов разработчику).
 
     Parameters
@@ -75,7 +75,7 @@ def build_login_use_case(
 
     Каждый вызов фабрики создаёт новый экземпляр Use Case
     и новую единицу работы (Unit of Work), что соответствует
-    transient-семантике: один вызов Use Case — одна транзакция
+    transient-семантике: один вызов Use Case - одна транзакция
     (ADR-0002, п. 1 ответов разработчику).
 
     Parameters
@@ -121,7 +121,7 @@ def build_refresh_session_use_case(
 
     Каждый вызов фабрики создаёт новый экземпляр Use Case
     и новую единицу работы (Unit of Work), что соответствует
-    transient-семантике: один вызов Use Case — одна транзакция
+    transient-семантике: один вызов Use Case - одна транзакция
     (ADR-0002, п. 1 ответов разработчику).
 
     Parameters
@@ -164,7 +164,7 @@ def build_logout_use_case(
 
     Каждый вызов фабрики создаёт новый экземпляр Use Case
     и новую единицу работы (Unit of Work), что соответствует
-    transient-семантике: один вызов Use Case — одна транзакция
+    transient-семантике: один вызов Use Case - одна транзакция
     (ADR-0002, п. 1 ответов разработчику).
 
     Parameters

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from src.shared.presentation.http import APICode
 
 
-class BaseResponse(BaseModel):
+class _BaseResponse(BaseModel):
     """Базовая модель ответа сервера.
 
     Используется в качестве базовой модели ответа для
@@ -29,7 +29,7 @@ class BaseResponse(BaseModel):
     )
 
 
-class StandardResponse(BaseResponse):
+class StandardResponse(_BaseResponse):
     """Стандартная модель ответа сервера.
 
     Используется в качестве стандартной модели ответа с сообщением
@@ -55,6 +55,21 @@ class StandardResponse(BaseResponse):
     )
 
 
+class CountResponse(StandardResponse):
+    """Модель ответа сервера с количеством записей.
+
+    Используется в качестве модели ответа для эндпоинтов,
+    возвращающих общее количество записей какой-либо сущности.
+
+    Attributes
+    ----------
+    count : int
+        Общее количество записей.
+    """
+
+    count: int = Field(description="Общее количество записей")
+
+
 class PaginationResponse(StandardResponse):
     """Модель ответа сервера с полем total для пагинации.
 
@@ -69,18 +84,3 @@ class PaginationResponse(StandardResponse):
     """
 
     total: int = Field(description="Общее количество записей, доступных пользователю.")
-
-
-class CountResponse(StandardResponse):
-    """Модель ответа сервера с количеством записей.
-
-    Используется в качестве модели ответа для эндпоинтов,
-    возвращающих общее количество записей какой-либо сущности.
-
-    Attributes
-    ----------
-    count : int
-        Общее количество записей.
-    """
-
-    count: int = Field(description="Общее количество записей")

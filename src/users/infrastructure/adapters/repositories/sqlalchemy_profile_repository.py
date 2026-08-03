@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from src.shared.domain.exceptions import ConcurrentModificationError
 from src.users.domain.entities import Profile
 from src.users.domain.value_objects import DisplayName
-from src.users.infrastructure.persistence.tables import profiles_table
+from src.users.infrastructure.tables import profiles_table
 
 
 class SqlAlchemyProfileRepository:

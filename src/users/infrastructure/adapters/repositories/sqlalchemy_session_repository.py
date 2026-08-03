@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from src.shared.domain.exceptions import ConcurrentModificationError
 from src.users.domain.entities import Session
-from src.users.infrastructure.persistence.tables import sessions_table
+from src.users.infrastructure.tables import sessions_table
 
 
 class SqlAlchemySessionRepository:
