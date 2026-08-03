@@ -15,11 +15,13 @@ from src.composition.app_info import (
     APP_SUMMARY,
     APP_VERSION,
 )
+from src.composition.container import build_application_container
 from src.composition.engine import build_engine
 from src.composition.paths import HTTP_STATIC_FILES_PATH
 from src.composition.redis import build_redis_client
 from src.composition.settings import get_settings
 from src.shared.presentation.http import api_root_router
+from src.users.presentation.http.v1.routes import users_v1_router
 
 _settings = get_settings()
 
@@ -54,7 +56,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         всех ресурсов.
     """
     app.state.startup_at = datetime.now(UTC)
-    _ = build_engine(), build_redis_client()
+    app.state.container = build_application_container()
 
     yield
 
@@ -82,6 +84,7 @@ elyria_http_app.add_middleware(
 )
 
 elyria_http_app.include_router(api_root_router)
+elyria_http_app.include_router(users_v1_router)
 
 elyria_http_app.mount(
     "/", StaticFiles(directory=HTTP_STATIC_FILES_PATH, html=True), name="static"
