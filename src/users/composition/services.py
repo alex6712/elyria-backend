@@ -2,8 +2,8 @@ from pathlib import Path
 
 from redis.asyncio import Redis as AsyncRedis
 
-from src.users.infrastructure.persistence import RedisTokenBlacklist
-from src.users.infrastructure.security import (
+from src.users.infrastructure.adapters.persistence import RedisTokenBlacklist
+from src.users.infrastructure.adapters.security import (
     Argon2idPasswordHasher,
     HmacSha256TokenHasher,
     JwtTokenIssuer,

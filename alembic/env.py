@@ -13,8 +13,8 @@ from alembic import context
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.composition.settings import get_settings
-from src.shared.infrastructure.persistence import metadata as target_metadata
-from src.users.infrastructure.persistence.tables import *
+from src.shared.infrastructure import metadata as target_metadata
+from src.users.infrastructure.tables import *
 
 config = context.config
 settings = get_settings()

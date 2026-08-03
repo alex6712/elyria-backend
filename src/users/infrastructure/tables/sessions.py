@@ -1,8 +1,8 @@
 from sqlalchemy import Column, ForeignKey, Index, Table, UniqueConstraint, text
 from sqlalchemy.types import DateTime, String, Uuid
 
-from src.shared.infrastructure.persistence import metadata
-from src.shared.infrastructure.persistence.columns import (
+from src.shared.infrastructure import metadata
+from src.shared.infrastructure.columns import (
     audit_columns,
     identifier_column,
     version_column,
