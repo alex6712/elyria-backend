@@ -1,7 +1,7 @@
 from types import TracebackType
 from typing import Protocol, Self, runtime_checkable
 
-from src.users.domain.repositories import (
+from src.users.domain.ports.repositories import (
     IdentityRepository,
     ProfileRepository,
     SessionRepository,
