@@ -64,7 +64,7 @@ click==8.4.2
     #   import-linter
     #   rich-toolkit
     #   uvicorn
-coverage==7.15.2
+coverage==7.15.3
     # via pytest-cov
 cryptography==50.0.0
     # via pyjwt
@@ -254,9 +254,9 @@ typer==0.27.0
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
-types-aiobotocore==3.8.0
+types-aiobotocore==3.9.0
     # via elyria-backend (pyproject.toml:dev)
-types-aiobotocore-s3==3.8.0
+types-aiobotocore-s3==3.9.0
     # via elyria-backend (pyproject.toml:dev)
 types-awscrt==0.34.1
     # via botocore-stubs
@@ -281,7 +281,7 @@ urllib3==2.7.0
     # via
     #   botocore
     #   sentry-sdk
-uvicorn==0.52.0
+uvicorn==0.52.1
     # via
     #   fastapi
     #   fastapi-cli
