@@ -69,7 +69,11 @@ elyria_http_app = FastAPI(
     description=APP_DESCRIPTION,
     version=APP_VERSION,
     openapi_tags=[
-        {"name": "root", "description": "Получение информации о **приложении**."}
+        {"name": "root", "description": "Получение информации о **приложении**."},
+        {
+            "name": "auth",
+            "description": "Операции **регистрации** и **аутентификации**.",
+        },
     ],
     lifespan=lifespan,
     contact={"name": ADMIN_NAME, "email": ADMIN_EMAIL},

@@ -6,7 +6,7 @@ from src.shared.presentation.http.schemas import StandardResponse
 from src.users.application.commands import RegisterUserCommand
 from src.users.presentation.http.v1.schemas import RegisterUserRequest
 
-router = APIRouter(prefix="/auth", tags=["authorization"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post(
