@@ -1,3 +1,3 @@
-from .standard import CountResponse, PaginationResponse, StandardResponse
+from .standard import BaseJsonModel, CountResponse, PaginationResponse, StandardResponse
 
-__all__ = ["CountResponse", "PaginationResponse", "StandardResponse"]
+__all__ = ["BaseJsonModel", "CountResponse", "PaginationResponse", "StandardResponse"]
