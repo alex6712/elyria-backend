@@ -1,7 +1,7 @@
 [project]
 name = "elyria-backend"
 version = "0.5.1"
-description = "Романтичное приложение-подарок на 14 февраля от Лёши для Светы."
+description = "Приватное цифровое пространство для пары: медиаархив воспоминаний, записки и мини-игры."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

@@ -1,6 +1,6 @@
 services:
-  elyria-http-app:
-    container_name: elyria-http-app
+  elyria-fastapi:
+    container_name: elyria-fastapi
     build: .
     environment:
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS}

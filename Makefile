@@ -26,7 +26,7 @@ install-hooks: ## Установить git-хуки pre-commit
 	uv run pre-commit install
 
 dev: ## Запустить сервер разработки
-	uv run fastapi dev ./src/composition/http_app.py
+	uv run fastapi dev ./src/composition/fastapi.py
 
 migrate: ## Применить миграции Alembic
 	uv run alembic upgrade head

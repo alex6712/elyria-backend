@@ -20,7 +20,8 @@ from src.composition.engine import build_engine
 from src.composition.paths import HTTP_STATIC_FILES_PATH
 from src.composition.redis import build_redis_client
 from src.composition.settings import get_settings
-from src.shared.presentation.http import api_root_router
+from src.observability.presentation.http.routes import observability_router
+from src.users.composition import build_hibp_http_client
 from src.users.presentation.http.v1.routes import users_v1_router
 
 _settings = get_settings()
@@ -39,7 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     При завершении работы:
 
     * освобождает пул соединений SQLAlchemy (``dispose``);
-    * закрывает асинхронный клиент Redis.
+    * закрывает асинхронный клиент Redis;
+    * закрывает HTTP-клиент проверки паролей на утечки (HIBP).
 
     Если какой-либо ресурс не удалось инициализировать, приложение
     завершит запуск с ошибкой.
@@ -60,10 +62,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     yield
 
-    _ = await asyncio.gather(build_engine().dispose(), build_redis_client().aclose())
+    _ = await asyncio.gather(
+        build_engine().dispose(),
+        build_redis_client().aclose(),
+        build_hibp_http_client().aclose(),
+    )
 
 
-elyria_http_app = FastAPI(
+elyria_fastapi = FastAPI(
     title=APP_NAME,
     summary=APP_SUMMARY,
     description=APP_DESCRIPTION,
@@ -79,7 +85,7 @@ elyria_http_app = FastAPI(
     contact={"name": ADMIN_NAME, "email": ADMIN_EMAIL},
 )
 
-elyria_http_app.add_middleware(
+elyria_fastapi.add_middleware(
     CORSMiddleware,
     allow_origins=_settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
@@ -87,9 +93,9 @@ elyria_http_app.add_middleware(
     allow_headers=["*"],
 )
 
-elyria_http_app.include_router(api_root_router)
-elyria_http_app.include_router(users_v1_router)
+elyria_fastapi.include_router(observability_router)
+elyria_fastapi.include_router(users_v1_router)
 
-elyria_http_app.mount(
+elyria_fastapi.mount(
     "/", StaticFiles(directory=HTTP_STATIC_FILES_PATH, html=True), name="static"
 )
