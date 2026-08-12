@@ -11,7 +11,9 @@ from src.users.application.ports.security import (
     TokenVerifier,
 )
 from src.users.application.results import RefreshSessionResult
-from src.users.domain.exceptions import InactiveUserError
+from src.users.domain.exceptions import (
+    InactiveUserError,
+)
 
 
 class RefreshSessionUseCase:
@@ -62,8 +64,8 @@ class RefreshSessionUseCase:
         1. Проверяет структуру и подпись переданного refresh-токена
            через ``TokenVerifier``.
         2. Загружает сессию по идентификатору из claims токена.
-        3. Проверяет, что сессия валидна и хеш переданного токена
-           совпадает с сохранённым секретом сессии.
+        3. Проверяет, что хеш переданного токена совпадает с сохранённым
+           секретом сессии (защита от кражи токена).
         4. Проверяет, что учётная запись владельца сессии активна.
         5. Вычисляет время истечения новой сессии.
         6. Выпускает новый refresh-токен через ``TokenIssuer``.
@@ -91,9 +93,14 @@ class RefreshSessionUseCase:
         Raises
         ------
         SessionNotFoundError
-            Если сессия с указанным ID отсутствует, была отозвана,
-            истекла или сохранённый хеш секрета не соответствует
-            хешу переданного токена (защита от кражи токена).
+            Если сессия с указанным ID отсутствует или сохранённый хеш
+            секрета не соответствует хешу переданного токена (защита
+            от кражи токена).
+        SessionRevokedError
+            Если сессия была отозвана.
+        SessionExpiredError
+            Если срок действия сессии истёк, даже если переданный
+            refresh-токен ещё действителен.
         InactiveUserError
             Если учётная запись владельца сессии деактивирована.
         TokenExpiredError
@@ -108,9 +115,9 @@ class RefreshSessionUseCase:
             её загрузкой и сохранением (пробрасывается на уровень
             представления как 409 Conflict).
         """
-        async with self._uow:
-            claims = self._token_verifier.verify(command.refresh_token)
+        claims = self._token_verifier.verify(command.refresh_token)
 
+        async with self._uow:
             session = await self._uow.sessions.get_by_id(claims.session_id)
             if session is None:
                 raise SessionNotFoundError("Session with passed id not found.")

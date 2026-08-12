@@ -62,9 +62,13 @@ class InactiveUserError(Exception):
         self.user_id = user_id
 
 
-class SessionInvalidError(Exception):
+class SessionRevokedError(Exception):
     """Исключение, сигнализирующее о попытке изменить состояние
-    отозванной или истёкшей сессии.
+    отозванной сессии.
+
+    Возникает при попытке выполнить операцию, требующую валидной
+    сессии, для сессии, которая была принудительно завершена
+    (logout или административное отозвание).
 
     Parameters
     ----------
@@ -74,9 +78,28 @@ class SessionInvalidError(Exception):
     """
 
     def __init__(self, session_id: UUID) -> None:
-        super().__init__(
-            f"Session {session_id} is revoked or expired and cannot be modified"
-        )
+        super().__init__(f"Session {session_id} is revoked and cannot be modified")
+
+        self.session_id = session_id
+
+
+class SessionExpiredError(Exception):
+    """Исключение, сигнализирующее о попытке изменить состояние
+    истёкшей сессии.
+
+    Возникает, когда срок действия сессии истёк, хотя переданный
+    refresh-токен может оставаться действительным: срок жизни сессии
+    независим от срока жизни токена.
+
+    Parameters
+    ----------
+    session_id : UUID
+        Идентификатор сессии, для которой была предпринята
+        запрещённая операция.
+    """
+
+    def __init__(self, session_id: UUID) -> None:
+        super().__init__(f"Session {session_id} is expired and cannot be modified")
 
         self.session_id = session_id
 

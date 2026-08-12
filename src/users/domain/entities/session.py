@@ -3,7 +3,7 @@ from typing import Self, override
 from uuid import UUID
 
 from src.shared.domain.entities import Auditable, Identifiable, Versioned
-from src.users.domain.exceptions import SessionInvalidError
+from src.users.domain.exceptions import SessionExpiredError, SessionRevokedError
 
 
 class Session(Identifiable[UUID], Auditable, Versioned):
@@ -49,7 +49,9 @@ class Session(Identifiable[UUID], Auditable, Versioned):
     Согласно решению, симметричному ADR-0004 (принятому для ``Profile``),
     методы ``extend`` и ``rotate_secret`` запрещены для отозванной
     или истёкшей сессии. При нарушении возбуждается
-    ``SessionInvalidError``. Это решение оформлено отдельным ADR-0005.
+    ``SessionRevokedError`` (отозванная сессия) либо
+    ``SessionExpiredError`` (истёкшая). Это решение оформлено
+    отдельным ADR-0005.
     """
 
     def __init__(
@@ -150,21 +152,6 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         """
         return (now or datetime.now(UTC)) >= self.expires_at
 
-    def is_valid(self, now: datetime | None = None) -> bool:
-        """Проверить, что сессия активна: не отозвана и не истекла.
-
-        Parameters
-        ----------
-        now : datetime | None, optional
-            Момент времени для проверки истечения срока действия.
-
-        Returns
-        -------
-        bool
-            ``True``, если сессия не отозвана и не истекла.
-        """
-        return not self.is_revoked() and not self.is_expired(now)
-
     def mark_used(self, at: datetime | None = None) -> None:
         """Зафиксировать факт использования сессии.
 
@@ -178,7 +165,7 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         -----
         Не проверяет валидность сессии: предполагается, что
         Application Layer вызывает данный метод только после
-        собственной проверки ``is_valid`` в рамках сценария
+        собственной проверки состояния сессии в рамках сценария
         аутентификации запроса.
         """
         if at is None:
@@ -207,8 +194,10 @@ class Session(Identifiable[UUID], Auditable, Versioned):
 
         Raises
         ------
-        SessionInvalidError
-            Если сессия отозвана или истёк срок её действия.
+        SessionRevokedError
+            Если сессия отозвана.
+        SessionExpiredError
+            Если истёк срок действия сессии.
 
         Notes
         -----
@@ -251,12 +240,14 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         Parameters
         ----------
         at : datetime | None, optional
-            Временная метка для проверки отзыва сессии.
+            Временная метка для проверки истечения срока действия.
 
         Raises
         ------
-        SessionInvalidError
-            Если сессия отозвана или истёк срок её действия.
+        SessionRevokedError
+            Если сессия отозвана.
+        SessionExpiredError
+            Если истёк срок действия сессии.
 
         Notes
         -----
@@ -264,8 +255,11 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         ``extend`` и ``rotate_secret`` запрещены для невалидной
         сессии. Решение описано в ADR-0005.
         """
-        if not self.is_valid(at):
-            raise SessionInvalidError(self.id)
+        if self.is_revoked():
+            raise SessionRevokedError(self.id)
+
+        if self.is_expired(at):
+            raise SessionExpiredError(self.id)
 
     @override
     def __repr__(self) -> str:

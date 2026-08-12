@@ -8,16 +8,6 @@ class SessionNotFoundError(Exception):
     pass
 
 
-class SessionExpiredError(Exception):
-    """Срок действия сессии истёк.
-
-    Возникает при попытке использования сессии, срок действия
-    которой истёк.
-    """
-
-    pass
-
-
 class TokenExpiredError(Exception):
     """Срок действия токена истёк.
 
