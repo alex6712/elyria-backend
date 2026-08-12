@@ -41,6 +41,7 @@
         "decryptor",
         "encryptor",
         "fastapi",
+        "HIBP",
         "ilike",
         "ilikes",
         "Pydantic",

@@ -3,8 +3,10 @@ from uuid import uuid4
 
 from src.users.application.commands import RegisterUserCommand
 from src.users.application.dto import TokenClaimsDTO
+from src.users.application.exceptions import CompromisedPasswordError
 from src.users.application.ports import UsersUnitOfWork
 from src.users.application.ports.security import (
+    CompromisedPasswordChecker,
     PasswordHasher,
     TokenHasher,
     TokenIssuer,
@@ -30,6 +32,8 @@ class RegisterUserUseCase:
         Единица работы с вложенными репозиториями.
     password_hasher : PasswordHasher
         Сервис хеширования паролей.
+    compromised_password_checker : CompromisedPasswordChecker
+        Сервис проверки пароля на утечки данных.
     token_issuer : TokenIssuer
         Сервис выпуска новых токенов.
     token_hasher : TokenHasher
@@ -44,6 +48,7 @@ class RegisterUserUseCase:
         self,
         uow: UsersUnitOfWork,
         password_hasher: PasswordHasher,
+        compromised_password_checker: CompromisedPasswordChecker,
         token_issuer: TokenIssuer,
         token_hasher: TokenHasher,
         at_lifetime_minutes: int,
@@ -51,6 +56,7 @@ class RegisterUserUseCase:
     ) -> None:
         self._uow = uow
         self._password_hasher = password_hasher
+        self._compromised_password_checker = compromised_password_checker
         self._token_issuer = token_issuer
         self._token_hasher = token_hasher
         self._at_lifetime_minutes = at_lifetime_minutes
@@ -75,14 +81,21 @@ class RegisterUserUseCase:
 
         Raises
         ------
+        CompromisedPasswordError
+            Если пароль встречается в известных утечках данных.
         UsernameAlreadyExistsError
             Если пользователь с указанным именем уже существует.
         """
-        async with self._uow:
-            identity = Identity.register(
-                command.username, self._password_hasher.hash(command.password)
+        if await self._compromised_password_checker.is_compromised(command.password):
+            raise CompromisedPasswordError(
+                "Password has been compromised and cannot be used."
             )
 
+        identity = Identity.register(
+            command.username, self._password_hasher.hash(command.password)
+        )
+
+        async with self._uow:
             await self._uow.identities.add(identity)
 
             profile = Profile.create(identity.id, command.display_name)

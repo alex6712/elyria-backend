@@ -13,7 +13,7 @@ USERNAME_MIN_LENGTH = 3
 USERNAME_MAX_LENGTH = 32
 """Максимальная длина имени пользователя (включительно)."""
 
-USERNAME_PATTERN = r"^[a-zA-Z0-9_-]+$"
+USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 """Регулярное выражение, допускающее буквы (a-z, A-Z), цифры (0-9),
 дефис (-) и подчёркивание (_).
 """
@@ -61,7 +61,7 @@ class Username:
                 + f"{USERNAME_MAX_LENGTH} characters."
             )
 
-        if not re.fullmatch(USERNAME_PATTERN, self.value):
+        if not USERNAME_PATTERN.fullmatch(self.value):
             raise InvalidUsernameFormatError(
                 "Username may only contain letters (a-z, A-Z), digits (0-9), "
                 + "hyphens (-), and underscores (_)."

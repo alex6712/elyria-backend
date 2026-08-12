@@ -1,16 +1,53 @@
+from functools import lru_cache
 from pathlib import Path
 
+from httpx import AsyncClient
 from redis.asyncio import Redis as AsyncRedis
 
 from src.users.infrastructure.adapters.persistence import RedisTokenBlacklist
 from src.users.infrastructure.adapters.security import (
     Argon2idPasswordHasher,
+    HibpCompromisedPasswordChecker,
     HmacSha256TokenHasher,
     JwtTokenIssuer,
     JwtTokenVerifier,
     SignatureKeys,
     SignatureKeysProvider,
 )
+
+_HIBP_TIMEOUT_SECONDS = 5.0
+"""Максимальное время ожидания ответа от API HIBP в секундах."""
+
+
+@lru_cache
+def build_hibp_http_client() -> AsyncClient:
+    """Создать асинхронный HTTP-клиент для запросов к HIBP.
+
+    Returns
+    -------
+    AsyncClient
+        Асинхронный HTTP-клиент с таймаутом ``_HIBP_TIMEOUT_SECONDS``.
+
+    Notes
+    -----
+    Результат кэшируется через ``lru_cache`` (ADR-0001, п. 2 ответов
+    разработчику): клиент внешнего сервиса является дорогим ресурсом
+    уровня Infrastructure/Composition, поэтому допускается единственный
+    экземпляр на всё приложение. Закрытие клиента выполняется
+    при завершении работы приложения в lifespan.
+    """
+    return AsyncClient(timeout=_HIBP_TIMEOUT_SECONDS)
+
+
+def build_compromised_password_checker() -> HibpCompromisedPasswordChecker:
+    """Создать сервис проверки пароля на утечки данных.
+
+    Returns
+    -------
+    HibpCompromisedPasswordChecker
+        Сервис проверки пароля через HIBP Pwned Passwords.
+    """
+    return HibpCompromisedPasswordChecker(client=build_hibp_http_client())
 
 
 def build_password_hasher() -> Argon2idPasswordHasher:

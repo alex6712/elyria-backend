@@ -1,21 +1,4 @@
-from dataclasses import dataclass
 from uuid import UUID
-
-
-@dataclass(frozen=True, slots=True)
-class PasswordRuleViolation:
-    """Нарушенное правило парольной политики.
-
-    Parameters
-    ----------
-    rule_id : str
-        Идентификатор нарушенного правила.
-    message : str
-        Человекочитаемое описание требования, которое не выполнено.
-    """
-
-    rule_id: str
-    message: str
 
 
 class InvalidDisplayNameLengthError(Exception):
@@ -28,51 +11,11 @@ class InvalidDisplayNameLengthError(Exception):
     pass
 
 
-class EmptyPublicKeyError(Exception):
-    """Пустой публичный ключ E2EE.
+class InvalidPasswordLengthError(Exception):
+    """Недопустимая длина пароля пользователя.
 
-    Возникает, если публичный ключ, входящий в состав криптографических
-    учётных данных пользователя, пуст.
-    """
-
-    pass
-
-
-class EmptyEncryptedPrivateKeyError(Exception):
-    """Пустой зашифрованный приватный ключ E2EE.
-
-    Возникает, если зашифрованный приватный ключ, входящий в состав
-    криптографических учётных данных пользователя, пуст.
-    """
-
-    pass
-
-
-class EmptyPrivateKeyNonceError(Exception):
-    """Пустой nonce приватного ключа E2EE.
-
-    Возникает, если nonce, использованный при шифровании приватного
-    ключа, пуст.
-    """
-
-    pass
-
-
-class EmptyKdfSaltError(Exception):
-    """Пустая соль KDF.
-
-    Возникает, если соль, использованная функцией деривации ключа
-    при защите приватного ключа пользователя, пуста.
-    """
-
-    pass
-
-
-class EmptyKdfParamsError(Exception):
-    """Пустые параметры KDF.
-
-    Возникает, если параметры функции деривации ключа, использованной
-    для защиты приватного ключа пользователя, не заданы.
+    Возникает, если длина пароля пользователя выходит за допустимые
+    пределы, установленные правилами предметной области.
     """
 
     pass
@@ -147,34 +90,3 @@ class UsernameAlreadyExistsError(Exception):
     """
 
     pass
-
-
-class InvalidPasswordError(Exception):
-    """Исключение, сигнализирующее о несоответствии пароля
-    парольной политике.
-
-    Агрегирует все нарушенные правила парольной политики, чтобы
-    пользователь мог исправить все нарушения за один раз.
-
-    Parameters
-    ----------
-    violations : tuple[PasswordRuleViolation, ...]
-        Нарушенные правила в виде объектов ``PasswordRuleViolation``.
-
-    Attributes
-    ----------
-    violations : tuple[PasswordRuleViolation, ...]
-        Нарушенные правила в виде объектов ``PasswordRuleViolation``.
-    rule_ids : tuple[str, ...]
-        Идентификаторы нарушенных правил в порядке их появления.
-    """
-
-    def __init__(self, violations: tuple[PasswordRuleViolation, ...]) -> None:
-        super().__init__(
-            "Password does not meet security requirements: "
-            + ", ".join(violation.rule_id for violation in violations)
-            + "."
-        )
-
-        self.violations = violations
-        self.rule_ids = tuple(violation.rule_id for violation in violations)

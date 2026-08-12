@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from src.users.application.ports.persistence import TokenBlacklist
 from src.users.application.ports.security import (
+    CompromisedPasswordChecker,
     PasswordHasher,
     TokenHasher,
     TokenIssuer,
@@ -20,6 +21,7 @@ def build_register_user_use_case(
     *,
     engine: AsyncEngine,
     password_hasher: PasswordHasher,
+    compromised_password_checker: CompromisedPasswordChecker,
     token_issuer: TokenIssuer,
     token_hasher: TokenHasher,
     at_lifetime_minutes: int,
@@ -38,6 +40,8 @@ def build_register_user_use_case(
         Асинхронный движок SQLAlchemy для открытия транзакций.
     password_hasher : PasswordHasher
         Сервис хеширования паролей.
+    compromised_password_checker : CompromisedPasswordChecker
+        Сервис проверки пароля на утечки данных.
     token_issuer : TokenIssuer
         Сервис выпуска новых токенов.
     token_hasher : TokenHasher
@@ -55,6 +59,7 @@ def build_register_user_use_case(
     return RegisterUserUseCase(
         uow=SqlAlchemyUsersUnitOfWork(engine),
         password_hasher=password_hasher,
+        compromised_password_checker=compromised_password_checker,
         token_issuer=token_issuer,
         token_hasher=token_hasher,
         at_lifetime_minutes=at_lifetime_minutes,

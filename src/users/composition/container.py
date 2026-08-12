@@ -12,6 +12,7 @@ from src.users.application.use_cases import (
     RegisterUserUseCase,
 )
 from src.users.composition.services import (
+    build_compromised_password_checker,
     build_password_hasher,
     build_signature_keys_provider,
     build_token_blacklist,
@@ -107,12 +108,14 @@ def build_users_module(
 
     Notes
     -----
-    Реализации портов (хешеры, выпуск и проверка токенов, чёрный список)
-    создаются один раз на время жизни контейнера; Use Cases - transient,
-    новый экземпляр на каждый вызов соответствующей фабрики.
+    Реализации портов (хешеры, выпуск и проверка токенов, чёрный
+    список, проверка пароля на утечки) создаются один раз на время
+    жизни контейнера; Use Cases - transient, новый экземпляр на каждый
+    вызов соответствующей фабрики.
     """
     password_hasher = build_password_hasher()
     token_hasher = build_token_hasher(hmac_secret_key=hmac_secret_key)
+    compromised_password_checker = build_compromised_password_checker()
 
     signature_keys = build_signature_keys_provider(
         public_key_path=public_key_path,
@@ -136,6 +139,7 @@ def build_users_module(
         register_user=lambda: build_register_user_use_case(
             engine=engine,
             password_hasher=password_hasher,
+            compromised_password_checker=compromised_password_checker,
             token_issuer=token_issuer,
             token_hasher=token_hasher,
             at_lifetime_minutes=access_token_lifetime_minutes,
