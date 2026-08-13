@@ -2,7 +2,11 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from src.users.application.use_cases import LoginUseCase, RegisterUserUseCase
+from src.users.application.use_cases import (
+    LoginUseCase,
+    RefreshSessionUseCase,
+    RegisterUserUseCase,
+)
 from src.users.presentation.http.services import AuthCookiesProvider
 
 
@@ -43,6 +47,48 @@ LoginUserDependency = Annotated[LoginUseCase, Depends(_get_login_use_case)]
         ...,
     ) -> LoginResponse:
         result = await login_user.execute(...)
+"""
+
+
+def _get_refresh_session_use_case(request: Request) -> RefreshSessionUseCase:
+    """Получить Use Case обновления пары токенов из DI-контейнера.
+
+    Единственное место в модуле Users, где выполняется доступ к
+    нетипизированному ``request.app.state.container`` - Starlette не
+    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
+    тип принудительно объявляется сигнатурой функции.
+
+    Parameters
+    ----------
+    request : Request
+        Объект HTTP-запроса FastAPI. Используется для доступа
+        к глобальному DI-контейнеру приложения через ``app.state``.
+
+    Returns
+    -------
+    RefreshSessionUseCase
+        Use Case обновления пары токенов.
+    """
+    return request.app.state.container.users.refresh_session_use_case
+
+
+RefreshSessionDependency = Annotated[
+    RefreshSessionUseCase, Depends(_get_refresh_session_use_case)
+]
+"""Типизированная FastAPI-зависимость Use Case обновления пары токенов.
+
+Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
+роутам готовый экземпляр :class:`RefreshSessionUseCase` без ручного
+приведения типов. Используется как аннотация параметра обработчика:
+
+.. code-block:: python
+
+    @router.post("/refresh")
+    async def refresh(
+        refresh_session: RefreshSessionDependency,
+        ...,
+    ) -> RefreshSessionResponse:
+        result = await refresh_session.execute(...)
 """
 
 

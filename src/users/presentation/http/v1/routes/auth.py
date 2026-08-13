@@ -1,18 +1,25 @@
 import textwrap
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Response, status
+from fastapi import APIRouter, Body, Request, Response, status
 
-from src.users.application.commands import LoginCommand, RegisterUserCommand
+from src.users.application.commands import (
+    LoginCommand,
+    RefreshSessionCommand,
+    RegisterUserCommand,
+)
 from src.users.domain.value_objects import DisplayName, Password, Username
 from src.users.presentation.http.dependencies import (
     AuthCookiesProviderDependency,
     LoginUserDependency,
+    RefreshSessionDependency,
     RegisterUserDependency,
 )
+from src.users.presentation.http.exceptions import RefreshTokenMissingError
 from src.users.presentation.http.v1.schemas import (
     LoginRequest,
     LoginResponse,
+    RefreshSessionResponse,
     RegisterUserRequest,
     RegisterUserResponse,
 )
@@ -85,6 +92,89 @@ async def login(
 
     return LoginResponse(
         detail="User logged in successfully.", access_token=result.access_token
+    )
+
+
+@router.post(
+    "/refresh",
+    response_model=RefreshSessionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Обновление пары токенов.",
+    description=textwrap.dedent("""\
+        Обновляет access и refresh токены по действующему refresh-токену.
+
+        Refresh-токен передаётся не в теле запроса, а в HttpOnly-cookie,
+        установленной при входе в систему или при предыдущем обновлении
+        пары токенов.
+
+        При успешном обновлении система ротирует сессию: предыдущий
+        refresh-токен аннулируется, новый refresh-токен устанавливается
+        в HttpOnly-cookie, а access-токен возвращается в теле ответа.
+
+        В случае ошибки (отсутствие или недействительность refresh-токена,
+        неактивная учётная запись, отсутствие или отзыв сессии) возвращается
+        соответствующий HTTP-код и сообщение об ошибке.
+    """),
+    response_description="Успешное обновление пары токенов",
+)
+async def refresh(
+    request: Request,
+    response: Response,
+    refresh_session: RefreshSessionDependency,
+    auth_cookies_provider: AuthCookiesProviderDependency,
+) -> RefreshSessionResponse:
+    """Обновление пары access/refresh токенов.
+
+    Извлекает refresh-токен из HttpOnly-cookie входящего запроса,
+    валидирует его и связанную с ним сессию, ротирует сессию
+    и выпускает новую пару токенов.
+
+    Parameters
+    ----------
+    request : Request
+        Объект входящего HTTP-запроса FastAPI. Используется для чтения
+        HttpOnly-cookie с refresh-токеном.
+    response : Response
+        Объект HTTP-ответа FastAPI. Используется для установки
+        HttpOnly-cookie с новым refresh-токеном.
+    refresh_session : RefreshSessionUseCase
+        Use Case обновления пары токенов, полученный через DI-зависимость
+        FastAPI из контейнера приложения.
+    auth_cookies_provider : AuthCookiesProvider
+        Провайдер auth-cookie, полученный через DI-зависимость FastAPI
+        из контейнера приложения. Используется для чтения refresh-токена
+        из cookie запроса и установки HttpOnly-cookie с новым refresh-токеном
+        в ответ.
+
+    Returns
+    -------
+    RefreshSessionResponse
+        Ответ с кодом 200 и новым access-токеном для дальнейшей
+        аутентификации запросов. Новый refresh-токен устанавливается
+        отдельно в HttpOnly-cookie.
+
+    Raises
+    ------
+    RefreshTokenMissingError
+        Если cookie с refresh-токеном отсутствует во входящем запросе.
+    """
+    refresh_token = auth_cookies_provider.get_refresh_token_cookie(request)
+
+    if refresh_token is None:
+        raise RefreshTokenMissingError(
+            "Refresh token is missing. Provide it in the refresh token cookie."
+        )
+
+    result = await refresh_session.execute(
+        RefreshSessionCommand(refresh_token=refresh_token)
+    )
+
+    auth_cookies_provider.set_refresh_token_cookie(
+        response=response, refresh_token=result.refresh_token
+    )
+
+    return RefreshSessionResponse(
+        detail="Session refreshed successfully.", access_token=result.access_token
     )
 
 

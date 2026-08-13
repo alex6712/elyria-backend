@@ -10,6 +10,38 @@ from src.users.application.exceptions import (
     TokenSignatureInvalidError,
 )
 from src.users.domain.exceptions import SessionExpiredError, SessionRevokedError
+from src.users.presentation.http.exceptions import RefreshTokenMissingError
+
+
+async def _refresh_token_missing_error_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:
+    """Обработать исключение RefreshTokenMissingError.
+
+    Возвращает клиенту ответ с HTTP 401 Unauthorized, если при
+    обновлении пары токенов cookie с refresh-токеном отсутствует
+    во входящем запросе.
+
+    Parameters
+    ----------
+    _request : Request
+        Объект запроса FastAPI, содержащий информацию о входящем
+        HTTP-запросе (не используется).
+    exc : Exception
+        Экземпляр исключения, из которого получается текст сообщения
+        об ошибке.
+
+    Returns
+    -------
+    JSONResponse
+        Ответ с ошибкой 401.
+    """
+    return JSONResponse(
+        content=StandardResponse(
+            code=APICode.TOKEN_NOT_PASSED, detail=str(exc)
+        ).model_dump(mode="json"),
+        status_code=status.HTTP_401_UNAUTHORIZED,
+    )
 
 
 async def _incorrect_username_or_password_error_handler(
@@ -206,6 +238,9 @@ def register(app: FastAPI) -> None:
     """
     app.add_exception_handler(
         IncorrectUsernameOrPasswordError, _incorrect_username_or_password_error_handler
+    )
+    app.add_exception_handler(
+        RefreshTokenMissingError, _refresh_token_missing_error_handler
     )
     app.add_exception_handler(TokenExpiredError, _token_expired_error_handler)
     app.add_exception_handler(

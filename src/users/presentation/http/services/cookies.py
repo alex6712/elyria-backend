@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fastapi import Response
+from fastapi import Request, Response
 
 
 class AuthCookiesProvider:
@@ -54,6 +54,29 @@ class AuthCookiesProvider:
         self._auth_cookie_samesite: Literal["lax", "strict", "none"] = (
             auth_cookie_samesite
         )
+
+    def get_refresh_token_cookie(self, request: Request) -> str | None:
+        """Получить refresh-токен из HttpOnly-cookie входящего запроса.
+
+        Читает значение cookie refresh-токена по имени, переданному
+        в конструктор. Проверка подлинности и срока действия токена
+        не выполняется - это ответственность вызывающего кода
+        (как правило, Use Case). Здесь выполняется только чтение
+        значения cookie из запроса.
+
+        Parameters
+        ----------
+        request : Request
+            Объект входящего HTTP-запроса FastAPI, из cookies которого
+            извлекается refresh-токен.
+
+        Returns
+        -------
+        str | None
+            Значение refresh-токена из cookie либо ``None``, если
+            cookie с ожидаемым именем в запросе отсутствует.
+        """
+        return request.cookies.get(self._refresh_token_cookie_name)
 
     def set_refresh_token_cookie(self, response: Response, refresh_token: str) -> None:
         """Установить HttpOnly-cookie с refresh-токеном в HTTP-ответ.
