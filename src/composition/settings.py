@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import (
     AnyHttpUrl,
@@ -193,7 +193,9 @@ class Settings(BaseSettings):
 
     @field_validator("AUTH_COOKIE_SAMESITE", mode="before")
     @classmethod
-    def _validate_auth_cookie_samesite(cls, value: Any) -> str:
+    def _validate_auth_cookie_samesite(
+        cls, value: Any
+    ) -> Literal["lax", "strict", "none"]:
         """Нормализует и валидирует значение ``SameSite`` для auth-cookie.
 
         Приводит значение к нижнему регистру и обрезает пробелы.
@@ -228,7 +230,7 @@ class Settings(BaseSettings):
                 + f"'none'; got {value!r}."
             )
 
-        return normalized
+        return cast(Literal["lax", "strict", "none"], normalized)
 
     @field_validator("AUTH_COOKIE_DOMAIN", mode="before")
     @classmethod
