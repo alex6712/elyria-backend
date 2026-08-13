@@ -1,3 +1,11 @@
-from .auth import AuthCookiesProviderDependency, RegisterUserDependency
+from .auth import (
+    AuthCookiesProviderDependency,
+    LoginUserDependency,
+    RegisterUserDependency,
+)
 
-__all__ = ["AuthCookiesProviderDependency", "RegisterUserDependency"]
+__all__ = [
+    "AuthCookiesProviderDependency",
+    "LoginUserDependency",
+    "RegisterUserDependency",
+]

@@ -2,8 +2,48 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from src.users.application.use_cases import RegisterUserUseCase
+from src.users.application.use_cases import LoginUseCase, RegisterUserUseCase
 from src.users.presentation.http.services import AuthCookiesProvider
+
+
+def _get_login_use_case(request: Request) -> LoginUseCase:
+    """Получить Use Case аутентификации пользователя из DI-контейнера.
+
+    Единственное место в модуле Users, где выполняется доступ к
+    нетипизированному ``request.app.state.container`` - Starlette не
+    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
+    тип принудительно объявляется сигнатурой функции.
+
+    Parameters
+    ----------
+    request : Request
+        Объект HTTP-запроса FastAPI. Используется для доступа
+        к глобальному DI-контейнеру приложения через ``app.state``.
+
+    Returns
+    -------
+    LoginUseCase
+        Use Case аутентификации пользователя.
+    """
+    return request.app.state.container.users.login_use_case
+
+
+LoginUserDependency = Annotated[LoginUseCase, Depends(_get_login_use_case)]
+"""Типизированная FastAPI-зависимость Use Case аутентификации пользователя.
+
+Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
+роутам готовый экземпляр :class:`LoginUseCase` без ручного приведения
+типов. Используется как аннотация параметра обработчика:
+
+.. code-block:: python
+
+    @router.post("/login")
+    async def login(
+        login_user: LoginUserDependency,
+        ...,
+    ) -> LoginResponse:
+        result = await login_user.execute(...)
+"""
 
 
 def _get_register_user_use_case(request: Request) -> RegisterUserUseCase:

@@ -3,18 +3,89 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Response, status
 
-from src.users.application.commands import RegisterUserCommand
+from src.users.application.commands import LoginCommand, RegisterUserCommand
 from src.users.domain.value_objects import DisplayName, Password, Username
 from src.users.presentation.http.dependencies import (
     AuthCookiesProviderDependency,
+    LoginUserDependency,
     RegisterUserDependency,
 )
 from src.users.presentation.http.v1.schemas import (
+    LoginRequest,
+    LoginResponse,
     RegisterUserRequest,
     RegisterUserResponse,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Вход в систему.",
+    description=textwrap.dedent("""\
+        Аутентифицирует пользователя по имени пользователя и паролю.
+
+        Для входа требуется передать следующие данные:
+        - ``username``: имя пользователя (логин);
+        - ``password``: пароль пользователя.
+
+        При успешной аутентификации система создаёт новую сессию,
+        возвращает access-токен в теле ответа и устанавливает
+        HttpOnly-cookie с refresh-токеном.
+
+        В случае ошибки (неверные учётные данные, неактивная учётная
+        запись или несоответствие данных требованиям) возвращается
+        соответствующий HTTP-код и сообщение об ошибке.
+    """),
+    response_description="Успешная аутентификация",
+)
+async def login(
+    response: Response,
+    body: Annotated[LoginRequest, Body(description="Схема запроса на вход в систему.")],
+    login_use_case: LoginUserDependency,
+    auth_cookies_provider: AuthCookiesProviderDependency,
+) -> LoginResponse:
+    """Вход пользователя в систему.
+
+    Принимает учётные данные (имя пользователя и пароль), аутентифицирует
+    пользователя и создаёт новую пользовательскую сессию.
+
+    Parameters
+    ----------
+    response : Response
+        Объект HTTP-ответа FastAPI. Используется для установки
+        HttpOnly-cookie с refresh-токеном.
+    body : LoginRequest
+        Валидированная схема тела запроса, содержащая данные для входа:
+        username (str) и password (str).
+    login_use_case : LoginUseCase
+        Use Case аутентификации пользователя, полученный через DI-зависимость
+        FastAPI из контейнера приложения.
+    auth_cookies_provider : AuthCookiesProvider
+        Провайдер auth-cookie, полученный через DI-зависимость FastAPI
+        из контейнера приложения. Используется для установки HttpOnly-cookie
+        с refresh-токеном в ответ.
+
+    Returns
+    -------
+    LoginResponse
+        Ответ с кодом 200 и access-токеном для дальнейшей аутентификации
+        запросов. Refresh-токен устанавливается отдельно в HttpOnly-cookie.
+    """
+    result = await login_use_case.execute(
+        LoginCommand(username=Username(body.username), password=Password(body.password))
+    )
+
+    auth_cookies_provider.set_refresh_token_cookie(
+        response=response, refresh_token=result.refresh_token
+    )
+
+    return LoginResponse(
+        detail="User logged in successfully.", access_token=result.access_token
+    )
 
 
 @router.post(
@@ -44,7 +115,7 @@ async def register(
         RegisterUserRequest,
         Body(description="Схема запроса на регистрацию пользователя."),
     ],
-    register_user: RegisterUserDependency,
+    register_user_use_case: RegisterUserDependency,
     auth_cookies_provider: AuthCookiesProviderDependency,
 ) -> RegisterUserResponse:
     """Регистрация нового пользователя.
@@ -60,7 +131,7 @@ async def register(
     body : RegisterUserRequest
         Валидированная схема тела запроса, содержащая данные для регистрации:
         username (str), password (str) и display_name (str).
-    register_user : RegisterUserUseCase
+    register_user_use_case : RegisterUserUseCase
         Use Case регистрации пользователя, полученный через DI-зависимость
         FastAPI из контейнера приложения.
     auth_cookies_provider : AuthCookiesProvider
@@ -75,7 +146,7 @@ async def register(
         и access-токеном для немедленной аутентификации. Refresh-токен
         устанавливается отдельно в HttpOnly-cookie.
     """
-    result = await register_user.execute(
+    result = await register_user_use_case.execute(
         RegisterUserCommand(
             username=Username(body.username),
             password=Password(body.password),

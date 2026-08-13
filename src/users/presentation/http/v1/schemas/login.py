@@ -1,12 +1,8 @@
 from typing import Annotated
 
-from pydantic import UUID4, Field, StringConstraints
+from pydantic import Field, StringConstraints
 
 from src.shared.presentation.http.schemas import BaseJsonModel, StandardResponse
-from src.users.domain.value_objects.display_name import (
-    DISPLAY_NAME_MAX_LENGTH,
-    DISPLAY_NAME_MIN_LENGTH,
-)
 from src.users.domain.value_objects.password import (
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
@@ -19,8 +15,8 @@ from src.users.domain.value_objects.username import (
 from src.users.presentation.http.v1.schemas._helpers import length_description
 
 
-class RegisterUserRequest(BaseJsonModel):
-    """Схема запроса регистрации.
+class LoginRequest(BaseJsonModel):
+    """Схема запроса входа в систему.
 
     Attributes
     ----------
@@ -28,13 +24,11 @@ class RegisterUserRequest(BaseJsonModel):
         Строковое представление логина пользователя.
     password : str
         Строковое представление пароля пользователя.
-    display_name : str
-        Строковое представление отображаемого имени пользователя.
 
     Notes
     -----
-    Для логина пользователя (username) и отображаемого имени пользователя (display_name)
-    ведущие и завершающие пробельные символы удаляются перед обработкой.
+    Для логина пользователя (username) ведущие и завершающие пробельные
+    символы удаляются перед обработкой.
 
     See Also
     --------
@@ -74,37 +68,17 @@ class RegisterUserRequest(BaseJsonModel):
         examples=["НадёжныйP@ssword123!"],
         json_schema_extra={"sensitive": True},
     )
-    display_name: Annotated[
-        str,
-        StringConstraints(
-            strip_whitespace=True,
-            min_length=DISPLAY_NAME_MIN_LENGTH,
-            max_length=DISPLAY_NAME_MAX_LENGTH,
-        ),
-    ] = Field(
-        description=(
-            "Отображаемое имя пользователя ("
-            + f"{
-                length_description(DISPLAY_NAME_MIN_LENGTH, DISPLAY_NAME_MAX_LENGTH)
-            }, "
-            + "любые Unicode-символы"
-            + ")."
-        ),
-        examples=["Александр", "7", "一只非常重要的鸡", "🍆"],
-    )
 
 
-class RegisterUserResponse(StandardResponse):
-    """Модель ответа на успешную регистрацию пользователя.
+class LoginResponse(StandardResponse):
+    """Модель ответа на успешный вход в систему.
 
-    Содержит идентификатор созданной учётной записи и access-токен
-    для немедленной аутентификации. Refresh-токен передаётся клиенту
-    не в теле ответа, а в HttpOnly-cookie, поэтому в модели отсутствует.
+    Содержит access-токен для дальнейшей аутентификации запросов.
+    Refresh-токен передаётся клиенту не в теле ответа, а в HttpOnly-cookie,
+    поэтому в модели отсутствует.
 
     Attributes
     ----------
-    user_id : UUID
-        Публичный идентификатор созданной учётной записи.
     access_token : str
         Access JWT для аутентификации последующих запросов.
 
@@ -114,13 +88,6 @@ class RegisterUserResponse(StandardResponse):
         Базовая модель ответа с полями ``code`` и ``detail``.
     """
 
-    user_id: UUID4 = Field(
-        description="Публичный идентификатор пользователя (UUID четвёртой версии).",
-        examples=[
-            "123e4567-e89b-12d3-a456-426614174000",
-            "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-        ],
-    )
     access_token: str = Field(
         description="Токен доступа, предоставляемый пользователю.",
         examples=[
