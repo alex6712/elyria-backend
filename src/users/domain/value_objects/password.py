@@ -1,6 +1,6 @@
 import unicodedata
 from dataclasses import dataclass
-from typing import override
+from typing import Any, NoReturn, override
 
 from src.users.domain.exceptions import InvalidPasswordLengthError
 
@@ -14,7 +14,7 @@ _PASSWORD_MASK = "********"
 """Маска, подставляемая вместо пароля в строковых представлениях."""
 
 
-@dataclass(init=False, repr=False, frozen=True, slots=True)
+@dataclass(init=False, repr=False, eq=False, frozen=True, slots=True)
 class Password:
     """Объект-значение, представляющий пароль пользователя.
 
@@ -109,3 +109,44 @@ class Password:
         его попадание в логи и дампы объектов.
         """
         return f"Password({_PASSWORD_MASK!r})"
+
+    @override
+    def __eq__(self, other: Any) -> NoReturn:
+        """Запрещает прямое сравнение паролей.
+
+        Parameters
+        ----------
+        other : Any
+            Объект, с которым предпринимается попытка сравнения.
+
+        Raises
+        ------
+        TypeError
+            Всегда, при любой попытке сравнения.
+
+        Notes
+        -----
+        Сравнение паролей в открытом виде (в том числе на равенство)
+        является небезопасной практикой. Чтобы исключить подобные ошибки
+        на уровне домена, оператор сравнения намеренно заблокирован.
+        """
+        raise TypeError("Passwords must not be compared directly.")
+
+    @override
+    def __hash__(self) -> NoReturn:
+        """Запрещает вычисление хеша пароля.
+
+        Raises
+        ------
+        TypeError
+            Всегда, при любой попытке вычислить хеш.
+
+        Notes
+        -----
+        Поскольку класс переопределяет ``__eq__``, интерпретатор
+        Python по умолчанию делает экземпляры нехешируемыми.
+        Метод переопределён явно, чтобы при попытке такого
+        использования выбрасывалось информативное исключение,
+        а не неочевидный ``TypeError: unhashable type``.
+        """
+        raise TypeError("Passwords cannot be hashed without using special tools.")
