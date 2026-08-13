@@ -1420,14 +1420,14 @@ wheels = [
 
 [[package]]
 name = "python-discovery"
-version = "1.5.1"
+version = "1.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/b7/1581a8103855c43567776aa34135e5ec3c597346c23bfd10c7eb5e0b10a4/python_discovery-1.5.1.tar.gz", hash = "sha256:e2ea8b884cd1701f386eda8cf327b87743f1dc21b7f784470799537d95635384", size = 77200, upload-time = "2026-07-31T22:06:02.48Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/b7/ac44da2cf0e53ada0e419033c2d058219c95dc1403126f163304c9e814b1/python_discovery-1.5.2.tar.gz", hash = "sha256:45fd4f20a4e3f9b7bf2e0817870bc8e3b320a19658da177af800768c82dbf354", size = 82350, upload-time = "2026-08-12T14:05:26.419Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/07/a89b539750a159d5101c4eb9fc84e2961f65cefbd5e0b7440b284471c0b0/python_discovery-1.5.1-py3-none-any.whl", hash = "sha256:ac07f44cade589d954e9d6a1e1468539fdddd2cf676beb51da73e0f156b7c932", size = 35752, upload-time = "2026-07-31T22:06:01.116Z" },
+    { url = "https://files.pythonhosted.org/packages/71/45/689603d04b3bb8d7faa00f25c24acef993aab7813b3dbbfc472a459ab0b5/python_discovery-1.5.2-py3-none-any.whl", hash = "sha256:3e338c2d0f15dfaeea57493f4c2c6caebe0e998ea815c30ae8bf8ee21f1112d3", size = 38350, upload-time = "2026-08-12T14:05:25.113Z" },
 ]
 
 [[package]]
@@ -1621,15 +1621,15 @@ wheels = [
 
 [[package]]
 name = "sentry-sdk"
-version = "2.67.1"
+version = "2.68.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/8a/b2eec40df8a67bf073e244d29001d04ee365d163bc4f15efdfce35f53090/sentry_sdk-2.67.1.tar.gz", hash = "sha256:f263d8c9aa4137750640de8fb0ed5404df6bb564e20e4b59cb16a6eeba18d4ed", size = 990599, upload-time = "2026-08-10T13:05:55.892Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/94/23b7dd072acb9628907bd3f4fbf61794a7b12a9db8f33c1276f70ae5ac92/sentry_sdk-2.68.0.tar.gz", hash = "sha256:648c58e9887311a03470a41539e24bdbbf64a30ca4f5336f7e3dcc87276400b3", size = 1008854, upload-time = "2026-08-13T09:06:21.268Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/e2/70692eba662037cddf93391cbbf98297159f3038612e9b9a8129e16feb7a/sentry_sdk-2.67.1-py3-none-any.whl", hash = "sha256:a66bfbce1cd8a93c51c369d642ad85b46253ea7a6f7938141315b83e2823cda5", size = 515591, upload-time = "2026-08-10T13:05:54.213Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/9b/e2421d08956d0bc4691d995393d835e563886bff499d8fb10fdefae85a8d/sentry_sdk-2.68.0-py3-none-any.whl", hash = "sha256:538e56c2d03679d42f7c0cb5f1af73a7a510b00abc7e296c13ac49b107b713a4", size = 518670, upload-time = "2026-08-13T09:06:19.735Z" },
 ]
 
 [[package]]
@@ -1742,14 +1742,14 @@ wheels = [
 
 [[package]]
 name = "typing-inspection"
-version = "0.4.3"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/bc/4eae18cd40c65798a16267572ba346c11f599d44b01603dbd843342042bc/typing_inspection-0.4.3.tar.gz", hash = "sha256:c5f9ec1530b5c1e2c9bc34a84d9a3466ed1b2f3f2fa9f901368d9c5596210e4d", size = 76711, upload-time = "2026-08-10T09:39:18.063Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/26/b09b8010994eccc3c09092e6b34058f36a460eea2d4c3e8b910c695975a0/typing_inspection-0.4.4.tar.gz", hash = "sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47", size = 76928, upload-time = "2026-08-12T12:37:25.997Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/f7/7a3935abdebd5cf18705a5f0335dd6a3a18bef3baa7cb9edc3b6b9922cc8/typing_inspection-0.4.3-py3-none-any.whl", hash = "sha256:5f42b23858a91e0b4ef521f5418f03a0da3c9216fd2995ef5e73463100e676cd", size = 14693, upload-time = "2026-08-10T09:39:16.693Z" },
+    { url = "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl", hash = "sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147", size = 14750, upload-time = "2026-08-12T12:37:24.648Z" },
 ]
 
 [[package]]
@@ -1763,15 +1763,15 @@ wheels = [
 
 [[package]]
 name = "uvicorn"
-version = "0.52.1"
+version = "0.52.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "h11" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/18/ccce41535dee1be77735592bd19965f3972c82e07ee703d324709496b716/uvicorn-0.52.1.tar.gz", hash = "sha256:112ec661814189acbccd3f7b86460147cc065fc92c0821afa78918780e4354dd", size = 100571, upload-time = "2026-08-01T18:19:30.732Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/53/be79eff13cc289570b4c6875fa4641a91a1dc51ece7f6213f364b0a58c4c/uvicorn-0.52.2.tar.gz", hash = "sha256:4294500b9c8f7a3ef3e975d9e4be08c3eb76441af449a9e6e10146c6a182ffec", size = 100685, upload-time = "2026-08-13T07:03:57.377Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c7/d5/68e6e9bca63c0badf67002890a46d3784c958de45b65e1275ec583ca1f06/uvicorn-0.52.1-py3-none-any.whl", hash = "sha256:e4403f9d93188cf9d1088e9f40e3acd12630e2df8675316704379a7fc20fff6a", size = 79859, upload-time = "2026-08-01T18:19:29.294Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/08/0d834cf3e61e476c9f422e856a9e37d12d708d7ada942a2774b1f42aee6c/uvicorn-0.52.2-py3-none-any.whl", hash = "sha256:0b916d247cf5500b320638ea11abf0fed7f348e8e1c7fde53a0e6b6319803512", size = 79912, upload-time = "2026-08-13T07:03:55.658Z" },
 ]
 
 [package.optional-dependencies]

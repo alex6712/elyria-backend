@@ -179,7 +179,7 @@ rignore==0.8.1
     # via fastapi-cloud-cli
 s3transfer==0.14.0
     # via boto3
-sentry-sdk==2.67.1
+sentry-sdk==2.68.0
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
@@ -208,7 +208,7 @@ typing-extensions==4.16.0
     #   rich-toolkit
     #   sqlalchemy
     #   typing-inspection
-typing-inspection==0.4.3
+typing-inspection==0.4.4
     # via
     #   fastapi
     #   pydantic
@@ -217,7 +217,7 @@ urllib3==2.7.0
     # via
     #   botocore
     #   sentry-sdk
-uvicorn==0.52.1
+uvicorn==0.52.2
     # via
     #   fastapi
     #   fastapi-cli
