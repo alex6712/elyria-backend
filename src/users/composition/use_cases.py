@@ -14,7 +14,7 @@ from src.users.application.use_cases import (
     RefreshSessionUseCase,
     RegisterUserUseCase,
 )
-from src.users.infrastructure import SqlAlchemyUsersUnitOfWork
+from src.users.infrastructure.adapters import SqlAlchemyUsersUnitOfWork
 
 
 def build_register_user_use_case(
