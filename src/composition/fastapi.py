@@ -21,7 +21,13 @@ from src.composition.paths import HTTP_STATIC_FILES_PATH
 from src.composition.redis import build_redis_client
 from src.composition.settings import get_settings
 from src.observability.presentation.http.routes import observability_router
+from src.shared.presentation.http.handlers import (
+    register_exception_handlers as register_shared_exception_handlers,
+)
 from src.users.composition import build_hibp_http_client
+from src.users.presentation.http.v1.handlers import (
+    register_exception_handlers as register_users_exception_handlers,
+)
 from src.users.presentation.http.v1.routes import users_v1_router
 
 _settings = get_settings()
@@ -95,6 +101,9 @@ elyria_fastapi.add_middleware(
 
 elyria_fastapi.include_router(observability_router)
 elyria_fastapi.include_router(users_v1_router)
+
+register_shared_exception_handlers(elyria_fastapi)
+register_users_exception_handlers(elyria_fastapi)
 
 elyria_fastapi.mount(
     "/", StaticFiles(directory=HTTP_STATIC_FILES_PATH, html=True), name="static"
