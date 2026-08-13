@@ -3,19 +3,26 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Request, Response, status
 
+from src.shared.presentation.http.schemas import StandardResponse
 from src.users.application.commands import (
     LoginCommand,
+    LogoutCommand,
     RefreshSessionCommand,
     RegisterUserCommand,
 )
 from src.users.domain.value_objects import DisplayName, Password, Username
 from src.users.presentation.http.dependencies import (
+    AccessTokenDependency,
     AuthCookiesProviderDependency,
     LoginUserDependency,
+    LogoutDependency,
     RefreshSessionDependency,
     RegisterUserDependency,
 )
-from src.users.presentation.http.exceptions import RefreshTokenMissingError
+from src.users.presentation.http.exceptions import (
+    AccessTokenMissingError,
+    RefreshTokenMissingError,
+)
 from src.users.presentation.http.v1.schemas import (
     LoginRequest,
     LoginResponse,
@@ -93,6 +100,81 @@ async def login(
     return LoginResponse(
         detail="User logged in successfully.", access_token=result.access_token
     )
+
+
+@router.post(
+    "/logout",
+    response_model=StandardResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Завершение сессии пользователя.",
+    description=textwrap.dedent("""\
+        Завершает пользовательскую сессию и отзывает токены.
+
+        Access-токен передаётся в заголовке ``Authorization``
+        в формате ``Bearer <token>``. При успешном завершении сессии
+        access-токен добавляется в чёрный список, связанная сессия
+        помечается как отозванная, а HttpOnly-cookie с refresh-токеном
+        удаляется из ответа.
+
+        Операция идемпотентна: повторный вызов с отозванным токеном
+        не является ошибкой.
+
+        В случае ошибки (отсутствие access-токена, истёкший токен
+        или недействительная подпись) возвращается соответствующий
+        HTTP-код и сообщение об ошибке.
+    """),
+    response_description="Успешное завершение сессии",
+)
+async def logout(
+    response: Response,
+    credentials: AccessTokenDependency,
+    logout_user: LogoutDependency,
+    auth_cookies_provider: AuthCookiesProviderDependency,
+) -> StandardResponse:
+    """Завершение пользовательской сессии.
+
+    Принимает access-токен из Bearer-заголовка, отзывает его
+    и связанную с ним сессию, удаляет HttpOnly-cookie с refresh-токеном.
+
+    Parameters
+    ----------
+    response : Response
+        Объект HTTP-ответа FastAPI. Используется для удаления
+        HttpOnly-cookie с refresh-токеном.
+    credentials : HTTPAuthorizationCredentials | None
+        Учётные данные Bearer-схемы из заголовка ``Authorization``
+        входящего запроса. Значение ``None`` означает отсутствие
+        заголовка либо некорректную схему.
+    logout_user : LogoutUseCase
+        Use Case завершения сессии, полученный через DI-зависимость
+        FastAPI из контейнера приложения.
+    auth_cookies_provider : AuthCookiesProvider
+        Провайдер auth-cookie, полученный через DI-зависимость FastAPI
+        из контейнера приложения. Используется для удаления HttpOnly-cookie
+        с refresh-токеном из ответа.
+
+    Returns
+    -------
+    StandardResponse
+        Ответ с кодом 200 и сообщением об успешном завершении сессии.
+
+    Raises
+    ------
+    AccessTokenMissingError
+        Если заголовок ``Authorization`` с Bearer-схемой отсутствует
+        во входящем запросе либо имеет некорректный формат.
+    """
+    if credentials is None:
+        raise AccessTokenMissingError(
+            "Access token is missing. "
+            + "Provide it in the Authorization: Bearer <token> header."
+        )
+
+    await logout_user.execute(LogoutCommand(access_token=credentials.credentials))
+
+    auth_cookies_provider.delete_refresh_token_cookie(response)
+
+    return StandardResponse(detail="User logged out successfully.")
 
 
 @router.post(

@@ -1,13 +1,46 @@
 from typing import Annotated
 
 from fastapi import Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.users.application.use_cases import (
     LoginUseCase,
+    LogoutUseCase,
     RefreshSessionUseCase,
     RegisterUserUseCase,
 )
 from src.users.presentation.http.services import AuthCookiesProvider
+
+http_bearer = HTTPBearer(auto_error=False)
+"""Экземпляр Bearer-схемы аутентификации FastAPI.
+
+Используется как security-схема OpenAPI для эндпоинтов, принимающих
+access-токен в заголовке ``Authorization``. С ``auto_error=False``
+не бросает исключение при отсутствии заголовка - возвращает ``None``,
+оставляя обработку ошибки вызывающему коду.
+"""
+
+AccessTokenDependency = Annotated[
+    HTTPAuthorizationCredentials | None, Depends(http_bearer)
+]
+"""Типизированная FastAPI-зависимость access-токена из Bearer-заголовка.
+
+Извлекает учётные данные Bearer-схемы из заголовка ``Authorization``
+входящего запроса. Значение ``None`` означает, что заголовок отсутствует
+либо схема не является Bearer - в этом случае обработка ошибки
+выполняется вызывающим кодом:
+
+.. code-block:: python
+
+    @router.post("/logout")
+    async def logout(
+        credentials: AccessTokenDependency,
+        ...,
+    ) -> StandardResponse:
+        if credentials is None:
+            raise AccessTokenMissingError(...)
+        token = credentials.credentials
+"""
 
 
 def _get_login_use_case(request: Request) -> LoginUseCase:
@@ -47,6 +80,46 @@ LoginUserDependency = Annotated[LoginUseCase, Depends(_get_login_use_case)]
         ...,
     ) -> LoginResponse:
         result = await login_user.execute(...)
+"""
+
+
+def _get_logout_use_case(request: Request) -> LogoutUseCase:
+    """Получить Use Case завершения сессии из DI-контейнера.
+
+    Единственное место в модуле Users, где выполняется доступ к
+    нетипизированному ``request.app.state.container`` - Starlette не
+    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
+    тип принудительно объявляется сигнатурой функции.
+
+    Parameters
+    ----------
+    request : Request
+        Объект HTTP-запроса FastAPI. Используется для доступа
+        к глобальному DI-контейнеру приложения через ``app.state``.
+
+    Returns
+    -------
+    LogoutUseCase
+        Use Case завершения пользовательской сессии.
+    """
+    return request.app.state.container.users.logout_use_case
+
+
+LogoutDependency = Annotated[LogoutUseCase, Depends(_get_logout_use_case)]
+"""Типизированная FastAPI-зависимость Use Case завершения сессии.
+
+Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
+роутам готовый экземпляр :class:`LogoutUseCase` без ручного приведения
+типов. Используется как аннотация параметра обработчика:
+
+.. code-block:: python
+
+    @router.post("/logout")
+    async def logout(
+        logout_user: LogoutDependency,
+        ...,
+    ) -> StandardResponse:
+        await logout_user.execute(...)
 """
 
 

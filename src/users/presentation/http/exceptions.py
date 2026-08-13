@@ -7,3 +7,14 @@ class RefreshTokenMissingError(Exception):
     """
 
     pass
+
+
+class AccessTokenMissingError(Exception):
+    """Access-токен отсутствует в запросе.
+
+    Возникает на уровне представления при попытке завершения сессии
+    без access-токена: заголовок ``Authorization`` с Bearer-схемой
+    отсутствует во входящем запросе либо имеет некорректный формат.
+    """
+
+    pass
