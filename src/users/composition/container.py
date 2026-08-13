@@ -106,7 +106,7 @@ class UsersContainer:
         self.auth_cookies_provider = auth_cookies_provider
 
     @property
-    def register_use_case(self) -> RegisterUserUseCase:
+    def register_user_use_case(self) -> RegisterUserUseCase:
         """Получить новый экземпляр Use Case регистрации пользователя.
 
         Returns
