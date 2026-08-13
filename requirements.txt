@@ -81,7 +81,7 @@ frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-greenlet==3.5.4
+greenlet==3.5.5
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -131,7 +131,7 @@ propcache==0.5.2
     # via
     #   aiohttp
     #   yarl
-pwdlib==0.3.0
+pwdlib==0.3.1
     # via elyria-backend (pyproject.toml)
 pycparser==3.0
     # via cffi
@@ -179,7 +179,7 @@ rignore==0.8.1
     # via fastapi-cloud-cli
 s3transfer==0.14.0
     # via boto3
-sentry-sdk==2.66.1
+sentry-sdk==2.67.1
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
@@ -187,7 +187,7 @@ six==1.17.0
     # via python-dateutil
 slowapi==0.1.10
     # via elyria-backend (pyproject.toml)
-sqlalchemy==2.0.51
+sqlalchemy==2.0.52
     # via
     #   elyria-backend (pyproject.toml)
     #   alembic
@@ -208,7 +208,7 @@ typing-extensions==4.16.0
     #   rich-toolkit
     #   sqlalchemy
     #   typing-inspection
-typing-inspection==0.4.2
+typing-inspection==0.4.3
     # via
     #   fastapi
     #   pydantic
