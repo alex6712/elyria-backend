@@ -1,8 +1,8 @@
 from typing import Annotated, Literal
 
-from pydantic import Field, StringConstraints
+from pydantic import UUID4, Field, StringConstraints
 
-from src.shared.presentation.http.schemas import BaseJsonModel
+from src.shared.presentation.http.schemas import BaseJsonModel, StandardResponse
 from src.users.domain.value_objects.display_name import (
     DISPLAY_NAME_MAX_LENGTH,
     DISPLAY_NAME_MIN_LENGTH,
@@ -185,4 +185,45 @@ class RegisterUserRequest(BaseJsonModel):
             + ")."
         ),
         examples=["Александр", "7", "一只非常重要的鸡", "🍆"],
+    )
+
+
+class RegisterUserResponse(StandardResponse):
+    """Модель ответа на успешную регистрацию пользователя.
+
+    Содержит идентификатор созданной учётной записи и access-токен
+    для немедленной аутентификации. Refresh-токен передаётся клиенту
+    не в теле ответа, а в HttpOnly-cookie, поэтому в модели отсутствует.
+
+    Attributes
+    ----------
+    user_id : UUID
+        Публичный идентификатор созданной учётной записи.
+    access_token : str
+        Access JWT для аутентификации последующих запросов.
+
+    See Also
+    --------
+    :class:`StandardResponse`
+        Базовая модель ответа с полями ``code`` и ``detail``.
+    """
+
+    user_id: UUID4 = Field(
+        description="Публичный идентификатор пользователя (UUID четвёртой версии).",
+        examples=[
+            "123e4567-e89b-12d3-a456-426614174000",
+            "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        ],
+    )
+    access_token: str = Field(
+        description="Токен доступа, предоставляемый пользователю.",
+        examples=[
+            "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9."
+            + "eyJzdWIiOiIxMjNlNDU2Ny1lODliLTEyZDMtYTQ1Ni00MjY2MTQxNzQwMDAiLCJpc3M"
+            + "iOiJodHRwczovL2FwaS5lbHlyaWEucnUiLCJpYXQiOjE3NTY4MTI4MDAsImV4cCI6MT"
+            + "c1NjgxNjQwMCwianRpIjoiMTIzZTQ1NjctZTg5Yi0xMmQzLWE0NTYtNDI2NjE0MTc0M"
+            + "DAxIiwic2lkIjoiMTIzZTQ1NjctZTg5Yi0xMmQzLWE0NTYtNDI2NjE0MTc0MDAyIn0."
+            + "5FbYeYiWaFIh18XlVGRMIbcQBrh3PJlU0wdmpnOAShy"
+            + "TuqukDqMV8bfz2_8SMdbnQz0gvst56uz2Tq6l-RMDBw",
+        ],
     )

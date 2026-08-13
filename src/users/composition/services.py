@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from httpx import AsyncClient
 from redis.asyncio import Redis as AsyncRedis
@@ -14,9 +15,56 @@ from src.users.infrastructure.adapters.security import (
     SignatureKeys,
     SignatureKeysProvider,
 )
+from src.users.presentation.http.services import AuthCookiesProvider
 
 _HIBP_TIMEOUT_SECONDS = 5.0
 """Максимальное время ожидания ответа от API HIBP в секундах."""
+
+
+def build_auth_cookies_provider(
+    refresh_token_cookie_name: str,
+    refresh_token_lifetime_days: int,
+    auth_cookie_path: str,
+    auth_cookie_domain: str | None,
+    auth_cookie_secure: bool,
+    auth_cookie_samesite: Literal["lax", "strict", "none"],
+) -> AuthCookiesProvider:
+    """Создать провайдер HttpOnly-cookie refresh-токена.
+
+    Провайдер управляет auth-cookie: устанавливает и удаляет
+    HttpOnly-cookie refresh-токена в HTTP-ответах роутеров.
+    Все атрибуты cookie передаются параметрами, что позволяет
+    модулю Users не зависеть от глобального Composition Root.
+
+    Parameters
+    ----------
+    refresh_token_cookie_name : str
+        Имя cookie с refresh-токеном.
+    refresh_token_lifetime_days : int
+        Время жизни refresh-токена в днях, определяющее ``Max-Age``
+        cookie.
+    auth_cookie_path : str
+        Значение атрибута ``Path`` cookie.
+    auth_cookie_domain : str | None
+        Значение атрибута ``Domain`` cookie.
+    auth_cookie_secure : bool
+        Флаг ``Secure``: передавать cookie только по HTTPS.
+    auth_cookie_samesite : Literal["lax", "strict", "none"]
+        Значение атрибута ``SameSite`` cookie.
+
+    Returns
+    -------
+    AuthCookiesProvider
+        Провайдер установки и удаления auth-cookie refresh-токена.
+    """
+    return AuthCookiesProvider(
+        refresh_token_cookie_name=refresh_token_cookie_name,
+        refresh_token_lifetime_days=refresh_token_lifetime_days,
+        auth_cookie_path=auth_cookie_path,
+        auth_cookie_domain=auth_cookie_domain,
+        auth_cookie_secure=auth_cookie_secure,
+        auth_cookie_samesite=auth_cookie_samesite,
+    )
 
 
 @lru_cache

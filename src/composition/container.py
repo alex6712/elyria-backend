@@ -50,6 +50,11 @@ def build_application_container() -> ApplicationContainer:
             private_key_path=PRIVATE_SIGNATURE_KEY_PATH,
             private_signature_password=settings.PRIVATE_SIGNATURE_KEY_PASSWORD,
             access_token_lifetime_minutes=settings.ACCESS_TOKEN_LIFETIME_MINUTES,
+            refresh_token_cookie_name=settings.REFRESH_TOKEN_COOKIE_NAME,
             refresh_token_lifetime_days=settings.REFRESH_TOKEN_LIFETIME_DAYS,
+            auth_cookie_path=settings.AUTH_COOKIE_PATH,
+            auth_cookie_domain=settings.AUTH_COOKIE_DOMAIN,
+            auth_cookie_secure=settings.AUTH_COOKIE_SECURE,
+            auth_cookie_samesite=settings.AUTH_COOKIE_SAMESITE,
         ),
     )

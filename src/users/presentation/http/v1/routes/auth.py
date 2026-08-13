@@ -1,19 +1,25 @@
 import textwrap
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Request, status
+from fastapi import APIRouter, Body, Response, status
 
-from src.shared.presentation.http.schemas import StandardResponse
 from src.users.application.commands import RegisterUserCommand
 from src.users.domain.value_objects import DisplayName, Password, Username
-from src.users.presentation.http.v1.schemas import RegisterUserRequest
+from src.users.presentation.http.dependencies import (
+    AuthCookiesProviderDependency,
+    RegisterUserDependency,
+)
+from src.users.presentation.http.v1.schemas import (
+    RegisterUserRequest,
+    RegisterUserResponse,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post(
     "/register",
-    response_model=StandardResponse,
+    response_model=RegisterUserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Регистрация пользователя.",
     description=textwrap.dedent("""\
@@ -33,12 +39,14 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     response_description="Успешная регистрация",
 )
 async def register(
-    request: Request,
+    response: Response,
     body: Annotated[
         RegisterUserRequest,
         Body(description="Схема запроса на регистрацию пользователя."),
     ],
-) -> StandardResponse:
+    register_user: RegisterUserDependency,
+    auth_cookies_provider: AuthCookiesProviderDependency,
+) -> RegisterUserResponse:
     """Регистрация нового пользователя.
 
     Принимает данные для регистрации (имя пользователя, пароль, отображаемое имя),
@@ -46,19 +54,28 @@ async def register(
 
     Parameters
     ----------
-    request : Request
-        Объект HTTP-запроса FastAPI. Используется для доступа к глобальному
-        DI-контейнеру через атрибуты состояния приложения.
+    response : Response
+        Объект HTTP-ответа FastAPI. Используется для установки
+        HttpOnly-cookie с refresh-токеном.
     body : RegisterUserRequest
         Валидированная схема тела запроса, содержащая данные для регистрации:
         username (str), password (str) и display_name (str).
+    register_user : RegisterUserUseCase
+        Use Case регистрации пользователя, полученный через DI-зависимость
+        FastAPI из контейнера приложения.
+    auth_cookies_provider : AuthCookiesProvider
+        Провайдер auth-cookie, полученный через DI-зависимость FastAPI
+        из контейнера приложения. Используется для установки HttpOnly-cookie
+        с refresh-токеном в ответ.
 
     Returns
     -------
-    StandardResponse
-        Ответ с кодом 201 и сообщением об успешной регистрации.
+    RegisterUserResponse
+        Ответ с кодом 201, идентификатором созданного пользователя
+        и access-токеном для немедленной аутентификации. Refresh-токен
+        устанавливается отдельно в HttpOnly-cookie.
     """
-    await request.app.state.container.users.register_user().execute(
+    result = await register_user.execute(
         RegisterUserCommand(
             username=Username(body.username),
             password=Password(body.password),
@@ -66,4 +83,12 @@ async def register(
         )
     )
 
-    return StandardResponse(detail="User registered successfully.")
+    auth_cookies_provider.set_refresh_token_cookie(
+        response=response, refresh_token=result.refresh_token
+    )
+
+    return RegisterUserResponse(
+        detail="User registered successfully.",
+        user_id=result.user_id,
+        access_token=result.access_token,
+    )
