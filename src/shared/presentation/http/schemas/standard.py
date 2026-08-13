@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+from pydantic_core import ErrorDetails
 
 from src.shared.presentation.http import APICode
 
@@ -93,6 +94,33 @@ class StandardResponse(BaseJsonModel):
             "Access token is missing. Provide it in the "
             + "Authorization: Bearer <token> header.",
         ],
+    )
+
+
+class ValidationErrorResponse(BaseJsonModel):
+    """Стандартная модель ответа об ошибке валидации.
+
+    Используется в качестве тела ответа обработчика
+    ``RequestValidationError`` для сохранения единого формата
+    ответов API: поле ``code`` присутствует и в успешных,
+    и в ошибочных ответах.
+
+    Attributes
+    ----------
+    code : APICode
+        Код результата операции, фиксированное значение
+        ``VALIDATION_ERROR``.
+    detail : list[ErrorDetails]
+        Список описаний ошибок валидации переданных данных.
+    """
+
+    code: APICode = Field(
+        default=APICode.VALIDATION_ERROR,
+        description="Код результата операции в виде перечисления APICode.",
+        examples=[APICode.VALIDATION_ERROR],
+    )
+    detail: list[ErrorDetails] = Field(
+        description="Список ошибок валидации переданных данных."
     )
 
 
