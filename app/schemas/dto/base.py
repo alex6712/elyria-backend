@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, Self, Sequence
+from typing import Any, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -96,8 +97,6 @@ class BaseFilterDTO(BaseDTO):
     отличать "поле не передано" от "поле передано как None".
     """
 
-    pass
-
 
 class BaseFilterOneDTO(BaseFilterDTO):
     """Базовый DTO для фильтрации одиночной записи.
@@ -173,8 +172,6 @@ class BaseFilterManyDTO(BaseFilterDTO):
     Конкретные подклассы могут добавлять поля пагинации, сортировки
     и произвольные фильтры в зависимости от требований сервиса.
     """
-
-    pass
 
 
 class BaseSearchDTO(BaseDTO):

@@ -439,7 +439,9 @@ class FileService:
 
         # FIXME: следствие ограничения в 64 символа на имя файла
         if len(create_dto.title) > 64:
-            create_dto.title = create_dto.title[:32] + create_dto.title[32:]
+            object.__setattr__(
+                create_dto, "title", create_dto.title[:32] + create_dto.title[32:]
+            )
 
         await self._file_repo.create_one(create_dto)
 
@@ -559,7 +561,9 @@ class FileService:
         # FIXME: следствие ограничения в 64 символа на имя файла
         for create_dto in create_dtos:
             if len(create_dto.title) > 64:
-                create_dto.title = create_dto.title[:32] + create_dto.title[32:]
+                object.__setattr__(
+                    create_dto, "title", create_dto.title[:32] + create_dto.title[32:]
+                )
 
         await self._file_repo.create_many(create_dtos)
 
