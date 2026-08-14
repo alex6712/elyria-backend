@@ -436,13 +436,6 @@ class FileService:
                 "created_by": user_id,
             }
         )
-
-        # FIXME: следствие ограничения в 64 символа на имя файла
-        if len(create_dto.title) > 64:
-            object.__setattr__(
-                create_dto, "title", create_dto.title[:32] + create_dto.title[32:]
-            )
-
         await self._file_repo.create_one(create_dto)
 
         try:
@@ -557,14 +550,6 @@ class FileService:
             )
             for metadata in valid_files
         ]
-
-        # FIXME: следствие ограничения в 64 символа на имя файла
-        for create_dto in create_dtos:
-            if len(create_dto.title) > 64:
-                object.__setattr__(
-                    create_dto, "title", create_dto.title[:32] + create_dto.title[32:]
-                )
-
         await self._file_repo.create_many(create_dtos)
 
         results = await asyncio.gather(
