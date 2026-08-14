@@ -30,16 +30,16 @@ AccessTokenDependency = Annotated[
 либо схема не является Bearer - в этом случае обработка ошибки
 выполняется вызывающим кодом:
 
-.. code-block:: python
-
-    @router.post("/logout")
-    async def logout(
-        credentials: AccessTokenDependency,
-        ...,
-    ) -> StandardResponse:
-        if credentials is None:
-            raise AccessTokenMissingError(...)
-        token = credentials.credentials
+```python
+@router.post("/logout")
+async def logout(
+    credentials: AccessTokenDependency,
+    ...,
+) -> StandardResponse:
+    if credentials is None:
+        raise AccessTokenMissingError(...)
+    token = credentials.credentials
+```
 """
 
 
@@ -72,14 +72,14 @@ LoginUserDependency = Annotated[LoginUseCase, Depends(_get_login_use_case)]
 роутам готовый экземпляр :class:`LoginUseCase` без ручного приведения
 типов. Используется как аннотация параметра обработчика:
 
-.. code-block:: python
-
-    @router.post("/login")
-    async def login(
-        login_user: LoginUserDependency,
-        ...,
-    ) -> LoginResponse:
-        result = await login_user.execute(...)
+```python
+@router.post("/login")
+async def login(
+    login_user: LoginUserDependency,
+    ...,
+) -> LoginResponse:
+    result = await login_user.execute(...)
+```
 """
 
 
@@ -112,14 +112,14 @@ LogoutDependency = Annotated[LogoutUseCase, Depends(_get_logout_use_case)]
 роутам готовый экземпляр :class:`LogoutUseCase` без ручного приведения
 типов. Используется как аннотация параметра обработчика:
 
-.. code-block:: python
-
-    @router.post("/logout")
-    async def logout(
-        logout_user: LogoutDependency,
-        ...,
-    ) -> StandardResponse:
-        await logout_user.execute(...)
+```python
+@router.post("/logout")
+async def logout(
+    logout_user: LogoutDependency,
+    ...,
+) -> StandardResponse:
+    await logout_user.execute(...)
+```
 """
 
 
@@ -154,14 +154,14 @@ RefreshSessionDependency = Annotated[
 роутам готовый экземпляр :class:`RefreshSessionUseCase` без ручного
 приведения типов. Используется как аннотация параметра обработчика:
 
-.. code-block:: python
-
-    @router.post("/refresh")
-    async def refresh(
-        refresh_session: RefreshSessionDependency,
-        ...,
-    ) -> RefreshSessionResponse:
-        result = await refresh_session.execute(...)
+```python
+@router.post("/refresh")
+async def refresh(
+    refresh_session: RefreshSessionDependency,
+    ...,
+) -> RefreshSessionResponse:
+    result = await refresh_session.execute(...)
+```
 """
 
 
@@ -196,14 +196,14 @@ RegisterUserDependency = Annotated[
 роутам готовый экземпляр :class:`RegisterUserUseCase` без ручного
 приведения типов. Используется как аннотация параметра обработчика:
 
-.. code-block:: python
-
-    @router.post("/register")
-    async def register(
-        register_user: RegisterUserDependency,
-        ...,
-    ) -> RegisterUserResponse:
-        result = await register_user.execute(...)
+```python
+@router.post("/register")
+async def register(
+    register_user: RegisterUserDependency,
+    ...,
+) -> RegisterUserResponse:
+    result = await register_user.execute(...)
+```
 """
 
 
@@ -238,15 +238,15 @@ AuthCookiesProviderDependency = Annotated[
 роутам готовый экземпляр :class:`AuthCookiesProvider` без ручного
 приведения типов. Используется как аннотация параметра обработчика:
 
-.. code-block:: python
-
-    @router.post("/register")
-    async def register(
-        response: Response,
-        auth_cookies_provider: AuthCookiesProviderDependency,
-        ...,
-    ) -> RegisterUserResponse:
-        auth_cookies_provider.set_refresh_token_cookie(
-            response=response, refresh_token=result.refresh_token,
-        )
+```python
+@router.post("/register")
+async def register(
+    response: Response,
+    auth_cookies_provider: AuthCookiesProviderDependency,
+    ...,
+) -> RegisterUserResponse:
+    auth_cookies_provider.set_refresh_token_cookie(
+        response=response, refresh_token=result.refresh_token,
+    )
+```
 """

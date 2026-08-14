@@ -30,22 +30,22 @@ class BaseJsonModel(BaseModel):
     --------
     Для поля ``created_at``:
 
-    .. code-block:: python
-
-        class UserResponse(BaseJsonModel):
-            created_at: datetime
+    ```python
+    class UserResponse(BaseJsonModel):
+        created_at: datetime
+    ```
 
     модель допускает заполнение по имени поля:
 
-    .. code-block:: python
-
-        UserResponse(created_at=value)
+    ```python
+    UserResponse(created_at=value)
+    ```
 
     а при сериализации с использованием alias получает имя:
 
-    .. code-block:: python
-
-        {"createdAt": ...}
+    ```python
+    {"createdAt": ...}
+    ```
 
     See Also
     --------
