@@ -139,7 +139,7 @@ class FileService:
         self,
         uow: UnitOfWork,
         redis_client: RedisClient,
-        s3_client: "S3Client",
+        s3_client: S3Client,
         settings: Settings,
     ):
         self._redis_client = redis_client
@@ -436,6 +436,11 @@ class FileService:
                 "created_by": user_id,
             }
         )
+
+        # FIXME: следствие ограничения в 64 символа на имя файла
+        if len(create_dto.title) > 64:
+            create_dto.title = create_dto.title[:32] + create_dto.title[32:]
+
         await self._file_repo.create_one(create_dto)
 
         try:
@@ -550,6 +555,12 @@ class FileService:
             )
             for metadata in valid_files
         ]
+
+        # FIXME: следствие ограничения в 64 символа на имя файла
+        for create_dto in create_dtos:
+            if len(create_dto.title) > 64:
+                create_dto.title = create_dto.title[:32] + create_dto.title[32:]
+
         await self._file_repo.create_many(create_dtos)
 
         results = await asyncio.gather(
@@ -666,7 +677,7 @@ class FileService:
             case UnsupportedFileTypeException():
                 code = UploadFileErrorCode.UNSUPPORTED_FILE_TYPE
             case _:
-                raise
+                raise exc
 
         return UploadFileErrorDTO(
             client_ref_id=client_ref_id, code=code, message=exc.detail
