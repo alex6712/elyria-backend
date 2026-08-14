@@ -34,17 +34,19 @@ class TokenInvalidError(Exception):
     Возникает при попытке верификации токена, в котором
     отсутствуют обязательные утверждения либо нарушен формат
     данных.
-
-    Parameters
-    ----------
-    detail : str
-        Причина недействительности токена.
     """
 
-    def __init__(self, detail: str) -> None:
-        super().__init__(detail)
+    pass
 
-        self.detail = detail
+
+class TokenRevokedError(Exception):
+    """Исключение при попытке использования отозванного токена.
+
+    Возникает в случае, когда токен, предоставленный в запросе, отозван.
+    Это может произойти, например, при выходе пользователя из системы.
+    """
+
+    pass
 
 
 class IncorrectUsernameOrPasswordError(Exception):

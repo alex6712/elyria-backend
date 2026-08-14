@@ -7,6 +7,7 @@ from src.users.application.exceptions import (
     IncorrectUsernameOrPasswordError,
     TokenExpiredError,
     TokenInvalidError,
+    TokenRevokedError,
     TokenSignatureInvalidError,
 )
 from src.users.domain.exceptions import SessionExpiredError, SessionRevokedError
@@ -199,6 +200,36 @@ async def _token_invalid_error_handler(
     )
 
 
+async def _token_revoked_error_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:
+    """Обработать исключение TokenRevokedError.
+
+    Возвращает клиенту ответ с HTTP 401 Unauthorized, если токен
+    был отозван.
+
+    Parameters
+    ----------
+    _request : Request
+        Объект запроса FastAPI, содержащий информацию о входящем
+        HTTP-запросе (не используется).
+    exc : Exception
+        Экземпляр исключения, из которого получается текст сообщения
+        об ошибке.
+
+    Returns
+    -------
+    JSONResponse
+        Ответ с ошибкой 401.
+    """
+    return JSONResponse(
+        content=StandardResponse(
+            code=APICode.TOKEN_REVOKED, detail=str(exc)
+        ).model_dump(mode="json"),
+        status_code=status.HTTP_401_UNAUTHORIZED,
+    )
+
+
 async def _session_revoked_error_handler(
     _request: Request, exc: Exception
 ) -> JSONResponse:
@@ -284,5 +315,6 @@ def register(app: FastAPI) -> None:
         TokenSignatureInvalidError, _token_signature_invalid_error_handler
     )
     app.add_exception_handler(TokenInvalidError, _token_invalid_error_handler)
+    app.add_exception_handler(TokenRevokedError, _token_revoked_error_handler)
     app.add_exception_handler(SessionRevokedError, _session_revoked_error_handler)
     app.add_exception_handler(SessionExpiredError, _session_expired_error_handler)

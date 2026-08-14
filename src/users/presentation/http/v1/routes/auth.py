@@ -241,7 +241,6 @@ async def refresh(
         Если cookie с refresh-токеном отсутствует во входящем запросе.
     """
     refresh_token = auth_cookies_provider.get_refresh_token_cookie(request)
-
     if refresh_token is None:
         raise RefreshTokenMissingError(
             "Refresh token is missing. Provide it in the refresh token cookie."

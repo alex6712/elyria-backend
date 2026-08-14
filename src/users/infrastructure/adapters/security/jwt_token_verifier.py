@@ -79,7 +79,7 @@ class JwtTokenVerifier:
                 "Signature of passed token is invalid or damaged."
             ) from e
         except jwt.InvalidTokenError as e:
-            raise TokenInvalidError(str(e)) from e
+            raise TokenInvalidError(e) from e
 
         try:
             return TokenClaimsDTO.model_validate(
@@ -92,4 +92,4 @@ class JwtTokenVerifier:
                 }
             )
         except ValidationError as e:
-            raise TokenInvalidError(str(e)) from e
+            raise TokenInvalidError(e) from e
