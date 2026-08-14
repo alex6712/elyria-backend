@@ -152,9 +152,10 @@ docker compose --env-file .env up elyria-postgres elyria-redis elyria-minio -d -
 | `make help` | Показать список доступных целей |
 | `make keys` | Сгенерировать Ed25519 ключи подписи (пароль берётся из `.env`) |
 | `make keys-force` | Перегенерировать ключи, перезаписав существующие |
-| `make requirements` | Сгенерировать `requirements.txt` и `requirements-dev.txt` |
-| `make clean` | Удалить все каталоги `__pycache__` |
 | `make sync` | Установить зависимости (`uv sync --group dev`) |
+| `make requirements` | Сгенерировать `requirements.txt` и `requirements-dev.txt` |
+| `make upgrade` | Обновить зависимости |
+| `make clean` | Удалить все каталоги `__pycache__` |
 | `make install-hooks` | Установить git-хуки pre-commit |
 | `make dev` | Запустить сервер разработки |
 | `make migrate` | Применить миграции Alembic |

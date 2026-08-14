@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help keys keys-force requirements clean sync install-hooks dev migrate test test-integration lint format typecheck import-lint services services-down
+.PHONY: help keys keys-force sync requirements upgrade clean install-hooks dev migrate test test-integration lint format typecheck import-lint services services-down
 
 help: ## Показать список доступных целей
 	@echo "Доступные цели:"
@@ -13,14 +13,17 @@ keys: ## Сгенерировать Ed25519 ключи подписи (паро�
 keys-force: ## Перегенерировать Ed25519 ключи подписи, перезаписав существующие
 	./scripts/gen_keys.sh -f
 
+sync: ## Установить зависимости: uv sync --group dev
+	uv sync --group dev
+
 requirements: ## Сгенерировать requirements.txt и requirements-dev.txt
 	./scripts/compile_pip.sh
 
+upgrade: ## Обновить зависимости
+	uv sync -U && ./scripts/compile_pip.sh
+
 clean: ## Удалить все каталоги __pycache__ в src/
 	./scripts/clear_pycache.sh
-
-sync: ## Установить зависимости: uv sync --group dev
-	uv sync --group dev
 
 install-hooks: ## Установить git-хуки pre-commit
 	uv run pre-commit install
