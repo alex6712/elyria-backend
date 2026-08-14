@@ -72,12 +72,9 @@ class FileRepository(
         bool
             True если запись медиафайла успешно создана.
         """
-        # FIXME: следствие ограничения в 64 символа на имя файла
-        values = {**create_dto.to_create_values()}
-        if len(values["title"]) > 64:
-            values["title"] = values["title"][:32] + values["title"][32:]
-
-        result = await self.connection.execute(insert(files_table).values(**values))
+        result = await self.connection.execute(
+            insert(files_table).values(**create_dto.to_create_values())
+        )
 
         return result.rowcount == 1
 
@@ -94,16 +91,11 @@ class FileRepository(
         int
             Количество успешно созданных записей.
         """
-        # FIXME: следствие ограничения в 64 символа на имя файла
-        values: list[Any] = []
-        for dto in create_dtos:
-            v = {**dto.to_create_values()}
-            if len(v["title"]) > 64:
-                v["title"] = v["title"][:32] + v["title"][32:]
-
-            values.append(v)
-
-        result = await self.connection.execute(insert(files_table).values(values))
+        result = await self.connection.execute(
+            insert(files_table).values(
+                [{**dto.to_create_values()} for dto in create_dtos]
+            )
+        )
 
         return result.rowcount
 
