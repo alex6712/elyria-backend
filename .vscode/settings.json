@@ -81,5 +81,7 @@
         ".import_linter_cache": true,
         ".pytest_cache": true,
         ".ruff_cache": true
-    }
+    },
+    "python.analysis.languageServerMode": "full",
+    "python.analysis.autoImportCompletions": true
 }
