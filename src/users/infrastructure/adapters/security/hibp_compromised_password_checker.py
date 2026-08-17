@@ -11,9 +11,6 @@ _HIBP_PREFIX_LENGTH = 5
 """Количество первых hex-символов SHA-1, передаваемых в API
 (принцип k-anonymity: полный хеш наружу не уходит)."""
 
-_HIBP_SUFFIX_LENGTH = 35
-"""Количество оставшихся hex-символов SHA-1 (всего 40)."""
-
 _HIBP_USER_AGENT = "elyria-backend"
 """User-Agent, идентифицирующий приложение (требование HIBP)."""
 
@@ -68,9 +65,7 @@ class HibpCompromisedPasswordChecker:
         sha1_hash = hashlib.sha1(password.reveal().encode("utf-8")).hexdigest().upper()
 
         prefix = sha1_hash[:_HIBP_PREFIX_LENGTH]
-        suffix = sha1_hash[
-            _HIBP_PREFIX_LENGTH : _HIBP_SUFFIX_LENGTH + _HIBP_PREFIX_LENGTH
-        ]
+        suffix = sha1_hash[_HIBP_PREFIX_LENGTH:]
 
         try:
             response = await self._client.get(
