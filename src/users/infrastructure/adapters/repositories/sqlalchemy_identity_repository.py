@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import RowMapping, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -92,15 +92,7 @@ class SqlAlchemyIdentityRepository:
         if not (row := result.mappings().first()):
             return None
 
-        return Identity(
-            id=row["id"],
-            username=row["username"],
-            password_hash=row["password_hash"],
-            is_active=row["is_active"],
-            version=row["version"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
-        )
+        return self._row_to_identity(row)
 
     async def get_by_username(self, username: Username) -> Identity | None:
         """Получить учётную запись по имени пользователя.
@@ -125,15 +117,7 @@ class SqlAlchemyIdentityRepository:
         if not (row := result.mappings().first()):
             return None
 
-        return Identity(
-            id=row["id"],
-            username=row["username"],
-            password_hash=row["password_hash"],
-            is_active=row["is_active"],
-            version=row["version"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
-        )
+        return self._row_to_identity(row)
 
     async def save_password_hash(self, identity: Identity) -> None:
         """Сохранить изменённый хэш пароля учётной записи.
@@ -173,3 +157,27 @@ class SqlAlchemyIdentityRepository:
             raise ConcurrentModificationError(identity.id, "Identity")
 
         identity.upgrade()
+
+    @staticmethod
+    def _row_to_identity(row: RowMapping) -> Identity:
+        """Преобразовать строку результата запроса в доменную сущность.
+
+        Parameters
+        ----------
+        row : RowMapping
+            Строка результата запроса (mapping).
+
+        Returns
+        -------
+        Identity
+            Доменная сущность учётной записи.
+        """
+        return Identity(
+            id=row["id"],
+            username=Username(row["username"]),
+            password_hash=row["password_hash"],
+            is_active=row["is_active"],
+            version=row["version"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
