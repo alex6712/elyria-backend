@@ -116,7 +116,7 @@ httpx==0.28.1
     #   fastapi-cloud-cli
 identify==2.6.19
     # via pre-commit
-idna==3.18
+idna==3.19
     # via
     #   anyio
     #   email-validator
@@ -188,7 +188,7 @@ pydantic-settings==2.15.0
     # via
     #   elyria-backend (pyproject.toml)
     #   fastapi
-pygments==2.20.0
+pygments==2.21.0
     # via
     #   pytest
     #   rich
