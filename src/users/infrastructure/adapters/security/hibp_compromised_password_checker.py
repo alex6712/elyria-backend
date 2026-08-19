@@ -79,6 +79,5 @@ class HibpCompromisedPasswordChecker:
             return False
 
         return suffix in {
-            line.split(":", maxsplit=1)[0].upper()
-            for line in response.text.splitlines()
+            line.partition(":")[0].upper() for line in response.text.splitlines()
         }
