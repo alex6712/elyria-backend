@@ -12,7 +12,7 @@ from src.users.domain.value_objects.username import USERNAME_MAX_LENGTH
 identities_table = Table(
     "identities",
     metadata,
-    identifier_column(),
+    identifier_column("random"),
     Column(
         "username",
         String(USERNAME_MAX_LENGTH),

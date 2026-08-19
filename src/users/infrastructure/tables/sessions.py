@@ -11,7 +11,7 @@ from src.shared.infrastructure.columns import (
 sessions_table = Table(
     "sessions",
     metadata,
-    identifier_column(),
+    identifier_column("random"),
     Column(
         "identity_id",
         Uuid(),

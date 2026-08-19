@@ -12,7 +12,7 @@ from src.users.domain.value_objects.display_name import DISPLAY_NAME_MAX_LENGTH
 profiles_table = Table(
     "profiles",
     metadata,
-    identifier_column(),
+    identifier_column("random"),
     Column(
         "identity_id",
         Uuid(),
