@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Self, override
 from uuid import UUID
 
-from src.shared.domain.entities import Auditable, Identifiable, Versioned
+from src.shared.domain.mixins import Auditable, Identifiable, Versioned
 from src.users.domain.exceptions import SessionExpiredError, SessionRevokedError
 
 

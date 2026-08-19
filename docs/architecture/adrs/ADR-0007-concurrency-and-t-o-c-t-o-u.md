@@ -305,7 +305,7 @@ Use case не проверяет инварианты конкурентно, а
 
 ### 2. `version` как общий миксин
 
-Вводится миксин `Versioned` в `src/shared/domain/entities/`:
+Вводится миксин `Versioned` в `src/shared/domain/mixins/`:
 
 ```python
 class Versioned:
