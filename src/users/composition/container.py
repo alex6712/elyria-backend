@@ -1,10 +1,11 @@
 from collections.abc import Callable
-from pathlib import Path
 from typing import Literal
 
-from redis.asyncio import Redis as AsyncRedis
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from src.shared.application.ports.persistence import TokenBlacklist
+from src.shared.application.ports.security import TokenVerifier
+from src.shared.infrastructure.adapters.security import SignatureKeys
 from src.users.application.use_cases import (
     LoginUseCase,
     LogoutUseCase,
@@ -15,11 +16,8 @@ from src.users.composition.services import (
     build_auth_cookies_provider,
     build_compromised_password_checker,
     build_password_hasher,
-    build_signature_keys_provider,
-    build_token_blacklist,
     build_token_hasher,
     build_token_issuer,
-    build_token_verifier,
 )
 from src.users.composition.use_cases import (
     build_login_use_case,
@@ -157,13 +155,12 @@ class UsersContainer:
 def build_users_module(
     *,
     engine: AsyncEngine,
-    redis_client: AsyncRedis,
     issuer: str,
     jws_algorithm: str,
     hmac_secret_key: str,
-    public_key_path: Path,
-    private_key_path: Path,
-    private_signature_password: str,
+    signature_keys: SignatureKeys,
+    token_verifier: TokenVerifier,
+    token_blacklist: TokenBlacklist,
     access_token_lifetime_minutes: int,
     refresh_token_cookie_name: str,
     refresh_token_lifetime_days: int,
@@ -176,29 +173,27 @@ def build_users_module(
 
     Единственная точка сборки Users в границах его ограниченного
     слоя композиции. Создаёт реализации портов (хеширование паролей,
-    выпуск и проверка токенов, чёрный список, провайдер auth-cookie)
-    и связывает их с фабриками Use Cases. Внешние ресурсы (движок БД,
-    клиент Redis, ключи подписи, настройки) передаются параметрами:
+    выпуск токенов, провайдер auth-cookie) и связывает их с фабриками
+    Use Cases. Общие ресурсы (движок БД, ключи подписи, сервисы
+    проверки и отзыва токенов, настройки) передаются параметрами:
     модуль ничего не знает о глобальном Composition Root.
 
     Parameters
     ----------
     engine : AsyncEngine
         Асинхронный движок SQLAlchemy для открытия транзакций.
-    redis_client : AsyncRedis
-        Асинхронный клиент Redis для чёрного списка токенов.
     issuer : str
         Издатель JWT-токенов (значение утверждения ``iss``).
     jws_algorithm : str
         Алгоритм подписи JWT (например, ``"EdDSA"``).
     hmac_secret_key : str
         Секретный ключ HMAC-SHA256 для хеширования токенов.
-    public_key_path : Path
-        Путь к PEM-файлу публичного ключа Ed25519.
-    private_key_path : Path
-        Путь к PEM-файлу приватного ключа Ed25519.
-    private_signature_password : str
-        Пароль для расшифровки приватного ключа.
+    signature_keys : SignatureKeys
+        Пара ключей Ed25519 для подписи выпускаемых токенов.
+    token_verifier : TokenVerifier
+        Сервис проверки подлинности refresh-токенов.
+    token_blacklist : TokenBlacklist
+        Хранилище отозванных access-токенов.
     access_token_lifetime_minutes : int
         Время жизни выдаваемого access-токена в минутах.
     refresh_token_cookie_name : str
@@ -221,33 +216,20 @@ def build_users_module(
 
     Notes
     -----
-    Реализации портов (хешеры, выпуск и проверка токенов, чёрный
-    список, проверка пароля на утечки, провайдер auth-cookie)
-    создаются один раз на время жизни контейнера; Use Cases -
-    transient, новый экземпляр на каждый вызов соответствующей
-    фабрики.
+    Реализации портов (хешеры, выпуск токенов, проверка пароля на
+    утечки, провайдер auth-cookie) создаются один раз на время жизни
+    контейнера; Use Cases - transient, новый экземпляр на каждый вызов
+    соответствующей фабрики.
     """
     password_hasher = build_password_hasher()
     token_hasher = build_token_hasher(hmac_secret_key=hmac_secret_key)
     compromised_password_checker = build_compromised_password_checker()
-
-    signature_keys = build_signature_keys_provider(
-        public_key_path=public_key_path,
-        private_key_path=private_key_path,
-        private_signature_password=private_signature_password,
-    ).get_signature_keys()
 
     token_issuer = build_token_issuer(
         issuer=issuer,
         algorithm=jws_algorithm,
         signature_keys=signature_keys,
     )
-    token_verifier = build_token_verifier(
-        issuer=issuer,
-        algorithm=jws_algorithm,
-        signature_keys=signature_keys,
-    )
-    token_blacklist = build_token_blacklist(redis_client=redis_client)
 
     auth_cookies_provider = build_auth_cookies_provider(
         refresh_token_cookie_name=refresh_token_cookie_name,

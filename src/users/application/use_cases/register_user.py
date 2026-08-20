@@ -1,8 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+from src.shared.application.dto import TokenClaimsDTO
 from src.users.application.commands import RegisterUserCommand
-from src.users.application.dto import TokenClaimsDTO
 from src.users.application.exceptions import CompromisedPasswordError
 from src.users.application.ports import UsersUnitOfWork
 from src.users.application.ports.security import (

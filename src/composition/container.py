@@ -4,6 +4,11 @@ from src.composition.app_info import APP_NAME
 from src.composition.engine import build_engine
 from src.composition.paths import PRIVATE_SIGNATURE_KEY_PATH, PUBLIC_SIGNATURE_KEY_PATH
 from src.composition.redis import build_redis_client
+from src.composition.security import (
+    build_signature_keys_provider,
+    build_token_blacklist,
+    build_token_verifier,
+)
 from src.composition.settings import get_settings
 from src.users.composition import UsersContainer, build_users_module
 
@@ -30,25 +35,38 @@ def build_application_container() -> ApplicationContainer:
     """Собрать приложение: все модули bounded contexts.
 
     Единственный Composition Root приложения. Создаёт общие
-    ресурсы (движок БД, клиент Redis), читает настройки и ключи
-    подписи, после чего передаёт их в фабрики модулей ограниченных
-    контекстов. Модули ничего не знают о глобальном слое композиции.
+    ресурсы (движок БД, клиент Redis, ключи подписи, сервисы
+    проверки и отзыва токенов), читает настройки, после чего
+    передаёт их в фабрики модулей ограниченных контекстов.
+    Модули ничего не знают о глобальном слое композиции.
 
     Returns
     -------
     ApplicationContainer
         Контейнер всех собранных модулей приложения.
     """
+    settings = get_settings()
+
+    signature_keys = build_signature_keys_provider(
+        public_key_path=PUBLIC_SIGNATURE_KEY_PATH,
+        private_key_path=PRIVATE_SIGNATURE_KEY_PATH,
+        private_signature_password=settings.PRIVATE_SIGNATURE_KEY_PASSWORD,
+    ).get_signature_keys()
+
+    token_verifier = build_token_verifier(
+        issuer=APP_NAME, algorithm=settings.JWS_ALGORITHM, signature_keys=signature_keys
+    )
+    token_blacklist = build_token_blacklist(redis_client=build_redis_client())
+
     return ApplicationContainer(
         users=build_users_module(
             engine=build_engine(),
-            redis_client=build_redis_client(),
             issuer=APP_NAME,
-            jws_algorithm=(settings := get_settings()).JWS_ALGORITHM,
+            jws_algorithm=settings.JWS_ALGORITHM,
             hmac_secret_key=settings.HMAC_SECRET_KEY,
-            public_key_path=PUBLIC_SIGNATURE_KEY_PATH,
-            private_key_path=PRIVATE_SIGNATURE_KEY_PATH,
-            private_signature_password=settings.PRIVATE_SIGNATURE_KEY_PASSWORD,
+            signature_keys=signature_keys,
+            token_verifier=token_verifier,
+            token_blacklist=token_blacklist,
             access_token_lifetime_minutes=settings.ACCESS_TOKEN_LIFETIME_MINUTES,
             refresh_token_cookie_name=settings.REFRESH_TOKEN_COOKIE_NAME,
             refresh_token_lifetime_days=settings.REFRESH_TOKEN_LIFETIME_DAYS,

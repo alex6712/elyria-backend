@@ -1,7 +1,7 @@
+from src.shared.application.ports.persistence import TokenBlacklist
+from src.shared.application.ports.security import TokenVerifier
 from src.users.application.commands import LogoutCommand
 from src.users.application.ports import UsersUnitOfWork
-from src.users.application.ports.persistence import TokenBlacklist
-from src.users.application.ports.security import TokenVerifier
 
 
 class LogoutUseCase:

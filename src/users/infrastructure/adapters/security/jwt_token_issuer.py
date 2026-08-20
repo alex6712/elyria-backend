@@ -1,7 +1,7 @@
 import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from src.users.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaimsDTO
 
 
 class JwtTokenIssuer:

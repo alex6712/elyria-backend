@@ -1,14 +1,14 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.ports.security import TokenVerifier
 from src.users.application.commands import RefreshSessionCommand
-from src.users.application.dto import TokenClaimsDTO
 from src.users.application.exceptions import SessionNotFoundError
 from src.users.application.ports import UsersUnitOfWork
 from src.users.application.ports.security import (
     TokenHasher,
     TokenIssuer,
-    TokenVerifier,
 )
 from src.users.application.results import RefreshSessionResult
 from src.users.domain.exceptions import (

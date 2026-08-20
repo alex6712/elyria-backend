@@ -2,8 +2,8 @@ import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from pydantic import ValidationError
 
-from src.users.application.dto import TokenClaimsDTO
-from src.users.application.exceptions import (
+from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.exceptions import (
     TokenExpiredError,
     TokenInvalidError,
     TokenSignatureInvalidError,

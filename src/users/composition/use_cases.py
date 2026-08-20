@@ -1,12 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from src.users.application.ports.persistence import TokenBlacklist
+from src.shared.application.ports.persistence import TokenBlacklist
+from src.shared.application.ports.security import TokenVerifier
 from src.users.application.ports.security import (
     CompromisedPasswordChecker,
     PasswordHasher,
     TokenHasher,
     TokenIssuer,
-    TokenVerifier,
 )
 from src.users.application.use_cases import (
     LoginUseCase,
