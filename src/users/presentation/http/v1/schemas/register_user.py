@@ -117,8 +117,8 @@ class RegisterUserResponse(StandardResponse):
     user_id: UUID4 = Field(
         description="Публичный идентификатор пользователя (UUID четвёртой версии).",
         examples=[
-            "123e4567-e89b-12d3-a456-426614174000",
-            "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+            "d522c9bb-d9d9-4075-bb01-fc358b4f5048",
+            "0e60ab98-9cf2-43ac-b19c-021a98ed0f95",
         ],
     )
     access_token: str = Field(
