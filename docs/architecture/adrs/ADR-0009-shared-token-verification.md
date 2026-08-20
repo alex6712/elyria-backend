@@ -138,7 +138,7 @@ Accepted
 - `src/shared/application/ports/persistence/token_blacklist.py` — порт `TokenBlacklist`;
 - `src/shared/application/exceptions.py` — `TokenExpiredError`, `TokenSignatureInvalidError`, `TokenInvalidError`, `TokenRevokedError`;
 - `src/shared/infrastructure/adapters/security/jwt_token_verifier.py` — `JwtTokenVerifier`;
-- `src/shared/infrastructure/adapters/security/signature_keys_provider.py` — `SignatureKeys`, `SignatureKeysProvider`;
+- `src/shared/infrastructure/signature_keys_provider.py` — `SignatureKeys`, `SignatureKeysProvider`;
 - `src/shared/infrastructure/adapters/persistence/redis_token_blacklist.py` — `RedisTokenBlacklist`;
 - `src/shared/presentation/http/handlers/client/unauthorized.py` — 401-обработчики токенных исключений (регистрируются в общем `register_exception_handlers`).
 

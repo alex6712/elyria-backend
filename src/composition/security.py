@@ -2,12 +2,9 @@ from pathlib import Path
 
 from redis.asyncio import Redis as AsyncRedis
 
+from src.shared.infrastructure import SignatureKeys, SignatureKeysProvider
 from src.shared.infrastructure.adapters.persistence import RedisTokenBlacklist
-from src.shared.infrastructure.adapters.security import (
-    JwtTokenVerifier,
-    SignatureKeys,
-    SignatureKeysProvider,
-)
+from src.shared.infrastructure.adapters.security import JwtTokenVerifier
 
 
 def build_signature_keys_provider(

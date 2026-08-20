@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from src.shared.application.ports.persistence import TokenBlacklist
 from src.shared.application.ports.security import TokenVerifier
-from src.shared.infrastructure.adapters.security import SignatureKeys
+from src.shared.infrastructure import SignatureKeys
 from src.users.application.use_cases import (
     LoginUseCase,
     LogoutUseCase,
