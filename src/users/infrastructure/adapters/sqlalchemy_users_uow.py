@@ -3,12 +3,12 @@ from types import TracebackType
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncTransaction
 
 from src.shared.application.exceptions import UnitOfWorkNotEnteredError
-from src.users.domain.ports.repositories import (
+from src.users.domain.ports.persistence import (
     IdentityRepository,
     ProfileRepository,
     SessionRepository,
 )
-from src.users.infrastructure.adapters.repositories import (
+from src.users.infrastructure.adapters.persistence import (
     SqlAlchemyIdentityRepository,
     SqlAlchemyProfileRepository,
     SqlAlchemySessionRepository,
