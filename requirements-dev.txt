@@ -152,7 +152,7 @@ multidict==6.7.1
     #   yarl
 nodeenv==1.10.0
     # via pre-commit
-nodejs-wheel-binaries==24.16.0
+nodejs-wheel-binaries==24.19.0
     # via basedpyright
 packaging==26.3
     # via
