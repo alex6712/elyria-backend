@@ -1,18 +1,37 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from src.shared.application.dto import TokenClaimsDTO
-from src.users.application.commands import LoginCommand
 from src.users.application.exceptions import IncorrectUsernameOrPasswordError
+from src.users.application.inputs import LoginInput
 from src.users.application.ports import UsersUnitOfWork
 from src.users.application.ports.security import (
     PasswordHasher,
     TokenHasher,
     TokenIssuer,
 )
-from src.users.application.results import LoginResult
 from src.users.domain.entities import Session
 from src.users.domain.exceptions import InactiveUserError
+
+
+@dataclass(frozen=True, slots=True)
+class _LoginResult:
+    """Результат успешной аутентификации пользователя.
+
+    Содержит access и refresh токены, возвращаемые пользователю
+    для дальнейшей авторизации.
+
+    Attributes
+    ----------
+    access_token : str
+        Access JWT для аутентификации запросов.
+    refresh_token : str
+        Refresh JWT для обновления сессии.
+    """
+
+    access_token: str
+    refresh_token: str
 
 
 class LoginUseCase:
@@ -55,7 +74,7 @@ class LoginUseCase:
         self._at_lifetime_minutes = at_lifetime_minutes
         self._rt_lifetime_days = rt_lifetime_days
 
-    async def execute(self, command: LoginCommand) -> LoginResult:
+    async def execute(self, input: LoginInput) -> _LoginResult:
         """Аутентифицировать пользователя и выпустить токены.
 
         Выполняет поиск учётной записи по имени пользователя,
@@ -64,12 +83,12 @@ class LoginUseCase:
 
         Parameters
         ----------
-        command : LoginCommand
+        input : LoginInput
             Данные для входа: имя пользователя и пароль.
 
         Returns
         -------
-        LoginResult
+        _LoginResult
             Результат аутентификации с access и refresh токенами.
 
         Raises
@@ -81,10 +100,10 @@ class LoginUseCase:
             Если учётная запись пользователя деактивирована.
         """
         async with self._uow:
-            identity = await self._uow.identities.get_by_username(command.username)
+            identity = await self._uow.identities.get_by_username(input.username)
 
             if identity is None or not self._password_hasher.verify(
-                command.password, identity.password_hash
+                input.password, identity.password_hash
             ):
                 raise IncorrectUsernameOrPasswordError(
                     "Incorrect username or password."
@@ -125,4 +144,4 @@ class LoginUseCase:
                 )
             )
 
-        return LoginResult(access_token=access_token, refresh_token=refresh_token)
+        return _LoginResult(access_token=access_token, refresh_token=refresh_token)

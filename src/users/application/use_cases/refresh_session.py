@@ -1,14 +1,33 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from src.shared.application.dto import TokenClaimsDTO
 from src.shared.application.ports.security import TokenVerifier
-from src.users.application.commands import RefreshSessionCommand
 from src.users.application.exceptions import SessionNotFoundError
+from src.users.application.inputs import RefreshSessionInput
 from src.users.application.ports import UsersUnitOfWork
 from src.users.application.ports.security import TokenHasher, TokenIssuer
-from src.users.application.results import RefreshSessionResult
 from src.users.domain.exceptions import InactiveUserError
+
+
+@dataclass(frozen=True, slots=True)
+class _RefreshSessionResult:
+    """Результат успешного продления сессии.
+
+    Содержит access и refresh токены, возвращаемые пользователю
+    для дальнейшей авторизации.
+
+    Attributes
+    ----------
+    access_token : str
+        Access JWT для аутентификации запросов.
+    refresh_token : str
+        Refresh JWT для обновления сессии.
+    """
+
+    access_token: str
+    refresh_token: str
 
 
 class RefreshSessionUseCase:
@@ -52,7 +71,7 @@ class RefreshSessionUseCase:
         self._at_lifetime_minutes = at_lifetime_minutes
         self._rt_lifetime_days = rt_lifetime_days
 
-    async def execute(self, command: RefreshSessionCommand) -> RefreshSessionResult:
+    async def execute(self, input: RefreshSessionInput) -> _RefreshSessionResult:
         """Обновить access и refresh токены по валидному refresh-токену.
 
         Алгоритм выполнения:
@@ -77,12 +96,12 @@ class RefreshSessionUseCase:
 
         Parameters
         ----------
-        command : RefreshSessionCommand
-            Команда, содержащая текущий refresh-токен пользователя.
+        input : RefreshSessionInput
+            Объект с данными, содержащий текущий refresh-токен пользователя.
 
         Returns
         -------
-        RefreshSessionResult
+        _RefreshSessionResult
             Результат операции, содержащий новые access и refresh токены.
 
         Raises
@@ -110,20 +129,24 @@ class RefreshSessionUseCase:
             её загрузкой и сохранением (пробрасывается на уровень
             представления как 409 Conflict).
         """
-        claims = self._token_verifier.verify(command.refresh_token)
+        claims = self._token_verifier.verify(input.refresh_token)
 
         async with self._uow:
             session = await self._uow.sessions.get_by_id(claims.session_id)
+
             if session is None:
                 raise SessionNotFoundError("Session with passed id not found.")
-            if session.session_secret != self._token_hasher.hash(command.refresh_token):
+
+            if session.session_secret != self._token_hasher.hash(input.refresh_token):
                 raise SessionNotFoundError(
                     "Session with passed id and session secret not found."
                 )
 
             identity = await self._uow.identities.get_by_id(session.identity_id)
+
             if identity is None:
                 raise SessionNotFoundError("Identity for session not found.")
+
             if not identity.is_active:
                 raise InactiveUserError(identity.id)
 
@@ -155,6 +178,6 @@ class RefreshSessionUseCase:
                 )
             )
 
-        return RefreshSessionResult(
+        return _RefreshSessionResult(
             access_token=access_token, refresh_token=new_refresh_token
         )

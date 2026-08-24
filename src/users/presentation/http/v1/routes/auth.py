@@ -3,11 +3,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Request, Response, status
 
-from src.users.application.commands import (
-    LoginCommand,
-    LogoutCommand,
-    RefreshSessionCommand,
-    RegisterUserCommand,
+from src.users.application.inputs import (
+    LoginInput,
+    LogoutInput,
+    RefreshSessionInput,
+    RegisterUserInput,
 )
 from src.users.domain.value_objects import DisplayName, Password, Username
 from src.users.presentation.http.dependencies import (
@@ -89,7 +89,7 @@ async def login(
         запросов. Refresh-токен устанавливается отдельно в HttpOnly-cookie.
     """
     result = await login_use_case.execute(
-        LoginCommand(username=Username(body.username), password=Password(body.password))
+        LoginInput(username=Username(body.username), password=Password(body.password))
     )
 
     auth_cookies_provider.set_refresh_token_cookie(
@@ -164,7 +164,7 @@ async def logout(
             + "Provide it in the Authorization: Bearer <token> header."
         )
 
-    await logout_user.execute(LogoutCommand(access_token=access_token))
+    await logout_user.execute(LogoutInput(access_token=access_token))
 
     auth_cookies_provider.delete_refresh_token_cookie(response)
 
@@ -233,13 +233,14 @@ async def refresh(
         Если cookie с refresh-токеном отсутствует во входящем запросе.
     """
     refresh_token = auth_cookies_provider.get_refresh_token_cookie(request)
+
     if refresh_token is None:
         raise RefreshTokenMissingError(
             "Refresh token is missing. Provide it in the refresh token cookie."
         )
 
     result = await refresh_session.execute(
-        RefreshSessionCommand(refresh_token=refresh_token)
+        RefreshSessionInput(refresh_token=refresh_token)
     )
 
     auth_cookies_provider.set_refresh_token_cookie(
@@ -310,7 +311,7 @@ async def register(
         устанавливается отдельно в HttpOnly-cookie.
     """
     result = await register_user_use_case.execute(
-        RegisterUserCommand(
+        RegisterUserInput(
             username=Username(body.username),
             password=Password(body.password),
             display_name=DisplayName(body.display_name),

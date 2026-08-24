@@ -1,8 +1,9 @@
-from pydantic import BaseModel, ConfigDict, Field
+from dataclasses import dataclass
 
 
-class RefreshSessionCommand(BaseModel):
-    """Запрос на обновление пары access/refresh токенов.
+@dataclass(frozen=True, slots=True)
+class RefreshSessionInput:
+    """Класс с входными данными для обновления пары access/refresh токенов.
 
     Содержит текущий refresh-токен пользователя.
     На основе этого токена сервис выпустит новую пару ключей доступа,
@@ -15,6 +16,4 @@ class RefreshSessionCommand(BaseModel):
         аутентификации и не должен быть отозван.
     """
 
-    refresh_token: str = Field(description="Текущий refresh-токен пользователя")
-
-    model_config = ConfigDict(frozen=True)
+    refresh_token: str

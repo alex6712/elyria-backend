@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, status
 
 from src.shared.application.unset import UNSET, Maybe
-from src.users.application.commands import ChangeProfileCommand
+from src.users.application.inputs import ChangeProfileInput
 from src.users.domain.value_objects import AvatarUrl, DisplayName
 from src.users.presentation.http.dependencies import (
     AccessTokenDependency,
@@ -98,7 +98,7 @@ async def change_profile(
     )
 
     await change_profile_use_case.execute(
-        ChangeProfileCommand(
+        ChangeProfileInput(
             access_token=access_token,
             display_name=new_display_name,
             avatar_url=new_avatar_url,

@@ -1,10 +1,11 @@
-from pydantic import BaseModel, ConfigDict, Field
+from dataclasses import dataclass
 
 from src.users.domain.value_objects import Password, Username
 
 
-class LoginCommand(BaseModel):
-    """Запрос на вход в систему.
+@dataclass(frozen=True, slots=True)
+class LoginInput:
+    """Класс с входными данными для входа в систему.
 
     Содержит данные, необходимые для аутентификации пользователя,
     и создания новой пользовательской сессии.
@@ -17,7 +18,5 @@ class LoginCommand(BaseModel):
         Пароль пользователя в виде объект-значения.
     """
 
-    username: Username = Field(description="Уникальное имя пользователя (логин)")
-    password: Password = Field(description="Пароль пользователя в открытом виде")
-
-    model_config = ConfigDict(frozen=True)
+    username: Username
+    password: Password

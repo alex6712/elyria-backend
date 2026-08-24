@@ -1,8 +1,9 @@
-from pydantic import BaseModel, ConfigDict, Field
+from dataclasses import dataclass
 
 
-class LogoutCommand(BaseModel):
-    """Запрос на завершение пользовательской сессии.
+@dataclass(frozen=True, slots=True)
+class LogoutInput:
+    """Класс с входными данными для завершения пользовательской сессии.
 
     Содержит текущий access-токен пользователя. На его основе сервис
     определяет идентификатор сессии, отзывает access-токен и, если
@@ -15,6 +16,4 @@ class LogoutCommand(BaseModel):
         эндпоинтом аутентификации.
     """
 
-    access_token: str = Field(description="Текущий access-токен пользователя")
-
-    model_config = ConfigDict(frozen=True)
+    access_token: str

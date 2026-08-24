@@ -1,9 +1,10 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from src.shared.application.dto import TokenClaimsDTO
-from src.users.application.commands import RegisterUserCommand
 from src.users.application.exceptions import CompromisedPasswordError
+from src.users.application.inputs import RegisterUserInput
 from src.users.application.ports import UsersUnitOfWork
 from src.users.application.ports.security import (
     CompromisedPasswordChecker,
@@ -11,8 +12,29 @@ from src.users.application.ports.security import (
     TokenHasher,
     TokenIssuer,
 )
-from src.users.application.results import RegisterUserResult
 from src.users.domain.entities import Identity, Profile, Session
+
+
+@dataclass(frozen=True, slots=True)
+class _RegisterUserResult:
+    """Результат успешной регистрации пользователя.
+
+    Содержит идентификатор созданной учётной записи, а также
+    access и refresh токены для немедленной аутентификации.
+
+    Attributes
+    ----------
+    user_id : UUID
+        Идентификатор созданной учётной записи.
+    access_token : str
+        Access JWT для аутентификации запросов.
+    refresh_token : str
+        Refresh JWT для обновления сессии.
+    """
+
+    user_id: UUID
+    access_token: str
+    refresh_token: str
 
 
 class RegisterUserUseCase:
@@ -62,7 +84,7 @@ class RegisterUserUseCase:
         self._at_lifetime_minutes = at_lifetime_minutes
         self._rt_lifetime_days = rt_lifetime_days
 
-    async def execute(self, command: RegisterUserCommand) -> RegisterUserResult:
+    async def execute(self, input: RegisterUserInput) -> _RegisterUserResult:
         """Зарегистрировать нового пользователя.
 
         Создаёт учётную запись, профиль и начальную пользовательскую
@@ -70,12 +92,12 @@ class RegisterUserUseCase:
 
         Parameters
         ----------
-        command : RegisterUserCommand
+        input : RegisterUserInput
             Данные для регистрации пользователя.
 
         Returns
         -------
-        RegisterUserResult
+        _RegisterUserResult
             Идентификатор созданного пользователя и выпущенные
             access- и refresh-токены.
 
@@ -86,19 +108,19 @@ class RegisterUserUseCase:
         UsernameAlreadyExistsError
             Если пользователь с указанным именем уже существует.
         """
-        if await self._compromised_password_checker.is_compromised(command.password):
+        if await self._compromised_password_checker.is_compromised(input.password):
             raise CompromisedPasswordError(
                 "Password has been compromised and cannot be used."
             )
 
         identity = Identity.register(
-            command.username, self._password_hasher.hash(command.password)
+            input.username, self._password_hasher.hash(input.password)
         )
 
         async with self._uow:
             await self._uow.identities.add(identity)
 
-            profile = Profile.create(identity.id, command.display_name)
+            profile = Profile.create(identity.id, input.display_name)
 
             now = datetime.now(UTC)
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)
@@ -133,6 +155,6 @@ class RegisterUserUseCase:
                 )
             )
 
-        return RegisterUserResult(
+        return _RegisterUserResult(
             user_id=identity.id, access_token=access_token, refresh_token=refresh_token
         )

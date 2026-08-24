@@ -1,6 +1,6 @@
 from src.shared.application.ports.persistence import TokenBlacklist
 from src.shared.application.ports.security import TokenVerifier
-from src.users.application.commands import LogoutCommand
+from src.users.application.inputs import LogoutInput
 from src.users.application.ports import UsersUnitOfWork
 
 
@@ -32,7 +32,7 @@ class LogoutUseCase:
         self._token_verifier = token_verifier
         self._token_blacklist = token_blacklist
 
-    async def execute(self, command: LogoutCommand) -> None:
+    async def execute(self, input: LogoutInput) -> None:
         """Завершить пользовательскую сессию.
 
         Проверяет подлинность access-токена, добавляет его идентификатор
@@ -41,7 +41,7 @@ class LogoutUseCase:
 
         Parameters
         ----------
-        command : LogoutCommand
+        input : LogoutInput
             Данные для завершения сессии, содержащие access-токен.
 
         Raises
@@ -54,7 +54,7 @@ class LogoutUseCase:
             Если в токене отсутствуют обязательные утверждения
             либо токен имеет некорректный формат.
         """
-        claims = self._token_verifier.verify(command.access_token)
+        claims = self._token_verifier.verify(input.access_token)
 
         await self._token_blacklist.revoke(claims.token_id, claims.expires_at)
 
