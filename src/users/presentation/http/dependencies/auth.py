@@ -42,10 +42,7 @@ def _extract_access_token(
         Строка access-токена (значение после слова ``Bearer``),
         если заголовок присутствует, иначе ``None``.
     """
-    if credentials is None:
-        return None
-
-    return credentials.credentials
+    return credentials.credentials if credentials is not None else None
 
 
 AccessTokenDependency = Annotated[str | None, Depends(_extract_access_token)]
@@ -71,10 +68,10 @@ async def logout(
 def _get_login_use_case(request: Request) -> LoginUseCase:
     """Получить Use Case аутентификации пользователя из DI-контейнера.
 
-    Единственное место в модуле Users, где выполняется доступ к
-    нетипизированному ``request.app.state.container`` - Starlette не
-    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
-    тип принудительно объявляется сигнатурой функции.
+    Доступ к нетипизированному ``request.app.state.container``
+    выполняется напрямую - Starlette не поддерживает типизацию
+    ``State`` нативно, поэтому возвращаемый тип принудительно
+    объявляется сигнатурой функции.
 
     Parameters
     ----------
@@ -111,10 +108,10 @@ async def login(
 def _get_logout_use_case(request: Request) -> LogoutUseCase:
     """Получить Use Case завершения сессии из DI-контейнера.
 
-    Единственное место в модуле Users, где выполняется доступ к
-    нетипизированному ``request.app.state.container`` - Starlette не
-    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
-    тип принудительно объявляется сигнатурой функции.
+    Доступ к нетипизированному ``request.app.state.container``
+    выполняется напрямую - Starlette не поддерживает типизацию
+    ``State`` нативно, поэтому возвращаемый тип принудительно
+    объявляется сигнатурой функции.
 
     Parameters
     ----------
@@ -151,10 +148,10 @@ async def logout(
 def _get_refresh_session_use_case(request: Request) -> RefreshSessionUseCase:
     """Получить Use Case обновления пары токенов из DI-контейнера.
 
-    Единственное место в модуле Users, где выполняется доступ к
-    нетипизированному ``request.app.state.container`` - Starlette не
-    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
-    тип принудительно объявляется сигнатурой функции.
+    Доступ к нетипизированному ``request.app.state.container``
+    выполняется напрямую - Starlette не поддерживает типизацию
+    ``State`` нативно, поэтому возвращаемый тип принудительно
+    объявляется сигнатурой функции.
 
     Parameters
     ----------
@@ -193,10 +190,10 @@ async def refresh(
 def _get_register_user_use_case(request: Request) -> RegisterUserUseCase:
     """Получить Use Case регистрации пользователя из DI-контейнера.
 
-    Единственное место в модуле Users, где выполняется доступ к
-    нетипизированному ``request.app.state.container`` - Starlette не
-    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
-    тип принудительно объявляется сигнатурой функции.
+    Доступ к нетипизированному ``request.app.state.container``
+    выполняется напрямую - Starlette не поддерживает типизацию
+    ``State`` нативно, поэтому возвращаемый тип принудительно
+    объявляется сигнатурой функции.
 
     Parameters
     ----------
@@ -235,10 +232,10 @@ async def register(
 def _get_auth_cookies_provider(request: Request) -> AuthCookiesProvider:
     """Получить провайдер auth-cookie из DI-контейнера.
 
-    Единственное место в модуле Users, где выполняется доступ к
-    нетипизированному ``request.app.state.container`` - Starlette не
-    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
-    тип принудительно объявляется сигнатурой функции.
+    Доступ к нетипизированному ``request.app.state.container``
+    выполняется напрямую - Starlette не поддерживает типизацию
+    ``State`` нативно, поэтому возвращаемый тип принудительно
+    объявляется сигнатурой функции.
 
     Parameters
     ----------

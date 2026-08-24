@@ -8,10 +8,10 @@ from src.users.application.use_cases import ChangeProfileUseCase
 def _get_change_profile_use_case(request: Request) -> ChangeProfileUseCase:
     """Получить Use Case изменения профиля из DI-контейнера.
 
-    Единственное место в модуле Users, где выполняется доступ к
-    нетипизированному ``request.app.state.container`` - Starlette не
-    поддерживает типизацию ``State`` нативно, поэтому возвращаемый
-    тип принудительно объявляется сигнатурой функции.
+    Доступ к нетипизированному ``request.app.state.container``
+    выполняется напрямую - Starlette не поддерживает типизацию
+    ``State`` нативно, поэтому возвращаемый тип принудительно
+    объявляется сигнатурой функции.
 
     Parameters
     ----------
