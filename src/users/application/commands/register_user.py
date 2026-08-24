@@ -19,14 +19,8 @@ class RegisterUserCommand(BaseModel):
         Отображаемое имя пользователя.
     """
 
-    username: Username = Field(
-        description="Уникальное имя пользователя (логин)", examples=["john_doe"]
-    )
-    password: Password = Field(
-        description="Пароль пользователя в открытом виде", examples=["secureP@ss1"]
-    )
-    display_name: DisplayName = Field(
-        description="Отображаемое имя пользователя", examples=["John Doe"]
-    )
+    username: Username = Field(description="Уникальное имя пользователя (логин)")
+    password: Password = Field(description="Пароль пользователя в открытом виде")
+    display_name: DisplayName = Field(description="Отображаемое имя пользователя")
 
     model_config = ConfigDict(frozen=True)

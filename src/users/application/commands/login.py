@@ -17,11 +17,7 @@ class LoginCommand(BaseModel):
         Пароль пользователя в виде объект-значения.
     """
 
-    username: Username = Field(
-        description="Уникальное имя пользователя (логин)", examples=["john_doe"]
-    )
-    password: Password = Field(
-        description="Пароль пользователя в открытом виде", examples=["secureP@ss1"]
-    )
+    username: Username = Field(description="Уникальное имя пользователя (логин)")
+    password: Password = Field(description="Пароль пользователя в открытом виде")
 
     model_config = ConfigDict(frozen=True)

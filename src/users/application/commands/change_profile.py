@@ -33,7 +33,11 @@ class ChangeProfileCommand(BaseModel):
     access_token: str = Field(
         description="Access-токен пользователя, выполняющего изменение профиля."
     )
-    display_name: Maybe[DisplayName] = Field(default=UNSET)
-    avatar_url: Maybe[AvatarUrl | None] = Field(default=UNSET)
+    display_name: Maybe[DisplayName] = Field(
+        default=UNSET, description="Новое отображаемое имя профиля."
+    )
+    avatar_url: Maybe[AvatarUrl | None] = Field(
+        default=UNSET, description="Новый URL изображения аватара."
+    )
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
