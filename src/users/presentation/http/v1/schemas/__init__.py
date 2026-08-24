@@ -1,7 +1,11 @@
-from .change_profile import ChangeProfileRequest
-from .login import LoginRequest, LoginResponse
-from .refresh_session import RefreshSessionResponse
-from .register_user import RegisterUserRequest, RegisterUserResponse
+from .auth import (
+    LoginRequest,
+    LoginResponse,
+    RefreshSessionResponse,
+    RegisterUserRequest,
+    RegisterUserResponse,
+)
+from .profiles import ChangeProfileRequest
 
 __all__ = [
     "ChangeProfileRequest",
