@@ -7,6 +7,7 @@ from src.shared.application.ports.persistence import TokenBlacklist
 from src.shared.application.ports.security import TokenVerifier
 from src.shared.infrastructure import SignatureKeys
 from src.users.application.use_cases import (
+    ChangeProfileUseCase,
     LoginUseCase,
     LogoutUseCase,
     RefreshSessionUseCase,
@@ -20,6 +21,7 @@ from src.users.composition.services import (
     build_token_issuer,
 )
 from src.users.composition.use_cases import (
+    build_change_profile_use_case,
     build_login_use_case,
     build_logout_use_case,
     build_refresh_session_use_case,
@@ -54,6 +56,9 @@ class UsersContainer:
     logout_use_case_factory : Callable[[], LogoutUseCase]
         Фабрика, создающая новый экземпляр Use Case завершения
         пользовательской сессии при каждом вызове.
+    change_profile_use_case_factory : Callable[[], ChangeProfileUseCase]
+        Фабрика, создающая новый экземпляр Use Case изменения профиля
+        пользователя при каждом вызове.
     auth_cookies_provider : AuthCookiesProvider
         Готовый экземпляр провайдера auth-cookie. В отличие от
         Use Cases передаётся напрямую, а не фабрикой, поскольку
@@ -74,6 +79,9 @@ class UsersContainer:
     logout_use_case : LogoutUseCase
         Use Case завершения пользовательской сессии. Новый экземпляр
         при каждом обращении.
+    change_profile_use_case : ChangeProfileUseCase
+        Use Case изменения профиля пользователя. Новый экземпляр при
+        каждом обращении.
     auth_cookies_provider : AuthCookiesProvider
         Провайдер установки и удаления HttpOnly-cookie refresh-токена.
         В отличие от Use Cases, единственный экземпляр на время жизни
@@ -81,6 +89,7 @@ class UsersContainer:
     """
 
     __slots__ = (
+        "_change_profile_use_case_factory",
         "_login_use_case_factory",
         "_logout_use_case_factory",
         "_refresh_session_use_case_factory",
@@ -94,12 +103,14 @@ class UsersContainer:
         login_use_case_factory: Callable[[], LoginUseCase],
         refresh_session_use_case_factory: Callable[[], RefreshSessionUseCase],
         logout_use_case_factory: Callable[[], LogoutUseCase],
+        change_profile_use_case_factory: Callable[[], ChangeProfileUseCase],
         auth_cookies_provider: AuthCookiesProvider,
     ) -> None:
         self._register_user_use_case_factory = register_user_use_case_factory
         self._login_use_case_factory = login_use_case_factory
         self._refresh_session_use_case_factory = refresh_session_use_case_factory
         self._logout_use_case_factory = logout_use_case_factory
+        self._change_profile_use_case_factory = change_profile_use_case_factory
 
         self.auth_cookies_provider = auth_cookies_provider
 
@@ -150,6 +161,18 @@ class UsersContainer:
             фабрики.
         """
         return self._logout_use_case_factory()
+
+    @property
+    def change_profile_use_case(self) -> ChangeProfileUseCase:
+        """Получить новый экземпляр Use Case изменения профиля пользователя.
+
+        Returns
+        -------
+        ChangeProfileUseCase
+            Новый экземпляр Use Case, созданный вызовом приватной
+            фабрики.
+        """
+        return self._change_profile_use_case_factory()
 
 
 def build_users_module(
@@ -267,6 +290,11 @@ def build_users_module(
             rt_lifetime_days=refresh_token_lifetime_days,
         ),
         logout_use_case_factory=lambda: build_logout_use_case(
+            engine=engine,
+            token_verifier=token_verifier,
+            token_blacklist=token_blacklist,
+        ),
+        change_profile_use_case_factory=lambda: build_change_profile_use_case(
             engine=engine,
             token_verifier=token_verifier,
             token_blacklist=token_blacklist,

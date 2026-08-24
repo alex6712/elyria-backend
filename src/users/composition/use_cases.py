@@ -9,6 +9,7 @@ from src.users.application.ports.security import (
     TokenIssuer,
 )
 from src.users.application.use_cases import (
+    ChangeProfileUseCase,
     LoginUseCase,
     LogoutUseCase,
     RefreshSessionUseCase,
@@ -187,6 +188,40 @@ def build_logout_use_case(
         Готовый к использованию Use Case выхода из системы.
     """
     return LogoutUseCase(
+        uow=SqlAlchemyUsersUnitOfWork(engine),
+        token_verifier=token_verifier,
+        token_blacklist=token_blacklist,
+    )
+
+
+def build_change_profile_use_case(
+    *,
+    engine: AsyncEngine,
+    token_verifier: TokenVerifier,
+    token_blacklist: TokenBlacklist,
+) -> ChangeProfileUseCase:
+    """Создать Use Case изменения профиля пользователя.
+
+    Каждый вызов фабрики создаёт новый экземпляр Use Case
+    и новую единицу работы (Unit of Work), что соответствует
+    transient-семантике: один вызов Use Case - одна транзакция
+    (ADR-0002, п. 1 ответов разработчику).
+
+    Parameters
+    ----------
+    engine : AsyncEngine
+        Асинхронный движок SQLAlchemy для открытия транзакций.
+    token_verifier : TokenVerifier
+        Сервис проверки подлинности access-токенов.
+    token_blacklist : TokenBlacklist
+        Хранилище отозванных access-токенов.
+
+    Returns
+    -------
+    ChangeProfileUseCase
+        Готовый к использованию Use Case изменения профиля.
+    """
+    return ChangeProfileUseCase(
         uow=SqlAlchemyUsersUnitOfWork(engine),
         token_verifier=token_verifier,
         token_blacklist=token_blacklist,
