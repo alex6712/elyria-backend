@@ -5,12 +5,13 @@ from .auth import (
     RegisterUserRequest,
     RegisterUserResponse,
 )
-from .profiles import ChangeProfileRequest
+from .profiles import ChangeProfileRequest, ProfileResponse
 
 __all__ = [
     "ChangeProfileRequest",
     "LoginRequest",
     "LoginResponse",
+    "ProfileResponse",
     "RefreshSessionResponse",
     "RegisterUserRequest",
     "RegisterUserResponse",

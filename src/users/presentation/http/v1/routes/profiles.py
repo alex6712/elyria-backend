@@ -1,17 +1,22 @@
 import textwrap
 from typing import Annotated
 
-from fastapi import APIRouter, Body, status
+from fastapi import APIRouter, Body, Path, status
+from pydantic import UUID4
 
 from src.shared.application.unset import UNSET, Maybe
-from src.users.application.inputs import ChangeProfileInput
+from src.users.application.inputs import ChangeProfileInput, GetProfileInput
 from src.users.domain.value_objects import AvatarUrl, DisplayName
 from src.users.presentation.http.dependencies import (
     AccessTokenDependency,
     ChangeProfileDependency,
+    GetProfileDependency,
 )
 from src.users.presentation.http.exceptions import AccessTokenMissingError
-from src.users.presentation.http.v1.schemas import ChangeProfileRequest
+from src.users.presentation.http.v1.schemas import (
+    ChangeProfileRequest,
+    ProfileResponse,
+)
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -47,11 +52,11 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
     response_description="Профиль успешно изменён (тело ответа отсутствует)",
 )
 async def change_profile(
-    access_token: AccessTokenDependency,
     body: Annotated[
         ChangeProfileRequest,
         Body(description="Схема частичного изменения профиля пользователя."),
     ],
+    access_token: AccessTokenDependency,
     change_profile_use_case: ChangeProfileDependency,
 ) -> None:
     """Изменение профиля пользователя.
@@ -62,15 +67,15 @@ async def change_profile(
 
     Parameters
     ----------
+    body : ChangeProfileRequest
+        Валидированная схема тела запроса, содержащая обновляемые
+        поля профиля: displayName (str | None) и avatarUrl
+        (str | None).
     access_token : str | None
         Строка access-токена из заголовка ``Authorization``
         входящего запроса (значение после слова ``Bearer``).
         Значение ``None`` означает отсутствие заголовка либо
         некорректную схему.
-    body : ChangeProfileRequest
-        Валидированная схема тела запроса, содержащая обновляемые
-        поля профиля: displayName (str | None) и avatarUrl
-        (str | None).
     change_profile_use_case : ChangeProfileUseCase
         Use Case изменения профиля, полученный через DI-зависимость
         FastAPI из контейнера приложения.
@@ -103,4 +108,167 @@ async def change_profile(
             display_name=new_display_name,
             avatar_url=new_avatar_url,
         )
+    )
+
+
+@router.get(
+    "/me",
+    response_model=ProfileResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Получение профиля текущего пользователя.",
+    description=textwrap.dedent("""\
+        Возвращает профиль учётной записи, выполнившей запрос.
+
+        Access-токен передаётся в заголовке ``Authorization``
+        в формате ``Bearer <token>``. Профиль выбирается по учётной
+        записи, указанной в утверждении ``sub`` токена, поэтому
+        путь запроса дополнительных параметров не содержит.
+
+        Для получения профиля другой учётной записи используйте
+        эндпоинт ``GET /v1/profiles/{identity_id}``.
+
+        В случае ошибки (отсутствие или недействительность access-токена,
+        отзыв токена, отсутствие профиля) возвращается соответствующий
+        HTTP-код и сообщение об ошибке.
+    """),
+    response_description="Профиль текущего пользователя",
+)
+async def get_my_profile(
+    access_token: AccessTokenDependency, get_profile_use_case: GetProfileDependency
+) -> ProfileResponse:
+    """Получить профиль текущего пользователя.
+
+    Извлекает access-токен из Bearer-заголовка и возвращает профиль
+    учётной записи, которой токен был выпущен.
+
+    Parameters
+    ----------
+    access_token : str | None
+        Строка access-токена из заголовка ``Authorization``
+        входящего запроса (значение после слова ``Bearer``).
+        Значение ``None`` означает отсутствие заголовка либо
+        некорректную схему.
+    get_profile_use_case : GetProfileUseCase
+        Use Case получения профиля, полученный через DI-зависимость
+        FastAPI из контейнера приложения.
+
+    Returns
+    -------
+    ProfileResponse
+        Ответ с кодом 200 и данными профиля текущего пользователя:
+        id, identityId, displayName, avatarUrl, createdAt, updatedAt.
+
+    Raises
+    ------
+    AccessTokenMissingError
+        Если заголовок ``Authorization`` с Bearer-схемой отсутствует
+        во входящем запросе либо имеет некорректный формат.
+    """
+    if access_token is None:
+        raise AccessTokenMissingError(
+            "Access token is missing. "
+            + "Provide it in the Authorization: Bearer <token> header."
+        )
+
+    result = await get_profile_use_case.execute(
+        GetProfileInput(access_token=access_token)
+    )
+
+    return ProfileResponse(
+        id=result.id,
+        identity_id=result.identity_id,
+        display_name=result.display_name.value,
+        avatar_url=result.avatar_url.value if result.avatar_url is not None else None,
+        created_at=result.created_at,
+        updated_at=result.updated_at,
+    )
+
+
+@router.get(
+    "/{identity_id}",
+    response_model=ProfileResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Получение профиля по идентификатору учётной записи.",
+    description=textwrap.dedent("""\
+        Возвращает профиль учётной записи с указанным идентификатором.
+
+        Access-токен передаётся в заголовке ``Authorization``
+        в формате ``Bearer <token>``. Идентификатор запрашиваемой
+        учётной записи передаётся в пути запроса как UUID
+        (``identity_id``); передача строки, не являющейся UUID,
+        отклоняется с кодом ``422 Unprocessable Content``
+        (``VALIDATION_ERROR``).
+
+        Для получения собственного профиля без указания идентификатора
+        используйте эндпоинт ``GET /v1/profiles/me``.
+
+        В случае ошибки (отсутствие или недействительность access-токена,
+        отзыв токена, некорректный формат идентификатора, отсутствие
+        профиля) возвращается соответствующий HTTP-код и сообщение
+        об ошибке.
+    """),
+    response_description="Профиль запрашиваемой учётной записи",
+)
+async def get_profile_by_identity_id(
+    identity_id: Annotated[
+        UUID4,
+        Path(
+            description=(
+                "Идентификатор учётной записи, профиль которой требуется получить."
+            ),
+            examples=["a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"],
+        ),
+    ],
+    access_token: AccessTokenDependency,
+    get_profile_use_case: GetProfileDependency,
+) -> ProfileResponse:
+    """Получить профиль по идентификатору учётной записи.
+
+    Извлекает access-токен из Bearer-заголовка и возвращает профиль
+    учётной записи, указанной в пути запроса.
+
+    Parameters
+    ----------
+    identity_id : UUID
+        Идентификатор учётной записи, профиль которой требуется
+        получить.
+    access_token : str | None
+        Строка access-токена из заголовка ``Authorization``
+        входящего запроса (значение после слова ``Bearer``).
+        Значение ``None`` означает отсутствие заголовка либо
+        некорректную схему.
+    get_profile_use_case : GetProfileUseCase
+        Use Case получения профиля, полученный через DI-зависимость
+        FastAPI из контейнера приложения.
+
+    Returns
+    -------
+    ProfileResponse
+        Ответ с кодом 200 и данными профиля запрашиваемой учётной
+        записи: id, identityId, displayName, avatarUrl, createdAt,
+        updatedAt.
+
+    Raises
+    ------
+    AccessTokenMissingError
+        Если заголовок ``Authorization`` с Bearer-схемой отсутствует
+        во входящем запросе либо имеет некорректный формат.
+    """
+    if access_token is None:
+        raise AccessTokenMissingError(
+            "Access token is missing. "
+            + "Provide it in the Authorization: Bearer <token> header."
+        )
+
+    result = await get_profile_use_case.execute(
+        GetProfileInput(access_token=access_token, identity_id=identity_id)
+    )
+
+    return ProfileResponse(
+        id=result.id,
+        identity_id=result.identity_id,
+        display_name=result.display_name.value,
+        avatar_url=result.avatar_url.value if result.avatar_url is not None else None,
+        created_at=result.created_at,
+        updated_at=result.updated_at,
     )

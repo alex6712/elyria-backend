@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Annotated
 
-from pydantic import Field, StringConstraints, field_validator
+from pydantic import UUID4, Field, StringConstraints, field_validator
 
 from src.shared.presentation.http.schemas import BaseJsonModel
 from src.users.domain.value_objects.avatar_url import (
@@ -105,4 +106,75 @@ class ChangeProfileRequest(BaseJsonModel):
             + "а значение ``null`` - удалить аватар из профиля."
         ),
         examples=["https://cdn.elyria.ru/avatars/john_doe.png", None],
+    )
+
+
+class ProfileResponse(BaseJsonModel):
+    """Схема ответа с данными профиля пользователя.
+
+    Содержит отображаемые атрибуты профиля. Технические атрибуты,
+    относящиеся к внутренней реализации, в ответ не включаются.
+
+    Attributes
+    ----------
+    id : UUID4
+        Уникальный идентификатор профиля.
+    identity_id : UUID4
+        Идентификатор учётной записи, к которой привязан профиль.
+    display_name : str
+        Отображаемое имя пользователя.
+    avatar_url : str | None
+        URL изображения аватара; ``null`` - аватар не установлен.
+    created_at : datetime
+        Дата и время создания профиля.
+    updated_at : datetime | None
+        Дата и время последнего изменения профиля; ``null`` - профиль
+        не изменялся после создания.
+
+    See Also
+    --------
+    :class:`BaseJsonModel`
+        Базовая модель данных, сериализуемых в JSON.
+    """
+
+    id: UUID4 = Field(
+        description="Уникальный идентификатор профиля (UUID четвёртой версии).",
+        examples=["f2a3c8e1-5b47-4d6e-9c8a-1d3f5e7a9b2c"],
+    )
+    identity_id: UUID4 = Field(
+        description=(
+            "Идентификатор учётной записи, к которой привязан профиль "
+            + "(UUID четвёртой версии)."
+        ),
+        examples=["a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"],
+    )
+    display_name: str = Field(
+        description=(
+            "Отображаемое имя пользователя ("
+            + f"{
+                length_description(DISPLAY_NAME_MIN_LENGTH, DISPLAY_NAME_MAX_LENGTH)
+            }, "
+            + "любые Unicode-символы)."
+        ),
+        examples=["Александр", "7", "一只非常重要的鸡", "🍆"],
+    )
+    avatar_url: str | None = Field(
+        description=(
+            "URL изображения аватара ("
+            + f"{length_description(AVATAR_URL_MIN_LENGTH, AVATAR_URL_MAX_LENGTH)}, "
+            + "абсолютный URL со схемой http/https); значение ``null`` означает, "
+            + "что аватар не установлен."
+        ),
+        examples=["https://cdn.elyria.ru/avatars/john_doe.png", None],
+    )
+    created_at: datetime = Field(
+        description="Дата и время создания профиля (UTC).",
+        examples=["2026-08-24T12:34:56.789012Z"],
+    )
+    updated_at: datetime | None = Field(
+        description=(
+            "Дата и время последнего изменения профиля (UTC); "
+            "``null`` - профиль не изменялся после создания."
+        ),
+        examples=["2026-08-24T15:00:00.123456Z", None],
     )
