@@ -12,7 +12,7 @@ AVATAR_URL_MIN_LENGTH = 1
 AVATAR_URL_MAX_LENGTH = 512
 """Максимальная длина URL изображения аватара (включительно)."""
 
-AVATAR_URL_ALLOWED_SCHEMES = ("http", "https")
+AVATAR_URL_ALLOWED_SCHEMES = {"http", "https"}
 """Схемы URL, разрешённые для изображений аватаров."""
 
 
