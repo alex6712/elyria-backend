@@ -126,7 +126,7 @@ async def login(
 async def logout(
     response: Response,
     access_token: AccessTokenDependency,
-    logout_user: LogoutDependency,
+    logout_use_case: LogoutDependency,
     auth_cookies_provider: AuthCookiesProviderDependency,
 ) -> None:
     """Завершение пользовательской сессии.
@@ -144,7 +144,7 @@ async def logout(
         входящего запроса (значение после слова ``Bearer``).
         Значение ``None`` означает отсутствие заголовка либо
         некорректную схему.
-    logout_user : LogoutUseCase
+    logout_use_case : LogoutUseCase
         Use Case завершения сессии, полученный через DI-зависимость
         FastAPI из контейнера приложения.
     auth_cookies_provider : AuthCookiesProvider
@@ -164,7 +164,7 @@ async def logout(
             + "Provide it in the Authorization: Bearer <token> header."
         )
 
-    await logout_user.execute(LogoutInput(access_token=access_token))
+    await logout_use_case.execute(LogoutInput(access_token=access_token))
 
     auth_cookies_provider.delete_refresh_token_cookie(response)
 
@@ -194,7 +194,7 @@ async def logout(
 async def refresh(
     request: Request,
     response: Response,
-    refresh_session: RefreshSessionDependency,
+    refresh_session_use_case: RefreshSessionDependency,
     auth_cookies_provider: AuthCookiesProviderDependency,
 ) -> RefreshSessionResponse:
     """Обновление пары access/refresh токенов.
@@ -211,7 +211,7 @@ async def refresh(
     response : Response
         Объект HTTP-ответа FastAPI. Используется для установки
         HttpOnly-cookie с новым refresh-токеном.
-    refresh_session : RefreshSessionUseCase
+    refresh_session_use_case : RefreshSessionUseCase
         Use Case обновления пары токенов, полученный через DI-зависимость
         FastAPI из контейнера приложения.
     auth_cookies_provider : AuthCookiesProvider
@@ -239,7 +239,7 @@ async def refresh(
             "Refresh token is missing. Provide it in the refresh token cookie."
         )
 
-    result = await refresh_session.execute(
+    result = await refresh_session_use_case.execute(
         RefreshSessionInput(refresh_token=refresh_token)
     )
 
