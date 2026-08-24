@@ -3,7 +3,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Request, Response, status
 
-from src.shared.presentation.http.schemas import StandardResponse
 from src.users.application.commands import (
     LoginCommand,
     LogoutCommand,
@@ -104,8 +103,7 @@ async def login(
 
 @router.post(
     "/logout",
-    response_model=StandardResponse,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Завершение сессии пользователя.",
     description=textwrap.dedent("""\
         Завершает пользовательскую сессию и отзывает токены.
@@ -123,14 +121,14 @@ async def login(
         или недействительная подпись) возвращается соответствующий
         HTTP-код и сообщение об ошибке.
     """),
-    response_description="Успешное завершение сессии",
+    response_description="Успешное завершение сессии (тело ответа отсутствует)",
 )
 async def logout(
     response: Response,
-    credentials: AccessTokenDependency,
+    access_token: AccessTokenDependency,
     logout_user: LogoutDependency,
     auth_cookies_provider: AuthCookiesProviderDependency,
-) -> StandardResponse:
+) -> None:
     """Завершение пользовательской сессии.
 
     Принимает access-токен из Bearer-заголовка, отзывает его
@@ -141,10 +139,11 @@ async def logout(
     response : Response
         Объект HTTP-ответа FastAPI. Используется для удаления
         HttpOnly-cookie с refresh-токеном.
-    credentials : HTTPAuthorizationCredentials | None
-        Учётные данные Bearer-схемы из заголовка ``Authorization``
-        входящего запроса. Значение ``None`` означает отсутствие
-        заголовка либо некорректную схему.
+    access_token : str | None
+        Строка access-токена из заголовка ``Authorization``
+        входящего запроса (значение после слова ``Bearer``).
+        Значение ``None`` означает отсутствие заголовка либо
+        некорректную схему.
     logout_user : LogoutUseCase
         Use Case завершения сессии, полученный через DI-зависимость
         FastAPI из контейнера приложения.
@@ -153,28 +152,21 @@ async def logout(
         из контейнера приложения. Используется для удаления HttpOnly-cookie
         с refresh-токеном из ответа.
 
-    Returns
-    -------
-    StandardResponse
-        Ответ с кодом 200 и сообщением об успешном завершении сессии.
-
     Raises
     ------
     AccessTokenMissingError
         Если заголовок ``Authorization`` с Bearer-схемой отсутствует
         во входящем запросе либо имеет некорректный формат.
     """
-    if credentials is None:
+    if access_token is None:
         raise AccessTokenMissingError(
             "Access token is missing. "
             + "Provide it in the Authorization: Bearer <token> header."
         )
 
-    await logout_user.execute(LogoutCommand(access_token=credentials.credentials))
+    await logout_user.execute(LogoutCommand(access_token=access_token))
 
     auth_cookies_provider.delete_refresh_token_cookie(response)
-
-    return StandardResponse(detail="User logged out successfully.")
 
 
 @router.post(

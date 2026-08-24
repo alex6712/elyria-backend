@@ -20,9 +20,35 @@ access-токен в заголовке ``Authorization``. С ``auto_error=False
 оставляя обработку ошибки вызывающему коду.
 """
 
-AccessTokenDependency = Annotated[
-    HTTPAuthorizationCredentials | None, Depends(http_bearer)
-]
+
+def _extract_access_token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(http_bearer)],
+) -> str | None:
+    """Извлечь строковое значение access-токена из учётных данных Bearer-схемы.
+
+    Служит внутренней FastAPI-зависимостью для :data:`AccessTokenDependency`.
+    Извлекает сырую строку токена из объекта учётных данных, полученного
+    в результате валидации Bearer-схемы.
+
+    Parameters
+    ----------
+    credentials : HTTPAuthorizationCredentials | None
+        Объект учётных данных из схемы ``HTTPBearer`` или ``None``,
+        если заголовок ``Authorization`` отсутствует либо некорректен.
+
+    Returns
+    -------
+    str | None
+        Строка access-токена (значение после слова ``Bearer``),
+        если заголовок присутствует, иначе ``None``.
+    """
+    if credentials is None:
+        return None
+
+    return credentials.credentials
+
+
+AccessTokenDependency = Annotated[str | None, Depends(_extract_access_token)]
 """Типизированная FastAPI-зависимость access-токена из Bearer-заголовка.
 
 Извлекает учётные данные Bearer-схемы из заголовка ``Authorization``
@@ -33,12 +59,11 @@ AccessTokenDependency = Annotated[
 ```python
 @router.post("/logout")
 async def logout(
-    credentials: AccessTokenDependency,
+    access_token: AccessTokenDependency,
     ...,
 ) -> StandardResponse:
-    if credentials is None:
+    if access_token is None:
         raise AccessTokenMissingError(...)
-    token = credentials.credentials
 ```
 """
 
