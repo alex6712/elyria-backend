@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from .auth import router as _auth_router
+from .profiles import router as _profiles_router
 
 users_v1_router = APIRouter(prefix="/v1")
 """Агрегатор роутеров HTTP API версии v1 bounded context Users.
@@ -10,5 +11,6 @@ users_v1_router = APIRouter(prefix="/v1")
 """
 
 users_v1_router.include_router(_auth_router)
+users_v1_router.include_router(_profiles_router)
 
 __all__ = ["users_v1_router"]

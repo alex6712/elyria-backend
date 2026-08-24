@@ -86,6 +86,10 @@ elyria_fastapi = FastAPI(
             "name": "auth",
             "description": "Операции **регистрации** и **аутентификации**.",
         },
+        {
+            "name": "profiles",
+            "description": "**Просмотр** и  **управление** профилями пользователей.",
+        },
     ],
     lifespan=lifespan,
     contact={"name": ADMIN_NAME, "email": ADMIN_EMAIL},

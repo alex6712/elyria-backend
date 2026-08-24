@@ -3,7 +3,40 @@ from fastapi.responses import JSONResponse
 
 from src.shared.presentation.http import APICode
 from src.shared.presentation.http.schemas import StandardResponse
-from src.users.application.exceptions import CompromisedPasswordError
+from src.users.application.exceptions import (
+    CompromisedPasswordError,
+    NothingToUpdateError,
+)
+
+
+async def _nothing_to_update_error_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:
+    """Обработать исключение NothingToUpdateError.
+
+    Возвращает клиенту ответ с HTTP 400 Bad Request, если запрос
+    на изменение профиля не содержит ни одного обновляемого поля.
+
+    Parameters
+    ----------
+    _request : Request
+        Объект запроса FastAPI, содержащий информацию о входящем
+        HTTP-запросе (не используется).
+    exc : Exception
+        Экземпляр исключения, из которого получается текст сообщения
+        об ошибке.
+
+    Returns
+    -------
+    JSONResponse
+        Ответ с ошибкой 400.
+    """
+    return JSONResponse(
+        content=StandardResponse(
+            code=APICode.NOTHING_TO_UPDATE, detail=str(exc)
+        ).model_dump(mode="json"),
+        status_code=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 async def _compromised_password_error_handler(
@@ -46,6 +79,7 @@ def register(app: FastAPI) -> None:
         Экземпляр FastAPI-приложения, на который регистрируется
         обработчик.
     """
+    app.add_exception_handler(NothingToUpdateError, _nothing_to_update_error_handler)
     app.add_exception_handler(
         CompromisedPasswordError, _compromised_password_error_handler
     )
