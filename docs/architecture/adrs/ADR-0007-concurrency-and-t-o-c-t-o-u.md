@@ -16,11 +16,11 @@ Accepted
 # Загрузили
 identity = await repo.get_by_username(username)
 # ← в этот момент другой запрос вызвал identity.deactivate()
-identity.change_password(new_hash)  # проверка _ensure_active() пройдена
+identity.change_password_hash(new_hash)  # проверка _ensure_active() пройдена
 await repo.change_password_hash(...)  # перезатрёт изменения конкурента
 ```
 
-В проекте на момент написания ADR уже существует три use case (RegisterUserUseCase, LoginUseCase, RefreshSessionUseCase), и в двух из них проблема потенциально проявляется. При этом `RefreshSessionUseCase` осознанно отступает от "чистого" DDD-цикла: он не загружает сущность, а выполняет атомарный условный UPDATE в репозитории (`rotate_secret`). Такой разнобой в подходах требует архитектурной фиксации.
+В проекте на момент написания ADR уже существует три use case (RegisterUserUseCase, LoginUseCase, RefreshSessionUseCase), и в двух из них проблема потенциально проявляется. При этом на момент написания ADR `RefreshSessionUseCase` осознанно отступал от "чистого" DDD-цикла: он не загружал сущность, а выполнял атомарный условный UPDATE в репозитории (`rotate_secret`). Такой разнобой в подходах потребовал архитектурной фиксации.
 
 Необходимо определить, какой подход к конкурентному доступу должен применяться по умолчанию, и в каких случаях допустимо от него отступать.
 
@@ -69,7 +69,7 @@ async def rotate_secret(self, id: UUID, old_secret: str, new_secret: str, ...) -
     return result.rowcount == 1
 ```
 
-Такой подход уже реализован в `SqlAlchemySessionRepository.rotate_secret()` и `SqlAlchemyIdentityRepository.change_password_hash()`.
+На момент принятия решения такой подход был реализован в `SqlAlchemySessionRepository.rotate_secret()` и `SqlAlchemyIdentityRepository.change_password_hash()`. После принятия решения оба сценария переведены на основной подход — оптимистичную блокировку (см. раздел «Решение»).
 
 #### Преимущества
 
@@ -250,7 +250,7 @@ Use case не проверяет инварианты конкурентно, а
 
 - **Сложность на порядок выше** — требуется брокер сообщений, саги, компенсирующие транзакции.
 - **Окна неконсистентности** — между записью и компенсацией данные находятся в противоречивом состоянии.
-- **Не для всех операций** — `change_password`, `rotate_secret` должны быть строго консистентными; eventual consistency здесь неприемлема.
+- **Не для всех операций** — смена пароля (`change_password_hash`) и обновление сессии (`refresh`) должны быть строго консистентными; eventual consistency здесь неприемлема.
 
 #### Ограничения
 
@@ -301,7 +301,7 @@ Use case не проверяет инварианты конкурентно, а
 - **Основной подход — Вариант B: оптимистичная блокировка через version stamp.**
 - **Точечно — Вариант C (SELECT FOR UPDATE).** Если для конкретного сценария окажется, что version stamp даёт слишком много retry (высокая частота конфликтов), допускается использование `SELECT FOR UPDATE` на уровне репозитория. Решение о переходе на C принимается на основании профилирования или наблюдения, а не заранее.
 - **Заложена возможность перехода на Вариант D (Domain Events + Saga).** При росте сложности и появлении инфраструктуры доменных событий допускается пересмотр данного решения в пользу eventual consistency для отдельных сценариев. Переход оформляется отдельным ADR.
-- Вариант A (условные UPDATE) остаётся как существующая реализация в `rotate_secret` и `change_password_hash` и не требует немедленной миграции, но для новых мутаторов не применяется.
+- Вариант A (условные UPDATE) допускался как временный: существовавшие реализации в `rotate_secret` и `change_password_hash` не требовали немедленной миграции, но для новых мутаторов не применялся. Впоследствии оба сценария были переведены на основной подход.
 
 ### 2. `version` как общий миксин
 
@@ -323,11 +323,13 @@ class Versioned:
 
 ```python
 # До
-async def change_password_hash(self, id: UUID, new_password_hash: str) -> bool
+async def change_password_hash(self, id: UUID, new_password_hash: str) -> bool: ...
+
 
 # После
-async def save_password(self, identity: Identity) -> None
-#                    Raises ConcurrentModificationError
+async def save_password_hash(
+    self, identity: Identity
+) -> None: ...  # Raises ConcurrentModificationError
 ```
 
 Use case не знает о существовании `version` и не передаёт её отдельным параметром.
@@ -339,3 +341,13 @@ Use case не знает о существовании `version` и не пер�
 При `ConcurrentModificationError` ошибка пробрасывается на уровень представления (`409 Conflict`). Клиент сам решает: показать сообщение, перезагрузить форму или повторить операцию осознанно.
 
 Автоматический retry допускается только как явная политика для операций, где повтор не приводит к потере пользовательских изменений (например, обновление `last_used_at`, счётчики, статистика).
+
+### 6. Обновление терминологии
+
+После принятия решения в ходе рефакторинга именование изменилось:
+
+- методы доменной сущности `Session.extend` и `Session.rotate_secret` консолидированы в `Session.refresh()`;
+- метод репозитория сессий `mark_used()` упразднён, `save_rotation()` заменён на `save_refresh(session)`; метод репозитория идентичностей `change_password_hash(id, new_password_hash) -> bool` переименован в `save_password_hash(identity)`; метод репозитория профилей `save_display_name(profile)` обобщён до `save_profile_changes(profile)`;
+- примеры сигнатур в разделе «Контекст» и «Вариант A» сохранены в историческом виде: гипотетический условный UPDATE не имеет аналога среди текущих методов.
+
+Все сценарии изменения агрегатов ныне следуют основному подходу — оптимистичной блокировке через миксин `Versioned`.

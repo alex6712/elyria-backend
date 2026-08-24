@@ -285,7 +285,7 @@ Logout:
 
 ### 2. Какой механизм защиты от race condition предпочтителен?
 
-Optimistic locking через `version` (ADR-0007): `save_rotation` проверяет версию агрегата, при конфликте возбуждается `ConcurrentModificationError` (HTTP 409). `SELECT FOR UPDATE` отклонён.
+Optimistic locking через `version` (ADR-0007): `save_refresh` проверяет версию агрегата, при конфликте возбуждается `ConcurrentModificationError` (HTTP 409). `SELECT FOR UPDATE` отклонён.
 
 ### 3. Следует ли добавить поля для управления устройствами?
 
@@ -297,7 +297,7 @@ Optimistic locking через `version` (ADR-0007): `save_rotation` провер
 
 ### 5. Как часто разрешается использовать один и тот же refresh token?
 
-Токен одноразовый: `rotate_secret` немедленно аннулирует старый секрет. Повторное использование отклоняется; параллельные запросы защищены optimistic locking (см. п. 2).
+Токен одноразовый: `refresh` немедленно аннулирует старый секрет. Повторное использование отклоняется; параллельные запросы защищены optimistic locking (см. п. 2).
 
 ---
 
@@ -307,5 +307,5 @@ Optimistic locking через `version` (ADR-0007): `save_rotation` провер
 
 - ADR-0001 (Dependency Injection) — сервисы аутентификации (TokenService, SessionRepository) будут создаваться через Composition Root.
 - ADR-0002 (Transaction Management) — операция создания пользователя и создания сессии должны быть атомарными в рамках одного Use Case.
-- ADR-0005 (Invalid Session Mutations) — инварианты `rotate_secret`/`revoke` доменной сущности `Session` действуют в реализации ротации.
+- ADR-0005 (Invalid Session Mutations) — инварианты `refresh`/`revoke` доменной сущности `Session` действуют в реализации ротации.
 - ADR-0007 (Concurrency and TOCTOU) — optimistic locking защищает ротацию сессий от параллельных запросов.
