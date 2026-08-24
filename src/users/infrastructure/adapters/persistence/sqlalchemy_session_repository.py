@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import RowMapping, insert, select, update
@@ -181,23 +181,41 @@ class SqlAlchemySessionRepository:
 
         session.upgrade()
 
-    async def revoke_all_by_identity_id(self, identity_id: UUID) -> int:
+    async def revoke_all_by_identity_id(
+        self, identity_id: UUID, *, except_session_id: UUID | None = None
+    ) -> int:
         """Принудительно завершить все сессии учётной записи.
+
+        Отзываются только активные сессии (с пустым ``revoked_at``):
+        ранее отозванные сессии остаются без изменений. При передаче
+        ``except_session_id`` соответствующая сессия отзывом
+        не затрагивается.
 
         Parameters
         ----------
         identity_id : UUID
             Идентификатор учётной записи.
+        except_session_id : UUID | None, optional
+            Идентификатор сессии, исключаемой из отзыва.
+            ``None`` означает отзыв всех сессий учётной записи.
 
         Returns
         -------
         int
             Количество отозванных сессий.
         """
+        conditions = [
+            sessions_table.c.identity_id == identity_id,
+            sessions_table.c.revoked_at.is_(None),
+        ]
+
+        if except_session_id is not None:
+            conditions.append(sessions_table.c.id != except_session_id)
+
         result = await self._connection.execute(
             update(sessions_table)
-            .values(revoked_at=datetime.now())
-            .where(sessions_table.c.identity_id == identity_id)
+            .values(revoked_at=datetime.now(UTC), updated_at=datetime.now(UTC))
+            .where(*conditions)
         )
 
         return result.rowcount
