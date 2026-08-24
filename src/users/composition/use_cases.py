@@ -9,6 +9,7 @@ from src.users.application.ports.security import (
     TokenIssuer,
 )
 from src.users.application.use_cases import (
+    ChangePasswordUseCase,
     ChangeProfileUseCase,
     GetProfileUseCase,
     LoginUseCase,
@@ -190,6 +191,49 @@ def build_logout_use_case(
     """
     return LogoutUseCase(
         uow=SqlAlchemyUsersUnitOfWork(engine),
+        token_verifier=token_verifier,
+        token_blacklist=token_blacklist,
+    )
+
+
+def build_change_password_use_case(
+    *,
+    engine: AsyncEngine,
+    password_hasher: PasswordHasher,
+    compromised_password_checker: CompromisedPasswordChecker,
+    token_verifier: TokenVerifier,
+    token_blacklist: TokenBlacklist,
+) -> ChangePasswordUseCase:
+    """Создать Use Case смены пароля пользователя.
+
+    Каждый вызов фабрики создаёт новый экземпляр Use Case
+    и новую единицу работы (Unit of Work), что соответствует
+    transient-семантике: один вызов Use Case - одна транзакция
+    (ADR-0002, п. 1 ответов разработчику).
+
+    Parameters
+    ----------
+    engine : AsyncEngine
+        Асинхронный движок SQLAlchemy для открытия транзакций.
+    password_hasher : PasswordHasher
+        Сервис хеширования паролей для проверки текущего пароля
+        и хеширования нового.
+    compromised_password_checker : CompromisedPasswordChecker
+        Сервис проверки нового пароля на утечки данных.
+    token_verifier : TokenVerifier
+        Сервис проверки подлинности access-токенов.
+    token_blacklist : TokenBlacklist
+        Хранилище отозванных access-токенов.
+
+    Returns
+    -------
+    ChangePasswordUseCase
+        Готовый к использованию Use Case смены пароля.
+    """
+    return ChangePasswordUseCase(
+        uow=SqlAlchemyUsersUnitOfWork(engine),
+        password_hasher=password_hasher,
+        compromised_password_checker=compromised_password_checker,
         token_verifier=token_verifier,
         token_blacklist=token_blacklist,
     )
