@@ -5,6 +5,8 @@ from src.shared.presentation.http import APICode
 from src.shared.presentation.http.schemas import StandardResponse
 from src.users.application.exceptions import (
     CompromisedPasswordError,
+    IncorrectCurrentPasswordError,
+    NewPasswordSameAsOldError,
     NothingToUpdateError,
 )
 
@@ -70,16 +72,84 @@ async def _compromised_password_error_handler(
     )
 
 
+async def _incorrect_current_password_error_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:
+    """Обработать исключение IncorrectCurrentPasswordError.
+
+    Возвращает клиенту ответ с HTTP 400 Bad Request в случае,
+    если при смене пароля переданный текущий пароль не совпадает
+    с сохранённым хэшем пароля учётной записи.
+
+    Parameters
+    ----------
+    _request : Request
+        Объект запроса FastAPI, содержащий информацию о входящем
+        HTTP-запросе (не используется).
+    exc : Exception
+        Экземпляр исключения, из которого получается текст сообщения
+        об ошибке.
+
+    Returns
+    -------
+    JSONResponse
+        Ответ с ошибкой 400.
+    """
+    return JSONResponse(
+        content=StandardResponse(
+            code=APICode.INCORRECT_PASSWORD, detail=str(exc)
+        ).model_dump(mode="json"),
+        status_code=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+async def _new_password_same_as_old_error_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:
+    """Обработать исключение NewPasswordSameAsOldError.
+
+    Возвращает клиенту ответ с HTTP 400 Bad Request в случае,
+    если при смене пароля новый пароль совпадает с текущим
+    сохранённым паролем учётной записи.
+
+    Parameters
+    ----------
+    _request : Request
+        Объект запроса FastAPI, содержащий информацию о входящем
+        HTTP-запросе (не используется).
+    exc : Exception
+        Экземпляр исключения, из которого получается текст сообщения
+        об ошибке.
+
+    Returns
+    -------
+    JSONResponse
+        Ответ с ошибкой 400.
+    """
+    return JSONResponse(
+        content=StandardResponse(
+            code=APICode.NEW_PASSWORD_SAME_AS_OLD, detail=str(exc)
+        ).model_dump(mode="json"),
+        status_code=status.HTTP_400_BAD_REQUEST,
+    )
+
+
 def register(app: FastAPI) -> None:
     """Зарегистрировать обработчик исключений на приложении.
 
     Parameters
     ----------
     app : FastAPI
-        Экземпляр FastAPI-приложения, на который регистрируется
-        обработчик.
+        Экземпляр FastAPI-приложения, на который регистрируются
+        обработчики.
     """
     app.add_exception_handler(NothingToUpdateError, _nothing_to_update_error_handler)
     app.add_exception_handler(
         CompromisedPasswordError, _compromised_password_error_handler
+    )
+    app.add_exception_handler(
+        IncorrectCurrentPasswordError, _incorrect_current_password_error_handler
+    )
+    app.add_exception_handler(
+        NewPasswordSameAsOldError, _new_password_same_as_old_error_handler
     )

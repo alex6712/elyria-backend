@@ -1,4 +1,5 @@
 from .auth import (
+    ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
     RefreshSessionResponse,
@@ -8,6 +9,7 @@ from .auth import (
 from .profiles import ChangeProfileRequest, ProfileResponse
 
 __all__ = [
+    "ChangePasswordRequest",
     "ChangeProfileRequest",
     "LoginRequest",
     "LoginResponse",

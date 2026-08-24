@@ -252,3 +252,51 @@ class RegisterUserResponse(StandardResponse):
             + "TuqukDqMV8bfz2_8SMdbnQz0gvst56uz2Tq6l-RMDBw",
         ],
     )
+
+
+class ChangePasswordRequest(BaseJsonModel):
+    """Схема запроса смены пароля пользователя.
+
+    Attributes
+    ----------
+    current_password : str
+        Строковое представление текущего пароля пользователя.
+    new_password : str
+        Строковое представление нового пароля пользователя.
+
+    See Also
+    --------
+    :class:`BaseJsonModel`
+        Базовая модель данных, сериализуемых в JSON.
+    """
+
+    current_password: Annotated[
+        str,
+        StringConstraints(
+            min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH
+        ),
+    ] = Field(
+        description=(
+            "Текущий пароль ("
+            + f"{length_description(PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH)}"
+            + ")."
+        ),
+        examples=["НадёжныйP@ssword123!"],
+        json_schema_extra={"sensitive": True},
+    )
+    new_password: Annotated[
+        str,
+        StringConstraints(
+            min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH
+        ),
+    ] = Field(
+        description=(
+            "Новый пароль ("
+            + f"{length_description(PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH)}, "
+            + "любые символы в соответствии с NIST SP 800-63B; не должен "
+            + "совпадать с текущим паролем и должен отсутствовать "
+            + "в известных утечках данных)."
+        ),
+        examples=["ДругойНадёжныйP@ssword456!"],
+        json_schema_extra={"sensitive": True},
+    )

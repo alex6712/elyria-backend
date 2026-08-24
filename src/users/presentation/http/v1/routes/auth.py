@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Request, Response, status
 
 from src.users.application.inputs import (
+    ChangePasswordInput,
     LoginInput,
     LogoutInput,
     RefreshSessionInput,
@@ -13,6 +14,7 @@ from src.users.domain.value_objects import DisplayName, Password, Username
 from src.users.presentation.http.dependencies import (
     AccessTokenDependency,
     AuthCookiesProviderDependency,
+    ChangePasswordDependency,
     LoginUserDependency,
     LogoutDependency,
     RefreshSessionDependency,
@@ -23,6 +25,7 @@ from src.users.presentation.http.exceptions import (
     RefreshTokenMissingError,
 )
 from src.users.presentation.http.v1.schemas import (
+    ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
     RefreshSessionResponse,
@@ -326,4 +329,80 @@ async def register(
         detail="User registered successfully.",
         user_id=result.user_id,
         access_token=result.access_token,
+    )
+
+
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Смена пароля пользователя.",
+    response_description="Пароль успешно изменён (тело ответа отсутствует)",
+    description=textwrap.dedent("""\
+        Изменяет пароль аутентифицированного пользователя.
+
+        Access-токен передаётся в заголовке ``Authorization``
+        в формате ``Bearer <token>``. Для подтверждения операции
+        в теле запроса передаются:
+
+        - ``currentPassword``: текущий пароль пользователя;
+        - ``newPassword``: новый пароль (должен отличаться от текущего
+          и отсутствовать в известных утечках данных).
+
+        При успешной смене пароля все прочие сессии пользователя
+        отзываются; сессия, в контексте которой выполнена операция,
+        остаётся активной, поэтому повторный вход на текущем устройстве
+        не требуется.
+
+        В случае ошибки (отсутствие или недействительность access-токена,
+        отзыв токена, неверный текущий пароль, совпадение нового пароля
+        со старым, пароль из утечки, неактивная учётная запись,
+        конкурентное изменение) возвращается соответствующий HTTP-код
+        и сообщение об ошибке.
+    """),
+)
+async def change_password(
+    body: Annotated[
+        ChangePasswordRequest,
+        Body(description="Схема запроса на смену пароля пользователя."),
+    ],
+    access_token: AccessTokenDependency,
+    change_password_use_case: ChangePasswordDependency,
+) -> None:
+    """Смена пароля текущего пользователя.
+
+    Подтверждает операцию текущим паролем, заменяет его новым
+    и отзывает все сессии пользователя, кроме текущей.
+
+    Parameters
+    ----------
+    body : ChangePasswordRequest
+        Валидированная схема тела запроса, содержащая текущий
+        и новый пароли пользователя.
+    access_token : str | None
+        Строка access-токена из заголовка ``Authorization``
+        входящего запроса (значение после слова ``Bearer``).
+        Значение ``None`` означает отсутствие заголовка либо
+        некорректную схему.
+    change_password_use_case : ChangePasswordUseCase
+        Use Case смены пароля, полученный через DI-зависимость
+        FastAPI из контейнера приложения.
+
+    Raises
+    ------
+    AccessTokenMissingError
+        Если заголовок ``Authorization`` с Bearer-схемой отсутствует
+        во входящем запросе либо имеет некорректный формат.
+    """
+    if access_token is None:
+        raise AccessTokenMissingError(
+            "Access token is missing. "
+            + "Provide it in the Authorization: Bearer <token> header."
+        )
+
+    await change_password_use_case.execute(
+        ChangePasswordInput(
+            access_token=access_token,
+            current_password=Password(body.current_password),
+            new_password=Password(body.new_password),
+        )
     )

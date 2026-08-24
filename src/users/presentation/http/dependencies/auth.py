@@ -4,6 +4,7 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.users.application.use_cases import (
+    ChangePasswordUseCase,
     LoginUseCase,
     LogoutUseCase,
     RefreshSessionUseCase,
@@ -225,6 +226,48 @@ async def register(
     ...,
 ) -> RegisterUserResponse:
     result = await register_user.execute(...)
+```
+"""
+
+
+def _get_change_password_use_case(request: Request) -> ChangePasswordUseCase:
+    """Получить Use Case смены пароля пользователя из DI-контейнера.
+
+    Доступ к нетипизированному ``request.app.state.container``
+    выполняется напрямую - Starlette не поддерживает типизацию
+    ``State`` нативно, поэтому возвращаемый тип принудительно
+    объявляется сигнатурой функции.
+
+    Parameters
+    ----------
+    request : Request
+        Объект HTTP-запроса FastAPI. Используется для доступа
+        к глобальному DI-контейнеру приложения через ``app.state``.
+
+    Returns
+    -------
+    ChangePasswordUseCase
+        Use Case смены пароля пользователя.
+    """
+    return request.app.state.container.users.change_password_use_case
+
+
+ChangePasswordDependency = Annotated[
+    ChangePasswordUseCase, Depends(_get_change_password_use_case)
+]
+"""Типизированная FastAPI-зависимость Use Case смены пароля пользователя.
+
+Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
+роутам готовый экземпляр :class:`ChangePasswordUseCase` без ручного
+приведения типов. Используется как аннотация параметра обработчика:
+
+```python
+@router.post("/change-password")
+async def change_password(
+    change_password: ChangePasswordDependency,
+    ...,
+) -> None:
+    await change_password.execute(...)
 ```
 """
 
