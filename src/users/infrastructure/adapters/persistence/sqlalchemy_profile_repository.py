@@ -80,10 +80,10 @@ class SqlAlchemyProfileRepository:
             updated_at=row["updated_at"],
         )
 
-    async def save_display_name(self, profile: Profile) -> None:
-        """Сохранить изменённое отображаемое имя профиля.
+    async def save_profile_changes(self, profile: Profile) -> None:
+        """Сохранить изменения профиля пользователя.
 
-        Обновляет отображаемое имя в базе данных с проверкой
+        Обновляет отображаемое имя и ссылку на аватар в базе данных с проверкой
         версии агрегата.
 
         После успешного обновления вызывает ``profile.upgrade()``
@@ -92,8 +92,7 @@ class SqlAlchemyProfileRepository:
         Parameters
         ----------
         profile : Profile
-            Доменная сущность профиля с изменённым отображаемым
-            именем и актуальной версией.
+            Доменная сущность профиля с внесёнными изменениями и актуальной версией.
 
         Raises
         ------
@@ -105,6 +104,7 @@ class SqlAlchemyProfileRepository:
             update(profiles_table)
             .values(
                 display_name=profile.display_name.value,
+                avatar_url=profile.avatar_url,
                 version=profiles_table.c.version + 1,
                 updated_at=profile.updated_at,
             )

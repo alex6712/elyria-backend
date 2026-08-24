@@ -7,6 +7,7 @@ from src.shared.infrastructure.columns import (
     identifier_column,
     version_column,
 )
+from src.users.domain.value_objects.avatar_url import AVATAR_URL_MAX_LENGTH
 from src.users.domain.value_objects.display_name import DISPLAY_NAME_MAX_LENGTH
 
 profiles_table = Table(
@@ -30,7 +31,7 @@ profiles_table = Table(
     ),
     Column(
         "avatar_url",
-        String(512),
+        String(AVATAR_URL_MAX_LENGTH),
         nullable=True,
         comment="URL изображения аватара пользователя",
     ),

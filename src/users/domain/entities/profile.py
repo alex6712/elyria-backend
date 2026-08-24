@@ -3,7 +3,7 @@ from typing import Self, override
 from uuid import UUID, uuid4
 
 from src.shared.domain.mixins import Auditable, Identifiable, Versioned
-from src.users.domain.value_objects import DisplayName
+from src.users.domain.value_objects import AvatarUrl, DisplayName
 
 
 class Profile(Identifiable[UUID], Auditable, Versioned):
@@ -24,7 +24,7 @@ class Profile(Identifiable[UUID], Auditable, Versioned):
         Идентификатор учётной записи, к которой привязан профиль.
     display_name : DisplayName
         Value object с отображаемым именем профиля.
-    avatar_url : str | None
+    avatar_url : AvatarUrl | None
         URL изображения аватара профиля.
     version : int
         Версия агрегата для optimistic locking. Увеличивается на 1
@@ -40,7 +40,7 @@ class Profile(Identifiable[UUID], Auditable, Versioned):
         id: UUID,
         identity_id: UUID,
         display_name: DisplayName,
-        avatar_url: str | None,
+        avatar_url: AvatarUrl | None,
         version: int,
         created_at: datetime,
         updated_at: datetime | None,
@@ -55,7 +55,10 @@ class Profile(Identifiable[UUID], Auditable, Versioned):
 
     @classmethod
     def create(
-        cls, identity_id: UUID, display_name: DisplayName, avatar_url: str | None = None
+        cls,
+        identity_id: UUID,
+        display_name: DisplayName,
+        avatar_url: AvatarUrl | None = None,
     ) -> Self:
         """Создать новый профиль со значениями по умолчанию.
 
@@ -65,7 +68,7 @@ class Profile(Identifiable[UUID], Auditable, Versioned):
             Идентификатор учётной записи, к которой привязывается профиль.
         display_name : DisplayName
             Value object с отображаемым именем профиля.
-        avatar_url : str | None, optional
+        avatar_url : AvatarUrl | None, optional
             URL изображения аватара. По умолчанию отсутствует.
 
         Returns
@@ -90,15 +93,28 @@ class Profile(Identifiable[UUID], Auditable, Versioned):
 
         Parameters
         ----------
+        new_display_name : DisplayName
+            Новое отображаемое имя профиля.
         at : datetime | None, optional
             Временная метка смены отображаемого имени.
+        """
+        self.display_name = new_display_name
+        self._touch(at)
+
+    def change_avatar_url(
+        self, new_avatar_url: AvatarUrl | None, *, at: datetime | None = None
+    ) -> None:
+        """Изменить URL изображения аватара профиля.
 
         Parameters
         ----------
-        new_display_name : DisplayName
-            Новое отображаемое имя профиля.
+        new_avatar_url : AvatarUrl | None
+            Новый URL изображения аватара. Значение ``None`` означает
+            удаление аватара из профиля.
+        at : datetime | None, optional
+            Временная метка изменения URL изображения аватара.
         """
-        self.display_name = new_display_name
+        self.avatar_url = new_avatar_url
         self._touch(at)
 
     @override
