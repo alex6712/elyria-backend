@@ -101,58 +101,33 @@ class SqlAlchemySessionRepository:
 
         return self._row_to_session(row)
 
-    async def mark_used(self, id: UUID, at: datetime) -> bool:
-        """Зафиксировать факт использования сессии.
+    async def save_refresh(self, session: Session) -> None:
+        """Сохранить результат обновления (продления) сессии.
 
-        Parameters
-        ----------
-        id : UUID
-            Идентификатор сессии.
-        at : datetime
-            Момент использования.
-        at : datetime | None, optional
-            Временная метка использования пользовательской сессии.
+        Атомарно записывает новый секрет, обновлённый срок действия и метку
+        последнего использования с проверкой версии агрегата. Обновляет только
+        изменённые поля жизненного цикла без затрагивания других атрибутов.
 
-        Returns
-        -------
-        bool
-            ``True``, если время использования было обновлено,
-            ``False``, если сессия с указанным идентификатором не найдена.
-        """
-        result = await self._connection.execute(
-            update(sessions_table)
-            .values(last_used_at=at)
-            .where(sessions_table.c.id == id)
-        )
-
-        return result.rowcount == 1
-
-    async def save_rotation(self, session: Session) -> None:
-        """Сохранить ротированный секрет сессии и обновлённый срок действия.
-
-        Обновляет секрет сессии и срок её действия в базе данных
-        с проверкой версии агрегата.
-
-        После успешного обновления вызывает ``session.upgrade()``
-        для синхронизации версии объекта Python с базой данных.
+        После успешного обновления вызывает ``session.upgrade()`` для синхронизации
+        версии объекта Python с базой данных.
 
         Parameters
         ----------
         session : Session
-            Доменная сущность сессии с уже ротированным секретом
-            и актуальной версией.
+            Доменная сущность сессии с уже обновлёнными полями (``secret``,
+            ``expires_at``, ``last_used_at``) и актуальной версией.
 
         Raises
         ------
         ConcurrentModificationError
-            Если версия ``session`` не совпадает с версией
-            в базе данных.
+            Если версия ``session`` не совпадает с версией в базе данных.
         """
         result = await self._connection.execute(
             update(sessions_table)
             .values(
                 session_secret=session.session_secret,
                 expires_at=session.expires_at,
+                last_used_at=session.last_used_at,
                 version=sessions_table.c.version + 1,
                 updated_at=session.updated_at,
             )

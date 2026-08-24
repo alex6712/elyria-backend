@@ -6,14 +6,9 @@ from src.shared.application.ports.security import TokenVerifier
 from src.users.application.commands import RefreshSessionCommand
 from src.users.application.exceptions import SessionNotFoundError
 from src.users.application.ports import UsersUnitOfWork
-from src.users.application.ports.security import (
-    TokenHasher,
-    TokenIssuer,
-)
+from src.users.application.ports.security import TokenHasher, TokenIssuer
 from src.users.application.results import RefreshSessionResult
-from src.users.domain.exceptions import (
-    InactiveUserError,
-)
+from src.users.domain.exceptions import InactiveUserError
 
 
 class RefreshSessionUseCase:
@@ -69,10 +64,10 @@ class RefreshSessionUseCase:
         4. Проверяет, что учётная запись владельца сессии активна.
         5. Вычисляет время истечения новой сессии.
         6. Выпускает новый refresh-токен через ``TokenIssuer``.
-        7. Вызывает ``session.rotate_secret()`` - метод доменной
+        7. Вызывает ``session.refresh()`` - метод доменной
            сущности, проверяющий доменные инварианты (сессия не
            отозвана и не истекла, согласно ADR-0005).
-        8. Сохраняет изменения через ``sessions.save_rotation()``
+        8. Сохраняет изменения через ``sessions.save_refresh()``
            с проверкой версии агрегата (optimistic locking).
         9. Выпускает новый short-lived access-токен.
 
@@ -145,10 +140,10 @@ class RefreshSessionUseCase:
                 )
             )
 
-            session.rotate_secret(
+            session.refresh(
                 self._token_hasher.hash(new_refresh_token), refresh_expires_at, at=now
             )
-            await self._uow.sessions.save_rotation(session)
+            await self._uow.sessions.save_refresh(session)
 
             access_token = self._token_issuer.issue(
                 TokenClaimsDTO(

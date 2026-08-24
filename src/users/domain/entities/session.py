@@ -46,8 +46,9 @@ class Session(Identifiable[UUID], Auditable, Versioned):
 
     Notes
     -----
-    Согласно решению, симметричному ADR-0004 (принятому для ``Profile``),
-    методы ``extend`` и ``rotate_secret`` запрещены для отозванной
+    Согласно решению, симметричному ADR-0004 (принятому для
+    учётной записи пользователя),
+    метод обновления сессии ``refresh`` запрещён для отозванной
     или истёкшей сессии. При нарушении возбуждается
     ``SessionRevokedError`` (отозванная сессия) либо
     ``SessionExpiredError`` (истёкшая). Это решение оформлено
@@ -152,62 +153,41 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         """
         return (now or datetime.now(UTC)) >= self.expires_at
 
-    def mark_used(self, at: datetime | None = None) -> None:
-        """Зафиксировать факт использования сессии.
-
-        Parameters
-        ----------
-        at : datetime | None, optional
-            Момент использования. Если не передан, используется
-            текущее время.
-
-        Notes
-        -----
-        Не проверяет валидность сессии: предполагается, что
-        Application Layer вызывает данный метод только после
-        собственной проверки состояния сессии в рамках сценария
-        аутентификации запроса.
-        """
-        if at is None:
-            at = datetime.now(UTC)
-
-        self.last_used_at = at
-        self._touch(at)
-
-    def rotate_secret(
+    def refresh(
         self,
         new_session_secret: str,
         new_expires_at: datetime,
         *,
         at: datetime | None = None,
     ) -> None:
-        """Заменить секрет сессии и продлить срок её действия.
+        """Обновить состояние активной сессии пользователя.
+
+        Атомарно меняет секрет, срок действия и метку последнего использования.
+        Проверяет валидность через ``_ensure_valid`` перед сохранением.
 
         Parameters
         ----------
         new_session_secret : str
-            Новый секрет сессии.
+            Новый криптографический токен.
         new_expires_at : datetime
-            Новый момент истечения срока действия сессии.
+            Новая дата истечения срока (обычно now + ttl).
         at : datetime | None, optional
-            Временная метка ротации секрета сессии.
+            Точка отсчета для проверки валидности. По умолчанию — сейчас.
 
         Raises
         ------
         SessionRevokedError
             Если сессия отозвана.
         SessionExpiredError
-            Если истёк срок действия сессии.
-
-        Notes
-        -----
-        Используется в сценарии обновления сессии (refresh),
-        когда старый секрет должен быть инвалидирован в пользу
-        нового, а не создания новой сессии с нуля.
+            Если сессия истекла на момент ``at``.
         """
+        if at is None:
+            at = datetime.now(UTC)
+
         self._ensure_valid(at)
         self.session_secret = new_session_secret
         self.expires_at = new_expires_at
+        self.last_used_at = at
         self._touch(at)
 
     def revoke(self, at: datetime | None = None) -> None:
@@ -251,9 +231,9 @@ class Session(Identifiable[UUID], Auditable, Versioned):
 
         Notes
         -----
-        Реализует инвариант, симметричный ADR-0004: операции
-        ``extend`` и ``rotate_secret`` запрещены для невалидной
-        сессии. Решение описано в ADR-0005.
+        Реализует инвариант, симметричный ADR-0004: операция
+        ``refresh`` запрещена для невалидной сессии. Решение описано
+        в ADR-0005.
         """
         if self.is_revoked():
             raise SessionRevokedError(self.id)
