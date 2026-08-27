@@ -19,20 +19,20 @@ from src.users.domain.entities import Identity, Profile, Session
 class _RegisterUserResult:
     """Результат успешной регистрации пользователя.
 
-    Содержит идентификатор созданной учётной записи, а также
+    Содержит идентификатор созданного профиля, а также
     access и refresh токены для немедленной аутентификации.
 
     Attributes
     ----------
-    user_id : UUID
-        Идентификатор созданной учётной записи.
+    profile_id : UUID
+        Уникальный идентификатор созданного профиля.
     access_token : str
         Access JWT для аутентификации запросов.
     refresh_token : str
         Refresh JWT для обновления сессии.
     """
 
-    user_id: UUID
+    profile_id: UUID
     access_token: str
     refresh_token: str
 
@@ -98,7 +98,7 @@ class RegisterUserUseCase:
         Returns
         -------
         _RegisterUserResult
-            Идентификатор созданного пользователя и выпущенные
+            Идентификатор созданного профиля и выпущенные
             access- и refresh-токены.
 
         Raises
@@ -156,5 +156,7 @@ class RegisterUserUseCase:
             )
 
         return _RegisterUserResult(
-            user_id=identity.id, access_token=access_token, refresh_token=refresh_token
+            profile_id=profile.id,
+            access_token=access_token,
+            refresh_token=refresh_token,
         )

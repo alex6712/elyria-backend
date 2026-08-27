@@ -16,7 +16,7 @@ async def _profile_not_found_error_handler(
     """Обработать исключение ProfileNotFoundError.
 
     Возвращает клиенту ответ с HTTP 404 Not Found, если профиль
-    для учётной записи, указанной в access-токене, отсутствует.
+    с указанным идентификатором отсутствует в системе.
 
     Parameters
     ----------

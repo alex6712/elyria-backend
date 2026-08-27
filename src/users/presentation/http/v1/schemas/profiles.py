@@ -119,8 +119,6 @@ class ProfileResponse(BaseJsonModel):
     ----------
     id : UUID4
         Уникальный идентификатор профиля.
-    identity_id : UUID4
-        Идентификатор учётной записи, к которой привязан профиль.
     display_name : str
         Отображаемое имя пользователя.
     avatar_url : str | None
@@ -140,13 +138,6 @@ class ProfileResponse(BaseJsonModel):
     id: UUID4 = Field(
         description="Уникальный идентификатор профиля (UUID четвёртой версии).",
         examples=["f2a3c8e1-5b47-4d6e-9c8a-1d3f5e7a9b2c"],
-    )
-    identity_id: UUID4 = Field(
-        description=(
-            "Идентификатор учётной записи, к которой привязан профиль "
-            + "(UUID четвёртой версии)."
-        ),
-        examples=["a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"],
     )
     display_name: str = Field(
         description=(

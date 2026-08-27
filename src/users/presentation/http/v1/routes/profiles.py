@@ -124,8 +124,8 @@ async def change_profile(
         записи, указанной в утверждении ``sub`` токена, поэтому
         путь запроса дополнительных параметров не содержит.
 
-        Для получения профиля другой учётной записи используйте
-        эндпоинт ``GET /v1/profiles/{identity_id}``.
+        Для получения профиля другого пользователя используйте
+        эндпоинт ``GET /v1/profiles/{profileId}``.
 
         В случае ошибки (отсутствие или недействительность access-токена,
         отзыв токена, отсутствие профиля) возвращается соответствующий
@@ -156,7 +156,7 @@ async def get_my_profile(
     -------
     ProfileResponse
         Ответ с кодом 200 и данными профиля текущего пользователя:
-        id, identityId, displayName, avatarUrl, createdAt, updatedAt.
+        id, displayName, avatarUrl, createdAt, updatedAt.
 
     Raises
     ------
@@ -176,7 +176,6 @@ async def get_my_profile(
 
     return ProfileResponse(
         id=result.id,
-        identity_id=result.identity_id,
         display_name=result.display_name.value,
         avatar_url=result.avatar_url.value if result.avatar_url is not None else None,
         created_at=result.created_at,
@@ -185,17 +184,17 @@ async def get_my_profile(
 
 
 @router.get(
-    "/{identity_id}",
+    "/{profile_id}",
     response_model=ProfileResponse,
     status_code=status.HTTP_200_OK,
-    summary="Получение профиля по идентификатору учётной записи.",
+    summary="Получение профиля по идентификатору.",
     description=textwrap.dedent("""\
-        Возвращает профиль учётной записи с указанным идентификатором.
+        Возвращает профиль пользователя с указанным идентификатором.
 
         Access-токен передаётся в заголовке ``Authorization``
-        в формате ``Bearer <token>``. Идентификатор запрашиваемой
-        учётной записи передаётся в пути запроса как UUID
-        (``identity_id``); передача строки, не являющейся UUID,
+        в формате ``Bearer <token>``. Идентификатор запрашиваемого
+        профиля передаётся в пути запроса как UUID
+        (``profileId``); передача строки, не являющейся UUID,
         отклоняется с кодом ``422 Unprocessable Content``
         (``VALIDATION_ERROR``).
 
@@ -207,14 +206,14 @@ async def get_my_profile(
         профиля) возвращается соответствующий HTTP-код и сообщение
         об ошибке.
     """),
-    response_description="Профиль запрашиваемой учётной записи",
+    response_description="Профиль запрашиваемого пользователя",
 )
-async def get_profile_by_identity_id(
-    identity_id: Annotated[
+async def get_profile_by_id(
+    profile_id: Annotated[
         UUID4,
         Path(
             description=(
-                "Идентификатор учётной записи, профиль которой требуется получить."
+                "Уникальный идентификатор профиля, который требуется получить."
             ),
             examples=["a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"],
         ),
@@ -222,16 +221,15 @@ async def get_profile_by_identity_id(
     access_token: AccessTokenDependency,
     get_profile_use_case: GetProfileDependency,
 ) -> ProfileResponse:
-    """Получить профиль по идентификатору учётной записи.
+    """Получить профиль по идентификатору.
 
     Извлекает access-токен из Bearer-заголовка и возвращает профиль
-    учётной записи, указанной в пути запроса.
+    пользователя, указанного в пути запроса.
 
     Parameters
     ----------
-    identity_id : UUID
-        Идентификатор учётной записи, профиль которой требуется
-        получить.
+    profile_id : UUID
+        Уникальный идентификатор профиля, который требуется получить.
     access_token : str | None
         Строка access-токена из заголовка ``Authorization``
         входящего запроса (значение после слова ``Bearer``).
@@ -244,8 +242,8 @@ async def get_profile_by_identity_id(
     Returns
     -------
     ProfileResponse
-        Ответ с кодом 200 и данными профиля запрашиваемой учётной
-        записи: id, identityId, displayName, avatarUrl, createdAt,
+        Ответ с кодом 200 и данными профиля запрашиваемого
+        пользователя: id, displayName, avatarUrl, createdAt,
         updatedAt.
 
     Raises
@@ -261,12 +259,11 @@ async def get_profile_by_identity_id(
         )
 
     result = await get_profile_use_case.execute(
-        GetProfileInput(access_token=access_token, identity_id=identity_id)
+        GetProfileInput(access_token=access_token, profile_id=profile_id)
     )
 
     return ProfileResponse(
         id=result.id,
-        identity_id=result.identity_id,
         display_name=result.display_name.value,
         avatar_url=result.avatar_url.value if result.avatar_url is not None else None,
         created_at=result.created_at,

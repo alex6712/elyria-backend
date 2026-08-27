@@ -16,15 +16,13 @@ class _GetProfileResult:
     """Результат успешного получения профиля пользователя.
 
     Содержит отображаемые данные профиля, возвращаемые клиенту.
-    Технические атрибуты агрегата (версия для optimistic locking)
-    в результат не включаются.
+    Технические атрибуты агрегата (версия для optimistic locking,
+    идентификатор учётной записи) в результат не включаются.
 
     Attributes
     ----------
     id : UUID
         Уникальный идентификатор профиля.
-    identity_id : UUID
-        Идентификатор учётной записи, к которой привязан профиль.
     display_name : DisplayName
         Value object с отображаемым именем профиля.
     avatar_url : AvatarUrl | None
@@ -38,7 +36,6 @@ class _GetProfileResult:
     """
 
     id: UUID
-    identity_id: UUID
     display_name: DisplayName
     avatar_url: AvatarUrl | None
     created_at: datetime
@@ -78,16 +75,17 @@ class GetProfileUseCase:
         """Получить профиль пользователя.
 
         Проверяет access-токен и его отсутствие в чёрном списке,
-        определяет целевую учётную запись (переданный идентификатор
-        либо владелец токена) и загружает её профиль в рамках единицы
-        работы. Читающая операция: изменений агрегата не выполняет,
-        транзакция фиксируется без сохранения состояния.
+        определяет целевой профиль (по переданному идентификатору
+        либо по учётной записи владельца токена) и загружает его
+        в рамках единицы работы. Читающая операция: изменений
+        агрегата не выполняет, транзакция фиксируется без сохранения
+        состояния.
 
         Parameters
         ----------
         input : GetProfileInput
             Объект с данными для получения профиля, содержащий
-            access-токен и необязательный идентификатор учётной записи.
+            access-токен и необязательный идентификатор профиля.
 
         Returns
         -------
@@ -113,19 +111,80 @@ class GetProfileUseCase:
         if await self._token_blacklist.is_revoked(claims.token_id):
             raise TokenRevokedError("Passed access token has been revoked.")
 
-        identity_id = (
-            input.identity_id if input.identity_id is not None else claims.user_id
-        )
+        if input.profile_id is not None:
+            return await self._get_by_profile_id(input.profile_id)
 
+        return await self._get_by_identity_id(claims.user_id)
+
+    async def _get_by_profile_id(self, profile_id: UUID) -> _GetProfileResult:
+        """Получить профиль по идентификатору профиля.
+
+        Выполняет поиск профиля по его уникальному идентификатору
+        в рамках единицы работы.
+
+        Parameters
+        ----------
+        profile_id : UUID
+            Уникальный идентификатор профиля.
+
+        Returns
+        -------
+        _GetProfileResult
+            Отображаемые данные найденного профиля.
+
+        Raises
+        ------
+        ProfileNotFoundError
+            Если профиль с указанным идентификатором не найден.
+        """
+        async with self._uow:
+            profile = await self._uow.profiles.get_by_id(profile_id)
+
+            if profile is None:
+                raise ProfileNotFoundError(f"Profile with id={profile_id} not found.")
+
+            return _GetProfileResult(
+                id=profile.id,
+                display_name=profile.display_name,
+                avatar_url=profile.avatar_url,
+                created_at=profile.created_at,
+                updated_at=profile.updated_at,
+            )
+
+    async def _get_by_identity_id(self, identity_id: UUID) -> _GetProfileResult:
+        """Получить профиль по идентификатору учётной записи.
+
+        Выполняет поиск профиля по идентификатору связанной учётной
+        записи (внутренний идентификатор аутентификации). Используется
+        для сценария "мой профиль", когда идентификатор профиля
+        неизвестен, но доступен ``identity_id`` из access-токена.
+
+        Parameters
+        ----------
+        identity_id : UUID
+            Идентификатор учётной записи пользователя, извлечённый
+            из утверждений ``sub`` access-токена.
+
+        Returns
+        -------
+        _GetProfileResult
+            Отображаемые данные найденного профиля.
+
+        Raises
+        ------
+        ProfileNotFoundError
+            Если профиль для указанной учётной записи не найден.
+        """
         async with self._uow:
             profile = await self._uow.profiles.get_by_identity_id(identity_id)
 
             if profile is None:
-                raise ProfileNotFoundError(f"Profile for user {identity_id} not found.")
+                raise ProfileNotFoundError(
+                    f"Profile with identity_id={identity_id} not found."
+                )
 
             return _GetProfileResult(
                 id=profile.id,
-                identity_id=profile.identity_id,
                 display_name=profile.display_name,
                 avatar_url=profile.avatar_url,
                 created_at=profile.created_at,

@@ -309,8 +309,9 @@ async def register(
     Returns
     -------
     RegisterUserResponse
-        Ответ с кодом 201, идентификатором созданного пользователя
-        и access-токеном для немедленной аутентификации. Refresh-токен
+        Ответ с кодом 201, идентификатором созданного профиля,
+        access-токеном для немедленной аутентификации и URI для получения
+        профиля зарегистрировавшегося пользователя. Refresh-токен
         устанавливается отдельно в HttpOnly-cookie.
     """
     result = await register_user_use_case.execute(
@@ -325,9 +326,11 @@ async def register(
         response=response, refresh_token=result.refresh_token
     )
 
+    response.headers["Location"] = f"/v1/profiles/{result.profile_id}"
+
     return RegisterUserResponse(
         detail="User registered successfully.",
-        user_id=result.user_id,
+        profile_id=result.profile_id,
         access_token=result.access_token,
     )
 

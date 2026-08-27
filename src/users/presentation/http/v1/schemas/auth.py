@@ -216,14 +216,14 @@ class RegisterUserRequest(BaseJsonModel):
 class RegisterUserResponse(StandardResponse):
     """Модель ответа на успешную регистрацию пользователя.
 
-    Содержит идентификатор созданной учётной записи и access-токен
+    Содержит идентификатор созданного профиля и access-токен
     для немедленной аутентификации. Refresh-токен передаётся клиенту
     не в теле ответа, а в HttpOnly-cookie, поэтому в модели отсутствует.
 
     Attributes
     ----------
-    user_id : UUID
-        Публичный идентификатор созданной учётной записи.
+    profile_id : UUID
+        Уникальный идентификатор созданного профиля.
     access_token : str
         Access JWT для аутентификации последующих запросов.
 
@@ -233,8 +233,8 @@ class RegisterUserResponse(StandardResponse):
         Базовая модель ответа с полями ``code`` и ``detail``.
     """
 
-    user_id: UUID4 = Field(
-        description="Публичный идентификатор пользователя (UUID четвёртой версии).",
+    profile_id: UUID4 = Field(
+        description="Уникальный идентификатор профиля (UUID четвёртой версии).",
         examples=[
             "d522c9bb-d9d9-4075-bb01-fc358b4f5048",
             "0e60ab98-9cf2-43ac-b19c-021a98ed0f95",

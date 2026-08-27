@@ -49,6 +49,37 @@ class SqlAlchemyProfileRepository:
             )
         )
 
+    async def get_by_id(self, profile_id: UUID) -> Profile | None:
+        """Получить профиль пользователя по идентификатору профиля.
+
+        Parameters
+        ----------
+        profile_id : UUID
+            Уникальный идентификатор профиля.
+
+        Returns
+        -------
+        Profile | None
+            Найденный профиль пользователя либо ``None``, если профиль
+            с указанным идентификатором не существует.
+        """
+        result = await self._connection.execute(
+            select(profiles_table).where(profiles_table.c.id == profile_id)
+        )
+
+        if not (row := result.mappings().first()):
+            return None
+
+        return Profile(
+            id=row["id"],
+            identity_id=row["identity_id"],
+            display_name=DisplayName(row["display_name"]),
+            avatar_url=row["avatar_url"],
+            version=row["version"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
     async def get_by_identity_id(self, identity_id: UUID) -> Profile | None:
         """Получить профиль пользователя по идентификатору учётной записи.
 

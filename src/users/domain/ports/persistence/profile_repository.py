@@ -27,6 +27,22 @@ class ProfileRepository(Protocol):
         """
         ...
 
+    async def get_by_id(self, profile_id: UUID) -> Profile | None:
+        """Получить профиль пользователя по идентификатору профиля.
+
+        Parameters
+        ----------
+        profile_id : UUID
+            Уникальный идентификатор профиля.
+
+        Returns
+        -------
+        Profile | None
+            Найденный профиль пользователя либо ``None``, если профиль
+            с указанным идентификатором не существует.
+        """
+        ...
+
     async def get_by_identity_id(self, identity_id: UUID) -> Profile | None:
         """Получить профиль пользователя по идентификатору учётной записи.
 
