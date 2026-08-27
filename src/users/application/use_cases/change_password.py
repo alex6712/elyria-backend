@@ -98,6 +98,11 @@ class ChangePasswordUseCase:
         if await self._token_blacklist.is_revoked(claims.token_id):
             raise TokenRevokedError("Passed access token has been revoked.")
 
+        if await self._compromised_password_checker.is_compromised(input.new_password):
+            raise CompromisedPasswordError(
+                "Password has been compromised and cannot be used."
+            )
+
         async with self._uow:
             identity = await self._uow.identities.get_by_id(claims.user_id)
 
@@ -112,13 +117,6 @@ class ChangePasswordUseCase:
             if self._password_hasher.verify(input.new_password, current_hash):
                 raise NewPasswordSameAsOldError(
                     "New password must differ from current."
-                )
-
-            if await self._compromised_password_checker.is_compromised(
-                input.new_password
-            ):
-                raise CompromisedPasswordError(
-                    "Password has been compromised and cannot be used."
                 )
 
             identity.change_password_hash(
