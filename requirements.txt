@@ -16,7 +16,7 @@ aioitertools==0.13.0
     # via aiobotocore
 aiosignal==1.4.0
     # via aiohttp
-alembic==1.19.1
+alembic==1.19.2
     # via elyria-backend (pyproject.toml)
 annotated-doc==0.0.5
     # via
@@ -24,7 +24,7 @@ annotated-doc==0.0.5
     #   typer
 annotated-types==0.8.0
     # via pydantic
-anyio==4.15.0
+anyio==4.15.1
     # via
     #   httpx
     #   starlette
@@ -173,7 +173,7 @@ rich==15.0.0
     # via
     #   rich-toolkit
     #   typer
-rich-toolkit==0.20.3
+rich-toolkit==0.20.4
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli

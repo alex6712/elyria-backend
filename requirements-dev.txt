@@ -18,7 +18,7 @@ aiosignal==1.4.0
     # via aiohttp
 aiosqlite==0.22.1
     # via elyria-backend (pyproject.toml:dev)
-alembic==1.19.1
+alembic==1.19.2
     # via elyria-backend (pyproject.toml)
 annotated-doc==0.0.5
     # via
@@ -26,7 +26,7 @@ annotated-doc==0.0.5
     #   typer
 annotated-types==0.8.0
     # via pydantic
-anyio==4.15.0
+anyio==4.15.1
     # via
     #   httpx
     #   starlette
@@ -102,7 +102,7 @@ frozenlist==1.8.0
     #   aiosignal
 greenlet==3.5.5
     # via sqlalchemy
-grimp==3.16
+grimp==3.17
     # via import-linter
 h11==0.16.0
     # via
@@ -124,7 +124,7 @@ idna==3.19
     #   email-validator
     #   httpx
     #   yarl
-import-linter==2.14
+import-linter==2.15
     # via elyria-backend (pyproject.toml:dev)
 iniconfig==2.3.0
     # via pytest
@@ -228,7 +228,7 @@ rich==15.0.0
     #   import-linter
     #   rich-toolkit
     #   typer
-rich-toolkit==0.20.3
+rich-toolkit==0.20.4
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
