@@ -5,10 +5,10 @@ from fastapi import APIRouter, Body, Path, status
 from pydantic import UUID4
 
 from src.shared.application.unset import UNSET, Maybe
+from src.shared.presentation.http.dependencies import AccessTokenDependency
 from src.users.application.inputs import ChangeProfileInput, GetProfileInput
 from src.users.domain.value_objects import AvatarUrl, DisplayName
 from src.users.presentation.http.dependencies import (
-    AccessTokenDependency,
     ChangeProfileDependency,
     GetProfileDependency,
 )

@@ -1,5 +1,4 @@
 from .auth import (
-    AccessTokenDependency,
     AuthCookiesProviderDependency,
     ChangePasswordDependency,
     LoginUserDependency,
@@ -10,7 +9,6 @@ from .auth import (
 from .profiles import ChangeProfileDependency, GetProfileDependency
 
 __all__ = [
-    "AccessTokenDependency",
     "AuthCookiesProviderDependency",
     "ChangePasswordDependency",
     "ChangeProfileDependency",

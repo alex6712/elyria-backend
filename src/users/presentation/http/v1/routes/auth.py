@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Request, Response, status
 
+from src.shared.presentation.http.dependencies import AccessTokenDependency
 from src.users.application.inputs import (
     ChangePasswordInput,
     LoginInput,
@@ -12,7 +13,6 @@ from src.users.application.inputs import (
 )
 from src.users.domain.value_objects import DisplayName, Password, Username
 from src.users.presentation.http.dependencies import (
-    AccessTokenDependency,
     AuthCookiesProviderDependency,
     ChangePasswordDependency,
     LoginUserDependency,
