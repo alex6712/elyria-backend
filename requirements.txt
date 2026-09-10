@@ -122,7 +122,7 @@ markupsafe==3.0.3
     #   mako
 mdurl==0.1.2
     # via markdown-it-py
-multidict==6.7.1
+multidict==6.8.0
     # via
     #   aiobotocore
     #   aiohttp
@@ -173,7 +173,7 @@ rich==15.0.0
     # via
     #   rich-toolkit
     #   typer
-rich-toolkit==0.20.4
+rich-toolkit==0.20.5
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
@@ -181,7 +181,7 @@ rignore==0.8.1
     # via fastapi-cloud-cli
 s3transfer==0.14.0
     # via boto3
-sentry-sdk==2.68.1
+sentry-sdk==2.69.1
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
