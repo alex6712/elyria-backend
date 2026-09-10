@@ -1,6 +1,7 @@
 from types import TracebackType
 from typing import Protocol, Self, runtime_checkable
 
+from src.users.application.ports.readers import UserSearchReader
 from src.users.domain.ports.persistence import (
     IdentityRepository,
     ProfileRepository,
@@ -69,6 +70,24 @@ class UsersUnitOfWork(Protocol):
         -------
         SessionRepository
             Репозиторий для работы с сущностями ``Session``.
+
+        Raises
+        ------
+        UnitOfWorkNotEnteredError
+            Если единица работы ещё не была открыта через
+            ``async with``.
+        """
+        ...
+
+    @property
+    def user_search(self) -> UserSearchReader:
+        """Источник данных поиска пользователей по имени пользователя.
+
+        Returns
+        -------
+        UserSearchReader
+            Источник denormalized read model
+            учётных записей и профилей.
 
         Raises
         ------

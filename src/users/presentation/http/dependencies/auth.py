@@ -2,18 +2,18 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from src.users.application.use_cases import (
-    ChangePasswordUseCase,
-    LoginUseCase,
-    LogoutUseCase,
-    RefreshSessionUseCase,
-    RegisterUserUseCase,
+from src.users.application.handlers.command import (
+    ChangePasswordCommandHandler,
+    LoginCommandHandler,
+    LogoutCommandHandler,
+    RefreshSessionCommandHandler,
+    RegisterUserCommandHandler,
 )
 from src.users.presentation.http.services import AuthCookiesProvider
 
 
-def _get_login_use_case(request: Request) -> LoginUseCase:
-    """Получить Use Case аутентификации пользователя из DI-контейнера.
+def _get_login_command_handler(request: Request) -> LoginCommandHandler:
+    """Получить обработчик команды аутентификации из DI-контейнера.
 
     Доступ к нетипизированному ``request.app.state.container``
     выполняется напрямую - Starlette не поддерживает типизацию
@@ -28,18 +28,20 @@ def _get_login_use_case(request: Request) -> LoginUseCase:
 
     Returns
     -------
-    LoginUseCase
-        Use Case аутентификации пользователя.
+    LoginCommandHandler
+        Обработчик команды аутентификации пользователя.
     """
-    return request.app.state.container.users.login_use_case
+    return request.app.state.container.users.login_command_handler
 
 
-LoginUserDependency = Annotated[LoginUseCase, Depends(_get_login_use_case)]
-"""Типизированная FastAPI-зависимость Use Case аутентификации пользователя.
+LoginUserDependency = Annotated[
+    LoginCommandHandler, Depends(_get_login_command_handler)
+]
+"""Типизированная FastAPI-зависимость обработчика команды аутентификации.
 
 Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
-роутам готовый экземпляр :class:`LoginUseCase` без ручного приведения
-типов. Используется как аннотация параметра обработчика:
+роутам готовый экземпляр :class:`LoginCommandHandler` без ручного
+приведения типов. Используется как аннотация параметра обработчика:
 
 ```python
 @router.post("/login")
@@ -52,8 +54,8 @@ async def login(
 """
 
 
-def _get_logout_use_case(request: Request) -> LogoutUseCase:
-    """Получить Use Case завершения сессии из DI-контейнера.
+def _get_logout_command_handler(request: Request) -> LogoutCommandHandler:
+    """Получить обработчик команды завершения сессии из DI-контейнера.
 
     Доступ к нетипизированному ``request.app.state.container``
     выполняется напрямую - Starlette не поддерживает типизацию
@@ -68,32 +70,34 @@ def _get_logout_use_case(request: Request) -> LogoutUseCase:
 
     Returns
     -------
-    LogoutUseCase
-        Use Case завершения пользовательской сессии.
+    LogoutCommandHandler
+        Обработчик команды завершения пользовательской сессии.
     """
-    return request.app.state.container.users.logout_use_case
+    return request.app.state.container.users.logout_command_handler
 
 
-LogoutDependency = Annotated[LogoutUseCase, Depends(_get_logout_use_case)]
-"""Типизированная FastAPI-зависимость Use Case завершения сессии.
+LogoutDependency = Annotated[LogoutCommandHandler, Depends(_get_logout_command_handler)]
+"""Типизированная FastAPI-зависимость обработчика команды завершения сессии.
 
 Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
-роутам готовый экземпляр :class:`LogoutUseCase` без ручного приведения
-типов. Используется как аннотация параметра обработчика:
+роутам готовый экземпляр :class:`LogoutCommandHandler` без ручного
+приведения типов. Используется как аннотация параметра обработчика:
 
 ```python
 @router.post("/logout")
 async def logout(
     logout_user: LogoutDependency,
     ...,
-) -> StandardResponse:
+) -> None:
     await logout_user.execute(...)
 ```
 """
 
 
-def _get_refresh_session_use_case(request: Request) -> RefreshSessionUseCase:
-    """Получить Use Case обновления пары токенов из DI-контейнера.
+def _get_refresh_session_command_handler(
+    request: Request,
+) -> RefreshSessionCommandHandler:
+    """Получить обработчик команды обновления пары токенов из DI-контейнера.
 
     Доступ к нетипизированному ``request.app.state.container``
     выполняется напрямую - Starlette не поддерживает типизацию
@@ -108,19 +112,19 @@ def _get_refresh_session_use_case(request: Request) -> RefreshSessionUseCase:
 
     Returns
     -------
-    RefreshSessionUseCase
-        Use Case обновления пары токенов.
+    RefreshSessionCommandHandler
+        Обработчик команды обновления пары токенов.
     """
-    return request.app.state.container.users.refresh_session_use_case
+    return request.app.state.container.users.refresh_session_command_handler
 
 
 RefreshSessionDependency = Annotated[
-    RefreshSessionUseCase, Depends(_get_refresh_session_use_case)
+    RefreshSessionCommandHandler, Depends(_get_refresh_session_command_handler)
 ]
-"""Типизированная FastAPI-зависимость Use Case обновления пары токенов.
+"""Типизированная FastAPI-зависимость обработчика команды обновления токенов.
 
 Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
-роутам готовый экземпляр :class:`RefreshSessionUseCase` без ручного
+роутам готовый экземпляр :class:`RefreshSessionCommandHandler` без ручного
 приведения типов. Используется как аннотация параметра обработчика:
 
 ```python
@@ -134,8 +138,10 @@ async def refresh(
 """
 
 
-def _get_register_user_use_case(request: Request) -> RegisterUserUseCase:
-    """Получить Use Case регистрации пользователя из DI-контейнера.
+def _get_register_user_command_handler(
+    request: Request,
+) -> RegisterUserCommandHandler:
+    """Получить обработчик команды регистрации пользователя из DI-контейнера.
 
     Доступ к нетипизированному ``request.app.state.container``
     выполняется напрямую - Starlette не поддерживает типизацию
@@ -150,19 +156,19 @@ def _get_register_user_use_case(request: Request) -> RegisterUserUseCase:
 
     Returns
     -------
-    RegisterUserUseCase
-        Use Case регистрации нового пользователя.
+    RegisterUserCommandHandler
+        Обработчик команды регистрации нового пользователя.
     """
-    return request.app.state.container.users.register_user_use_case
+    return request.app.state.container.users.register_user_command_handler
 
 
 RegisterUserDependency = Annotated[
-    RegisterUserUseCase, Depends(_get_register_user_use_case)
+    RegisterUserCommandHandler, Depends(_get_register_user_command_handler)
 ]
-"""Типизированная FastAPI-зависимость Use Case регистрации пользователя.
+"""Типизированная FastAPI-зависимость обработчика команды регистрации.
 
 Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
-роутам готовый экземпляр :class:`RegisterUserUseCase` без ручного
+роутам готовый экземпляр :class:`RegisterUserCommandHandler` без ручного
 приведения типов. Используется как аннотация параметра обработчика:
 
 ```python
@@ -176,8 +182,10 @@ async def register(
 """
 
 
-def _get_change_password_use_case(request: Request) -> ChangePasswordUseCase:
-    """Получить Use Case смены пароля пользователя из DI-контейнера.
+def _get_change_password_command_handler(
+    request: Request,
+) -> ChangePasswordCommandHandler:
+    """Получить обработчик команды смены пароля из DI-контейнера.
 
     Доступ к нетипизированному ``request.app.state.container``
     выполняется напрямую - Starlette не поддерживает типизацию
@@ -192,19 +200,19 @@ def _get_change_password_use_case(request: Request) -> ChangePasswordUseCase:
 
     Returns
     -------
-    ChangePasswordUseCase
-        Use Case смены пароля пользователя.
+    ChangePasswordCommandHandler
+        Обработчик команды смены пароля пользователя.
     """
-    return request.app.state.container.users.change_password_use_case
+    return request.app.state.container.users.change_password_command_handler
 
 
 ChangePasswordDependency = Annotated[
-    ChangePasswordUseCase, Depends(_get_change_password_use_case)
+    ChangePasswordCommandHandler, Depends(_get_change_password_command_handler)
 ]
-"""Типизированная FastAPI-зависимость Use Case смены пароля пользователя.
+"""Типизированная FastAPI-зависимость обработчика команды смены пароля.
 
 Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
-роутам готовый экземпляр :class:`ChangePasswordUseCase` без ручного
+роутам готовый экземпляр :class:`ChangePasswordCommandHandler` без ручного
 приведения типов. Используется как аннотация параметра обработчика:
 
 ```python

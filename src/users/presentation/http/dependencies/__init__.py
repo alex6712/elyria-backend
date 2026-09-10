@@ -7,6 +7,7 @@ from .auth import (
     RegisterUserDependency,
 )
 from .profiles import ChangeProfileDependency, GetProfileDependency
+from .users import SearchUsersDependency
 
 __all__ = [
     "AuthCookiesProviderDependency",
@@ -17,4 +18,5 @@ __all__ = [
     "LogoutDependency",
     "RefreshSessionDependency",
     "RegisterUserDependency",
+    "SearchUsersDependency",
 ]

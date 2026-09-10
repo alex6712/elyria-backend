@@ -6,7 +6,8 @@ from pydantic import UUID4
 
 from src.shared.application.unset import UNSET, Maybe
 from src.shared.presentation.http.dependencies import AccessTokenDependency
-from src.users.application.inputs import ChangeProfileInput, GetProfileInput
+from src.users.application.dto.commands import ChangeProfileCommand
+from src.users.application.dto.queries import GetProfileQuery
 from src.users.domain.value_objects import AvatarUrl, DisplayName
 from src.users.presentation.http.dependencies import (
     ChangeProfileDependency,
@@ -57,7 +58,7 @@ async def change_profile(
         Body(description="Схема частичного изменения профиля пользователя."),
     ],
     access_token: AccessTokenDependency,
-    change_profile_use_case: ChangeProfileDependency,
+    change_profile_command_handler: ChangeProfileDependency,
 ) -> None:
     """Изменение профиля пользователя.
 
@@ -76,9 +77,9 @@ async def change_profile(
         входящего запроса (значение после слова ``Bearer``).
         Значение ``None`` означает отсутствие заголовка либо
         некорректную схему.
-    change_profile_use_case : ChangeProfileUseCase
-        Use Case изменения профиля, полученный через DI-зависимость
-        FastAPI из контейнера приложения.
+    change_profile_command_handler : ChangeProfileCommandHandler
+        Обработчик команды изменения профиля, полученный через
+        DI-зависимость FastAPI из контейнера приложения.
 
     Raises
     ------
@@ -102,8 +103,8 @@ async def change_profile(
         else UNSET
     )
 
-    await change_profile_use_case.execute(
-        ChangeProfileInput(
+    await change_profile_command_handler.execute(
+        ChangeProfileCommand(
             access_token=access_token,
             display_name=new_display_name,
             avatar_url=new_avatar_url,
@@ -134,7 +135,8 @@ async def change_profile(
     response_description="Профиль текущего пользователя",
 )
 async def get_my_profile(
-    access_token: AccessTokenDependency, get_profile_use_case: GetProfileDependency
+    access_token: AccessTokenDependency,
+    get_profile_query_handler: GetProfileDependency,
 ) -> ProfileResponse:
     """Получить профиль текущего пользователя.
 
@@ -148,9 +150,9 @@ async def get_my_profile(
         входящего запроса (значение после слова ``Bearer``).
         Значение ``None`` означает отсутствие заголовка либо
         некорректную схему.
-    get_profile_use_case : GetProfileUseCase
-        Use Case получения профиля, полученный через DI-зависимость
-        FastAPI из контейнера приложения.
+    get_profile_query_handler : GetProfileQueryHandler
+        Обработчик запроса получения профиля, полученный через
+        DI-зависимость FastAPI из контейнера приложения.
 
     Returns
     -------
@@ -170,8 +172,8 @@ async def get_my_profile(
             + "Provide it in the Authorization: Bearer <token> header."
         )
 
-    result = await get_profile_use_case.execute(
-        GetProfileInput(access_token=access_token)
+    result = await get_profile_query_handler.execute(
+        GetProfileQuery(access_token=access_token)
     )
 
     return ProfileResponse(
@@ -219,7 +221,7 @@ async def get_profile_by_id(
         ),
     ],
     access_token: AccessTokenDependency,
-    get_profile_use_case: GetProfileDependency,
+    get_profile_query_handler: GetProfileDependency,
 ) -> ProfileResponse:
     """Получить профиль по идентификатору.
 
@@ -235,9 +237,9 @@ async def get_profile_by_id(
         входящего запроса (значение после слова ``Bearer``).
         Значение ``None`` означает отсутствие заголовка либо
         некорректную схему.
-    get_profile_use_case : GetProfileUseCase
-        Use Case получения профиля, полученный через DI-зависимость
-        FastAPI из контейнера приложения.
+    get_profile_query_handler : GetProfileQueryHandler
+        Обработчик запроса получения профиля, полученный через
+        DI-зависимость FastAPI из контейнера приложения.
 
     Returns
     -------
@@ -258,8 +260,8 @@ async def get_profile_by_id(
             + "Provide it in the Authorization: Bearer <token> header."
         )
 
-    result = await get_profile_use_case.execute(
-        GetProfileInput(access_token=access_token, profile_id=profile_id)
+    result = await get_profile_query_handler.execute(
+        GetProfileQuery(access_token=access_token, profile_id=profile_id)
     )
 
     return ProfileResponse(

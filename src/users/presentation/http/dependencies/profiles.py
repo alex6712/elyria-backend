@@ -2,11 +2,14 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from src.users.application.use_cases import ChangeProfileUseCase, GetProfileUseCase
+from src.users.application.handlers.command import ChangeProfileCommandHandler
+from src.users.application.handlers.query import GetProfileQueryHandler
 
 
-def _get_change_profile_use_case(request: Request) -> ChangeProfileUseCase:
-    """Получить Use Case изменения профиля из DI-контейнера.
+def _get_change_profile_command_handler(
+    request: Request,
+) -> ChangeProfileCommandHandler:
+    """Получить обработчик команды изменения профиля из DI-контейнера.
 
     Доступ к нетипизированному ``request.app.state.container``
     выполняется напрямую - Starlette не поддерживает типизацию
@@ -21,34 +24,34 @@ def _get_change_profile_use_case(request: Request) -> ChangeProfileUseCase:
 
     Returns
     -------
-    ChangeProfileUseCase
-        Use Case изменения профиля пользователя.
+    ChangeProfileCommandHandler
+        Обработчик команды изменения профиля пользователя.
     """
-    return request.app.state.container.users.change_profile_use_case
+    return request.app.state.container.users.change_profile_command_handler
 
 
 ChangeProfileDependency = Annotated[
-    ChangeProfileUseCase, Depends(_get_change_profile_use_case)
+    ChangeProfileCommandHandler, Depends(_get_change_profile_command_handler)
 ]
-"""Типизированная FastAPI-зависимость Use Case изменения профиля.
+"""Типизированная FastAPI-зависимость обработчика команды изменения профиля.
 
 Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
-роутам готовый экземпляр :class:`ChangeProfileUseCase` без ручного
+роутам готовый экземпляр :class:`ChangeProfileCommandHandler` без ручного
 приведения типов. Используется как аннотация параметра обработчика:
 
 ```python
 @router.patch("/profiles")
 async def change_profile(
-    change_profile_use_case: ChangeProfileDependency,
+    change_profile_command_handler: ChangeProfileDependency,
     ...,
 ) -> None:
-    await change_profile_use_case.execute(...)
+    await change_profile_command_handler.execute(...)
 ```
 """
 
 
-def _get_get_profile_use_case(request: Request) -> GetProfileUseCase:
-    """Получить Use Case получения профиля из DI-контейнера.
+def _get_get_profile_query_handler(request: Request) -> GetProfileQueryHandler:
+    """Получить query handler получения профиля из DI-контейнера.
 
     Доступ к нетипизированному ``request.app.state.container``
     выполняется напрямую - Starlette не поддерживает типизацию
@@ -63,25 +66,27 @@ def _get_get_profile_use_case(request: Request) -> GetProfileUseCase:
 
     Returns
     -------
-    GetProfileUseCase
-        Use Case получения профиля пользователя.
+    GetProfileQueryHandler
+        Query handler получения профиля пользователя.
     """
-    return request.app.state.container.users.get_profile_use_case
+    return request.app.state.container.users.get_profile_query_handler
 
 
-GetProfileDependency = Annotated[GetProfileUseCase, Depends(_get_get_profile_use_case)]
-"""Типизированная FastAPI-зависимость Use Case получения профиля.
+GetProfileDependency = Annotated[
+    GetProfileQueryHandler, Depends(_get_get_profile_query_handler)
+]
+"""Типизированная FastAPI-зависимость query handler получения профиля.
 
 Инкапсулирует доступ к ``request.app.state.container`` и предоставляет
-роутам готовый экземпляр :class:`GetProfileUseCase` без ручного
+роутам готовый экземпляр :class:`GetProfileQueryHandler` без ручного
 приведения типов. Используется как аннотация параметра обработчика:
 
 ```python
 @router.get("/profiles/me")
 async def get_my_profile(
-    get_profile_use_case: GetProfileDependency,
+    get_profile_query_handler: GetProfileDependency,
     ...,
 ) -> ProfileResponse:
-    result = await get_profile_use_case.execute(...)
+    result = await get_profile_query_handler.execute(...)
 ```
 """

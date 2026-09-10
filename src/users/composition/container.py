@@ -6,14 +6,28 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from src.shared.application.ports.persistence import TokenBlacklist
 from src.shared.application.ports.security import TokenVerifier
 from src.shared.infrastructure import SignatureKeys
-from src.users.application.use_cases import (
-    ChangePasswordUseCase,
-    ChangeProfileUseCase,
-    GetProfileUseCase,
-    LoginUseCase,
-    LogoutUseCase,
-    RefreshSessionUseCase,
-    RegisterUserUseCase,
+from src.shared.infrastructure.adapters.messaging import InMemoryEventDispatcher
+from src.users.application.handlers.command import (
+    ChangePasswordCommandHandler,
+    ChangeProfileCommandHandler,
+    LoginCommandHandler,
+    LogoutCommandHandler,
+    RefreshSessionCommandHandler,
+    RegisterUserCommandHandler,
+)
+from src.users.application.handlers.query import (
+    GetProfileQueryHandler,
+    SearchUsersQueryHandler,
+)
+from src.users.composition.handlers import (
+    build_change_password_command_handler,
+    build_change_profile_command_handler,
+    build_get_profile_query_handler,
+    build_login_command_handler,
+    build_logout_command_handler,
+    build_refresh_session_command_handler,
+    build_register_user_command_handler,
+    build_search_users_query_handler,
 )
 from src.users.composition.services import (
     build_auth_cookies_provider,
@@ -22,203 +36,234 @@ from src.users.composition.services import (
     build_token_hasher,
     build_token_issuer,
 )
-from src.users.composition.use_cases import (
-    build_change_password_use_case,
-    build_change_profile_use_case,
-    build_get_profile_use_case,
-    build_login_use_case,
-    build_logout_use_case,
-    build_refresh_session_use_case,
-    build_register_user_use_case,
-)
+from src.users.domain.events import ProfileChangedEvent, UserRegisteredEvent
+from src.users.infrastructure.projections import UserSearchProjection
 from src.users.presentation.http.services import AuthCookiesProvider
 
 
 class UsersContainer:
-    """Контейнер Use Case контекста Users.
+    """Контейнер обработчиков команд и запросов контекста Users.
 
-    Инкапсулирует фабричные функции Use Cases за приватными атрибутами
-    и предоставляет доступ к свежим экземплярам через properties.
+    Инкапсулирует фабричные функции Command/Query Handlers за приватными
+    атрибутами и предоставляет доступ к свежим экземплярам через properties.
     Каждое обращение к property вызывает соответствующую фабрику и
-    возвращает новый Use Case с новой единицей работы (Unit of Work),
-    что соответствует transient-семантике (ADR-0002, п. 1 ответов
-    разработчику). Сами фабрики скрыты от внешнего кода: снаружи
-    контейнер выглядит как набор готовых к использованию Use Cases,
-    а не набор функций, которые нужно дополнительно вызывать.
+    возвращает новый обработчик с новой единицей работы (Unit of Work),
+    что соответствует transient-семантике (ADR-0002). Сами фабрики скрыты
+    от внешнего кода: снаружи контейнер выглядит как набор готовых
+    к использованию обработчиков.
+
+    Диспетчер доменных событий и обработчик проекции поиска пользователей
+    создаются один раз на время жизни контейнера (singleton) и рассылаются
+    соответствующим обработчикам, публикующим доменные события.
 
     Parameters
     ----------
-    register_user_use_case_factory : Callable[[], RegisterUserUseCase]
-        Фабрика, создающая новый экземпляр Use Case регистрации
-        пользователя при каждом вызове.
-    login_use_case_factory : Callable[[], LoginUseCase]
-        Фабрика, создающая новый экземпляр Use Case аутентификации
-        при каждом вызове.
-    refresh_session_use_case_factory : Callable[[], RefreshSessionUseCase]
-        Фабрика, создающая новый экземпляр Use Case обновления пары
-        токенов при каждом вызове.
-    logout_use_case_factory : Callable[[], LogoutUseCase]
-        Фабрика, создающая новый экземпляр Use Case завершения
-        пользовательской сессии при каждом вызове.
-    change_password_use_case_factory : Callable[[], ChangePasswordUseCase]
-        Фабрика, создающая новый экземпляр Use Case смены пароля
-        пользователя при каждом вызове.
-    change_profile_use_case_factory : Callable[[], ChangeProfileUseCase]
-        Фабрика, создающая новый экземпляр Use Case изменения профиля
-        пользователя при каждом вызове.
-    get_profile_use_case_factory : Callable[[], GetProfileUseCase]
-        Фабрика, создающая новый экземпляр Use Case получения профиля
-        пользователя при каждом вызове.
+    register_user_command_handler_factory : Callable[[], RegisterUserCommandHandler]
+        Фабрика, создающая новый обработчик команды регистрации при каждом вызове.
+    login_command_handler_factory : Callable[[], LoginCommandHandler]
+        Фабрика, создающая новый обработчик команды аутентификации при каждом вызове.
+    refresh_session_command_handler_factory : Callable[[], RefreshSessionCommandHandler]
+        Фабрика, создающая новый обработчик команды обновления пары токенов.
+    logout_command_handler_factory : Callable[[], LogoutCommandHandler]
+        Фабрика, создающая новый обработчик команды завершения сессии.
+    change_password_command_handler_factory : Callable[[], ChangePasswordCommandHandler]
+        Фабрика, создающая новый обработчик команды смены пароля.
+    change_profile_command_handler_factory : Callable[[], ChangeProfileCommandHandler]
+        Фабрика, создающая новый обработчик команды изменения профиля.
+    get_profile_query_handler_factory : Callable[[], GetProfileQueryHandler]
+        Фабрика, создающая новый query handler получения профиля.
+    search_users_query_handler_factory : Callable[[], SearchUsersQueryHandler]
+        Фабрика, создающая новый query handler поиска пользователей.
     auth_cookies_provider : AuthCookiesProvider
-        Готовый экземпляр провайдера auth-cookie. В отличие от
-        Use Cases передаётся напрямую, а не фабрикой, поскольку
-        не хранит состояние конкретного запроса и безопасен для
-        повторного использования между запросами.
+        Готовый экземпляр провайдера auth-cookie.
 
     Attributes
     ----------
-    register_user_use_case : RegisterUserUseCase
-        Use Case регистрации нового пользователя. Новый экземпляр
-        при каждом обращении.
-    login_use_case : LoginUseCase
-        Use Case аутентификации пользователя. Новый экземпляр при
+    register_user_command_handler : RegisterUserCommandHandler
+        Обработчик команды регистрации. Новый экземпляр при каждом обращении.
+    login_command_handler : LoginCommandHandler
+        Обработчик команды аутентификации. Новый экземпляр при каждом обращении.
+    refresh_session_command_handler : RefreshSessionCommandHandler
+        Обработчик команды обновления пары токенов. Новый экземпляр при
         каждом обращении.
-    refresh_session_use_case : RefreshSessionUseCase
-        Use Case обновления пары токенов. Новый экземпляр при каждом
-        обращении.
-    logout_use_case : LogoutUseCase
-        Use Case завершения пользовательской сессии. Новый экземпляр
-        при каждом обращении.
-    change_password_use_case : ChangePasswordUseCase
-        Use Case смены пароля пользователя. Новый экземпляр при
-        каждом обращении.
-    change_profile_use_case : ChangeProfileUseCase
-        Use Case изменения профиля пользователя. Новый экземпляр при
-        каждом обращении.
-    get_profile_use_case : GetProfileUseCase
-        Use Case получения профиля пользователя. Новый экземпляр при
-        каждом обращении.
+    logout_command_handler : LogoutCommandHandler
+        Обработчик команды завершения сессии. Новый экземпляр при каждом обращении.
+    change_password_command_handler : ChangePasswordCommandHandler
+        Обработчик команды смены пароля. Новый экземпляр при каждом обращении.
+    change_profile_command_handler : ChangeProfileCommandHandler
+        Обработчик команды изменения профиля. Новый экземпляр при каждом обращении.
+    get_profile_query_handler : GetProfileQueryHandler
+        Query handler получения профиля. Новый экземпляр при каждом обращении.
+    search_users_query_handler : SearchUsersQueryHandler
+        Query handler поиска пользователей. Новый экземпляр при каждом обращении.
     auth_cookies_provider : AuthCookiesProvider
         Провайдер установки и удаления HttpOnly-cookie refresh-токена.
-        В отличие от Use Cases, единственный экземпляр на время жизни
-        контейнера (singleton), а не фабрика.
     """
 
     __slots__ = (
-        "_change_password_use_case_factory",
-        "_change_profile_use_case_factory",
-        "_get_profile_use_case_factory",
-        "_login_use_case_factory",
-        "_logout_use_case_factory",
-        "_refresh_session_use_case_factory",
-        "_register_user_use_case_factory",
+        "_change_password_command_handler_factory",
+        "_change_profile_command_handler_factory",
+        "_engine",
+        "_event_dispatcher",
+        "_get_profile_query_handler_factory",
+        "_login_command_handler_factory",
+        "_logout_command_handler_factory",
+        "_refresh_session_command_handler_factory",
+        "_register_user_command_handler_factory",
+        "_search_users_query_handler_factory",
         "auth_cookies_provider",
     )
 
     def __init__(
         self,
-        register_user_use_case_factory: Callable[[], RegisterUserUseCase],
-        login_use_case_factory: Callable[[], LoginUseCase],
-        refresh_session_use_case_factory: Callable[[], RefreshSessionUseCase],
-        logout_use_case_factory: Callable[[], LogoutUseCase],
-        change_password_use_case_factory: Callable[[], ChangePasswordUseCase],
-        change_profile_use_case_factory: Callable[[], ChangeProfileUseCase],
-        get_profile_use_case_factory: Callable[[], GetProfileUseCase],
+        register_user_command_handler_factory: Callable[[], RegisterUserCommandHandler],
+        login_command_handler_factory: Callable[[], LoginCommandHandler],
+        refresh_session_command_handler_factory: Callable[
+            [], RefreshSessionCommandHandler
+        ],
+        logout_command_handler_factory: Callable[[], LogoutCommandHandler],
+        change_password_command_handler_factory: Callable[
+            [], ChangePasswordCommandHandler
+        ],
+        change_profile_command_handler_factory: Callable[
+            [], ChangeProfileCommandHandler
+        ],
+        get_profile_query_handler_factory: Callable[[], GetProfileQueryHandler],
+        search_users_query_handler_factory: Callable[[], SearchUsersQueryHandler],
+        engine: AsyncEngine,
+        event_dispatcher: InMemoryEventDispatcher,
         auth_cookies_provider: AuthCookiesProvider,
     ) -> None:
-        self._register_user_use_case_factory = register_user_use_case_factory
-        self._login_use_case_factory = login_use_case_factory
-        self._refresh_session_use_case_factory = refresh_session_use_case_factory
-        self._logout_use_case_factory = logout_use_case_factory
-        self._change_password_use_case_factory = change_password_use_case_factory
-        self._change_profile_use_case_factory = change_profile_use_case_factory
-        self._get_profile_use_case_factory = get_profile_use_case_factory
+        self._register_user_command_handler_factory = (
+            register_user_command_handler_factory
+        )
+        self._login_command_handler_factory = login_command_handler_factory
+        self._refresh_session_command_handler_factory = (
+            refresh_session_command_handler_factory
+        )
+        self._logout_command_handler_factory = logout_command_handler_factory
+        self._change_password_command_handler_factory = (
+            change_password_command_handler_factory
+        )
+        self._change_profile_command_handler_factory = (
+            change_profile_command_handler_factory
+        )
+        self._get_profile_query_handler_factory = get_profile_query_handler_factory
+        self._search_users_query_handler_factory = search_users_query_handler_factory
+
+        self._engine = engine
+        self._event_dispatcher = event_dispatcher
 
         self.auth_cookies_provider = auth_cookies_provider
 
+    async def register_event_subscriptions(self) -> None:
+        """Зарегистрировать подписки обработчиков проекций на доменные события.
+
+        Подписывает обработчик проекции поиска пользователей на события
+        регистрации пользователя и изменения профиля. Диспетчер выполняет
+        обработчики после успешного коммита основной транзакции.
+
+        Notes
+        -----
+        Вызывается один раз на этапе инициализации приложения (lifespan),
+        когда доступен работающий цикл событий для асинхронной подписки.
+        """
+        projection = UserSearchProjection(engine=self._engine)
+
+        await self._event_dispatcher.subscribe(
+            UserRegisteredEvent, projection.handle_user_registered
+        )
+        await self._event_dispatcher.subscribe(
+            ProfileChangedEvent, projection.handle_profile_changed
+        )
+
     @property
-    def register_user_use_case(self) -> RegisterUserUseCase:
-        """Получить новый экземпляр Use Case регистрации пользователя.
+    def register_user_command_handler(self) -> RegisterUserCommandHandler:
+        """Получить новый обработчик команды регистрации пользователя.
 
         Returns
         -------
-        RegisterUserUseCase
-            Новый экземпляр Use Case, созданный вызовом приватной
-            фабрики.
+        RegisterUserCommandHandler
+            Новый экземпляр обработчика, созданный вызовом приватной фабрики.
         """
-        return self._register_user_use_case_factory()
+        return self._register_user_command_handler_factory()
 
     @property
-    def login_use_case(self) -> LoginUseCase:
-        """Получить новый экземпляр Use Case аутентификации пользователя.
+    def login_command_handler(self) -> LoginCommandHandler:
+        """Получить новый обработчик команды аутентификации пользователя.
 
         Returns
         -------
-        LoginUseCase
-            Новый экземпляр Use Case, созданный вызовом приватной
-            фабрики.
+        LoginCommandHandler
+            Новый экземпляр обработчика, созданный вызовом приватной фабрики.
         """
-        return self._login_use_case_factory()
+        return self._login_command_handler_factory()
 
     @property
-    def refresh_session_use_case(self) -> RefreshSessionUseCase:
-        """Получить новый экземпляр Use Case обновления пары токенов.
+    def refresh_session_command_handler(self) -> RefreshSessionCommandHandler:
+        """Получить новый обработчик команды обновления пары токенов.
 
         Returns
         -------
-        RefreshSessionUseCase
-            Новый экземпляр Use Case, созданный вызовом приватной
-            фабрики.
+        RefreshSessionCommandHandler
+            Новый экземпляр обработчика, созданный вызовом приватной фабрики.
         """
-        return self._refresh_session_use_case_factory()
+        return self._refresh_session_command_handler_factory()
 
     @property
-    def logout_use_case(self) -> LogoutUseCase:
-        """Получить новый экземпляр Use Case завершения пользовательской сессии.
+    def logout_command_handler(self) -> LogoutCommandHandler:
+        """Получить новый обработчик команды завершения сессии.
 
         Returns
         -------
-        LogoutUseCase
-            Новый экземпляр Use Case, созданный вызовом приватной
-            фабрики.
+        LogoutCommandHandler
+            Новый экземпляр обработчика, созданный вызовом приватной фабрики.
         """
-        return self._logout_use_case_factory()
+        return self._logout_command_handler_factory()
 
     @property
-    def change_password_use_case(self) -> ChangePasswordUseCase:
-        """Получить новый экземпляр Use Case смены пароля пользователя.
+    def change_password_command_handler(self) -> ChangePasswordCommandHandler:
+        """Получить новый обработчик команды смены пароля.
 
         Returns
         -------
-        ChangePasswordUseCase
-            Новый экземпляр Use Case, созданный вызовом приватной
-            фабрики.
+        ChangePasswordCommandHandler
+            Новый экземпляр обработчика, созданный вызовом приватной фабрики.
         """
-        return self._change_password_use_case_factory()
+        return self._change_password_command_handler_factory()
 
     @property
-    def change_profile_use_case(self) -> ChangeProfileUseCase:
-        """Получить новый экземпляр Use Case изменения профиля пользователя.
+    def change_profile_command_handler(self) -> ChangeProfileCommandHandler:
+        """Получить новый обработчик команды изменения профиля.
 
         Returns
         -------
-        ChangeProfileUseCase
-            Новый экземпляр Use Case, созданный вызовом приватной
-            фабрики.
+        ChangeProfileCommandHandler
+            Новый экземпляр обработчика, созданный вызовом приватной фабрики.
         """
-        return self._change_profile_use_case_factory()
+        return self._change_profile_command_handler_factory()
 
     @property
-    def get_profile_use_case(self) -> GetProfileUseCase:
-        """Получить новый экземпляр Use Case получения профиля пользователя.
+    def get_profile_query_handler(self) -> GetProfileQueryHandler:
+        """Получить новый query handler получения профиля.
 
         Returns
         -------
-        GetProfileUseCase
-            Новый экземпляр Use Case, созданный вызовом приватной
-            фабрики.
+        GetProfileQueryHandler
+            Новый экземпляр обработчика, созданный вызовом приватной фабрики.
         """
-        return self._get_profile_use_case_factory()
+        return self._get_profile_query_handler_factory()
+
+    @property
+    def search_users_query_handler(self) -> SearchUsersQueryHandler:
+        """Получить новый query handler поиска пользователей.
+
+        Returns
+        -------
+        SearchUsersQueryHandler
+            Новый экземпляр обработчика, созданный вызовом приватной фабрики.
+        """
+        return self._search_users_query_handler_factory()
 
 
 def build_users_module(
@@ -238,14 +283,18 @@ def build_users_module(
     auth_cookie_secure: bool,
     auth_cookie_samesite: Literal["lax", "strict", "none"],
 ) -> UsersContainer:
-    """Собрать модуль Users: контейнер Use Cases с реализациями портов.
+    """Собрать модуль Users: контейнер обработчиков с реализациями портов.
 
     Единственная точка сборки Users в границах его ограниченного
     слоя композиции. Создаёт реализации портов (хеширование паролей,
-    выпуск токенов, провайдер auth-cookie) и связывает их с фабриками
-    Use Cases. Общие ресурсы (движок БД, ключи подписи, сервисы
-    проверки и отзыва токенов, настройки) передаются параметрами:
-    модуль ничего не знает о глобальном Composition Root.
+    выпуск токенов, провайдер auth-cookie, диспетчер доменных событий,
+    обработчик проекции поиска пользователей) и связывает их с фабриками
+    Command/Query Handlers.
+
+    Диспетчер доменных событий и обработчик проекции создаются один раз
+    на время жизни контейнера; на обработчик проекции регистрируются
+    подписки на события регистрации и изменения профиля. Обработчики команд
+    и запросов - transient, новый экземпляр на каждый вызов фабрики.
 
     Parameters
     ----------
@@ -281,13 +330,14 @@ def build_users_module(
     Returns
     -------
     UsersContainer
-        Контейнер фабрик Use Cases контекста Users.
+        Контейнер фабрик обработчиков контекста Users.
 
     Notes
     -----
     Реализации портов (хешеры, выпуск токенов, проверка пароля на
-    утечки, провайдер auth-cookie) создаются один раз на время жизни
-    контейнера; Use Cases - transient, новый экземпляр на каждый вызов
+    утечки, провайдер auth-cookie, диспетчер событий, обработчик
+    проекции) создаются один раз на время жизни контейнера;
+    обработчики - transient, новый экземпляр на каждый вызов
     соответствующей фабрики.
     """
     password_hasher = build_password_hasher()
@@ -309,53 +359,72 @@ def build_users_module(
         auth_cookie_samesite=auth_cookie_samesite,
     )
 
+    event_dispatcher = InMemoryEventDispatcher()
+
     return UsersContainer(
-        register_user_use_case_factory=lambda: build_register_user_use_case(
+        register_user_command_handler_factory=lambda: (
+            build_register_user_command_handler(
+                engine=engine,
+                password_hasher=password_hasher,
+                compromised_password_checker=compromised_password_checker,
+                token_issuer=token_issuer,
+                token_hasher=token_hasher,
+                event_dispatcher=event_dispatcher,
+                at_lifetime_minutes=access_token_lifetime_minutes,
+                rt_lifetime_days=refresh_token_lifetime_days,
+            )
+        ),
+        login_command_handler_factory=lambda: build_login_command_handler(
             engine=engine,
             password_hasher=password_hasher,
-            compromised_password_checker=compromised_password_checker,
             token_issuer=token_issuer,
             token_hasher=token_hasher,
             at_lifetime_minutes=access_token_lifetime_minutes,
             rt_lifetime_days=refresh_token_lifetime_days,
         ),
-        login_use_case_factory=lambda: build_login_use_case(
-            engine=engine,
-            password_hasher=password_hasher,
-            token_issuer=token_issuer,
-            token_hasher=token_hasher,
-            at_lifetime_minutes=access_token_lifetime_minutes,
-            rt_lifetime_days=refresh_token_lifetime_days,
+        refresh_session_command_handler_factory=lambda: (
+            build_refresh_session_command_handler(
+                engine=engine,
+                token_issuer=token_issuer,
+                token_verifier=token_verifier,
+                token_hasher=token_hasher,
+                at_lifetime_minutes=access_token_lifetime_minutes,
+                rt_lifetime_days=refresh_token_lifetime_days,
+            )
         ),
-        refresh_session_use_case_factory=lambda: build_refresh_session_use_case(
-            engine=engine,
-            token_issuer=token_issuer,
-            token_verifier=token_verifier,
-            token_hasher=token_hasher,
-            at_lifetime_minutes=access_token_lifetime_minutes,
-            rt_lifetime_days=refresh_token_lifetime_days,
-        ),
-        logout_use_case_factory=lambda: build_logout_use_case(
+        logout_command_handler_factory=lambda: build_logout_command_handler(
             engine=engine,
             token_verifier=token_verifier,
             token_blacklist=token_blacklist,
         ),
-        change_password_use_case_factory=lambda: build_change_password_use_case(
+        change_password_command_handler_factory=lambda: (
+            build_change_password_command_handler(
+                engine=engine,
+                password_hasher=password_hasher,
+                compromised_password_checker=compromised_password_checker,
+                token_verifier=token_verifier,
+                token_blacklist=token_blacklist,
+            )
+        ),
+        change_profile_command_handler_factory=lambda: (
+            build_change_profile_command_handler(
+                engine=engine,
+                token_verifier=token_verifier,
+                token_blacklist=token_blacklist,
+                event_dispatcher=event_dispatcher,
+            )
+        ),
+        get_profile_query_handler_factory=lambda: build_get_profile_query_handler(
             engine=engine,
-            password_hasher=password_hasher,
-            compromised_password_checker=compromised_password_checker,
             token_verifier=token_verifier,
             token_blacklist=token_blacklist,
         ),
-        change_profile_use_case_factory=lambda: build_change_profile_use_case(
+        search_users_query_handler_factory=lambda: build_search_users_query_handler(
             engine=engine,
             token_verifier=token_verifier,
             token_blacklist=token_blacklist,
         ),
-        get_profile_use_case_factory=lambda: build_get_profile_use_case(
-            engine=engine,
-            token_verifier=token_verifier,
-            token_blacklist=token_blacklist,
-        ),
+        engine=engine,
+        event_dispatcher=event_dispatcher,
         auth_cookies_provider=auth_cookies_provider,
     )

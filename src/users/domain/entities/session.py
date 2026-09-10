@@ -172,7 +172,7 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         new_expires_at : datetime
             Новая дата истечения срока (обычно now + ttl).
         at : datetime | None, optional
-            Точка отсчета для проверки валидности. По умолчанию — сейчас.
+            Точка отсчета для проверки валидности. По умолчанию - сейчас.
 
         Raises
         ------

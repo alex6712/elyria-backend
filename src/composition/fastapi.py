@@ -66,6 +66,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.state.startup_at = datetime.now(UTC)
     app.state.container = build_application_container()
 
+    await app.state.container.users.register_event_subscriptions()
+
     yield
 
     _ = await asyncio.gather(
@@ -89,6 +91,10 @@ elyria_fastapi = FastAPI(
         {
             "name": "profiles",
             "description": "**Просмотр** и  **управление** профилями пользователей.",
+        },
+        {
+            "name": "users",
+            "description": "**Поиск** пользователей по имени пользователя.",
         },
     ],
     lifespan=lifespan,

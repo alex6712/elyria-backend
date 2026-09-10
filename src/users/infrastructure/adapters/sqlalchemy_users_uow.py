@@ -3,6 +3,7 @@ from types import TracebackType
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncTransaction
 
 from src.shared.application.exceptions import UnitOfWorkNotEnteredError
+from src.users.application.ports.readers import UserSearchReader
 from src.users.domain.ports.persistence import (
     IdentityRepository,
     ProfileRepository,
@@ -13,6 +14,7 @@ from src.users.infrastructure.adapters.persistence import (
     SqlAlchemyProfileRepository,
     SqlAlchemySessionRepository,
 )
+from src.users.infrastructure.adapters.readers import SqlAlchemyUserSearchReader
 
 
 class SqlAlchemyUsersUnitOfWork:
@@ -39,11 +41,13 @@ class SqlAlchemyUsersUnitOfWork:
         Репозиторий профилей пользователей.
     sessions : SessionRepository
         Репозиторий пользовательских сессий.
+    user_search : UserSearchReader
+        Источник данных поиска пользователей по имени пользователя.
 
     Notes
     -----
-    Все репозитории создаются лениво при первом обращении и привязываются
-    к текущему открытому соединению.
+    Все репозитории и источники данных создаются лениво при первом
+    обращении и привязываются к текущему открытому соединению.
     """
 
     def __init__(self, engine: AsyncEngine) -> None:
@@ -55,6 +59,8 @@ class SqlAlchemyUsersUnitOfWork:
         self._identities: IdentityRepository | None = None
         self._profiles: ProfileRepository | None = None
         self._sessions: SessionRepository | None = None
+
+        self._user_search: UserSearchReader | None = None
 
     @property
     def identities(self) -> IdentityRepository:
@@ -133,6 +139,32 @@ class SqlAlchemyUsersUnitOfWork:
             )
 
         return self._sessions
+
+    @property
+    def user_search(self) -> UserSearchReader:
+        """Источник данных поиска пользователей по имени пользователя.
+
+        При первом обращении создаёт ``SqlAlchemyUserSearchReader``,
+        используя текущее активное соединение, и кэширует его на всё
+        время жизни единицы работы.
+
+        Returns
+        -------
+        UserSearchReader
+            Источник данных, работающий в рамках текущей транзакции.
+
+        Raises
+        ------
+        UnitOfWorkNotEnteredError
+            Если единица работы ещё не была открыта через
+            ``async with`` (соединение отсутствует).
+        """
+        if self._user_search is None:
+            self._user_search = SqlAlchemyUserSearchReader(
+                self._ensure_active_connection()
+            )
+
+        return self._user_search
 
     def _ensure_active_connection(self) -> AsyncConnection:
         """Вернуть текущее активное соединение либо выбросить ошибку.
@@ -298,6 +330,8 @@ class SqlAlchemyUsersUnitOfWork:
             self._identities = None
             self._profiles = None
             self._sessions = None
+
+            self._user_search = None
 
             await self._ensure_active_connection().close()
 

@@ -7,6 +7,7 @@ from .auth import (
     RegisterUserResponse,
 )
 from .profiles import ChangeProfileRequest, ProfileResponse
+from .users import UserSearchItem, UserSearchResponse
 
 __all__ = [
     "ChangePasswordRequest",
@@ -17,4 +18,6 @@ __all__ = [
     "RefreshSessionResponse",
     "RegisterUserRequest",
     "RegisterUserResponse",
+    "UserSearchItem",
+    "UserSearchResponse",
 ]

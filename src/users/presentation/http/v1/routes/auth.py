@@ -4,12 +4,12 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Request, Response, status
 
 from src.shared.presentation.http.dependencies import AccessTokenDependency
-from src.users.application.inputs import (
-    ChangePasswordInput,
-    LoginInput,
-    LogoutInput,
-    RefreshSessionInput,
-    RegisterUserInput,
+from src.users.application.dto.commands import (
+    ChangePasswordCommand,
+    LoginCommand,
+    LogoutCommand,
+    RefreshSessionCommand,
+    RegisterUserCommand,
 )
 from src.users.domain.value_objects import DisplayName, Password, Username
 from src.users.presentation.http.dependencies import (
@@ -61,7 +61,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def login(
     response: Response,
     body: Annotated[LoginRequest, Body(description="Схема запроса на вход в систему.")],
-    login_use_case: LoginUserDependency,
+    login_command_handler: LoginUserDependency,
     auth_cookies_provider: AuthCookiesProviderDependency,
 ) -> LoginResponse:
     """Вход пользователя в систему.
@@ -77,9 +77,9 @@ async def login(
     body : LoginRequest
         Валидированная схема тела запроса, содержащая данные для входа:
         username (str) и password (str).
-    login_use_case : LoginUseCase
-        Use Case аутентификации пользователя, полученный через DI-зависимость
-        FastAPI из контейнера приложения.
+    login_command_handler : LoginCommandHandler
+        Обработчик команды аутентификации пользователя, полученный через
+        DI-зависимость FastAPI из контейнера приложения.
     auth_cookies_provider : AuthCookiesProvider
         Провайдер auth-cookie, полученный через DI-зависимость FastAPI
         из контейнера приложения. Используется для установки HttpOnly-cookie
@@ -91,8 +91,8 @@ async def login(
         Ответ с кодом 200 и access-токеном для дальнейшей аутентификации
         запросов. Refresh-токен устанавливается отдельно в HttpOnly-cookie.
     """
-    result = await login_use_case.execute(
-        LoginInput(username=Username(body.username), password=Password(body.password))
+    result = await login_command_handler.execute(
+        LoginCommand(username=Username(body.username), password=Password(body.password))
     )
 
     auth_cookies_provider.set_refresh_token_cookie(
@@ -129,7 +129,7 @@ async def login(
 async def logout(
     response: Response,
     access_token: AccessTokenDependency,
-    logout_use_case: LogoutDependency,
+    logout_command_handler: LogoutDependency,
     auth_cookies_provider: AuthCookiesProviderDependency,
 ) -> None:
     """Завершение пользовательской сессии.
@@ -147,9 +147,9 @@ async def logout(
         входящего запроса (значение после слова ``Bearer``).
         Значение ``None`` означает отсутствие заголовка либо
         некорректную схему.
-    logout_use_case : LogoutUseCase
-        Use Case завершения сессии, полученный через DI-зависимость
-        FastAPI из контейнера приложения.
+    logout_command_handler : LogoutCommandHandler
+        Обработчик команды завершения сессии, полученный через
+        DI-зависимость FastAPI из контейнера приложения.
     auth_cookies_provider : AuthCookiesProvider
         Провайдер auth-cookie, полученный через DI-зависимость FastAPI
         из контейнера приложения. Используется для удаления HttpOnly-cookie
@@ -167,7 +167,7 @@ async def logout(
             + "Provide it in the Authorization: Bearer <token> header."
         )
 
-    await logout_use_case.execute(LogoutInput(access_token=access_token))
+    await logout_command_handler.execute(LogoutCommand(access_token=access_token))
 
     auth_cookies_provider.delete_refresh_token_cookie(response)
 
@@ -197,7 +197,7 @@ async def logout(
 async def refresh(
     request: Request,
     response: Response,
-    refresh_session_use_case: RefreshSessionDependency,
+    refresh_session_command_handler: RefreshSessionDependency,
     auth_cookies_provider: AuthCookiesProviderDependency,
 ) -> RefreshSessionResponse:
     """Обновление пары access/refresh токенов.
@@ -214,9 +214,9 @@ async def refresh(
     response : Response
         Объект HTTP-ответа FastAPI. Используется для установки
         HttpOnly-cookie с новым refresh-токеном.
-    refresh_session_use_case : RefreshSessionUseCase
-        Use Case обновления пары токенов, полученный через DI-зависимость
-        FastAPI из контейнера приложения.
+    refresh_session_command_handler : RefreshSessionCommandHandler
+        Обработчик команды обновления пары токенов, полученный через
+        DI-зависимость FastAPI из контейнера приложения.
     auth_cookies_provider : AuthCookiesProvider
         Провайдер auth-cookie, полученный через DI-зависимость FastAPI
         из контейнера приложения. Используется для чтения refresh-токена
@@ -242,8 +242,8 @@ async def refresh(
             "Refresh token is missing. Provide it in the refresh token cookie."
         )
 
-    result = await refresh_session_use_case.execute(
-        RefreshSessionInput(refresh_token=refresh_token)
+    result = await refresh_session_command_handler.execute(
+        RefreshSessionCommand(refresh_token=refresh_token)
     )
 
     auth_cookies_provider.set_refresh_token_cookie(
@@ -282,7 +282,7 @@ async def register(
         RegisterUserRequest,
         Body(description="Схема запроса на регистрацию пользователя."),
     ],
-    register_user_use_case: RegisterUserDependency,
+    register_user_command_handler: RegisterUserDependency,
     auth_cookies_provider: AuthCookiesProviderDependency,
 ) -> RegisterUserResponse:
     """Регистрация нового пользователя.
@@ -298,9 +298,9 @@ async def register(
     body : RegisterUserRequest
         Валидированная схема тела запроса, содержащая данные для регистрации:
         username (str), password (str) и display_name (str).
-    register_user_use_case : RegisterUserUseCase
-        Use Case регистрации пользователя, полученный через DI-зависимость
-        FastAPI из контейнера приложения.
+    register_user_command_handler : RegisterUserCommandHandler
+        Обработчик команды регистрации пользователя, полученный через
+        DI-зависимость FastAPI из контейнера приложения.
     auth_cookies_provider : AuthCookiesProvider
         Провайдер auth-cookie, полученный через DI-зависимость FastAPI
         из контейнера приложения. Используется для установки HttpOnly-cookie
@@ -314,8 +314,8 @@ async def register(
         профиля зарегистрировавшегося пользователя. Refresh-токен
         устанавливается отдельно в HttpOnly-cookie.
     """
-    result = await register_user_use_case.execute(
-        RegisterUserInput(
+    result = await register_user_command_handler.execute(
+        RegisterUserCommand(
             username=Username(body.username),
             password=Password(body.password),
             display_name=DisplayName(body.display_name),
@@ -369,7 +369,7 @@ async def change_password(
         Body(description="Схема запроса на смену пароля пользователя."),
     ],
     access_token: AccessTokenDependency,
-    change_password_use_case: ChangePasswordDependency,
+    change_password_command_handler: ChangePasswordDependency,
 ) -> None:
     """Смена пароля текущего пользователя.
 
@@ -386,8 +386,8 @@ async def change_password(
         входящего запроса (значение после слова ``Bearer``).
         Значение ``None`` означает отсутствие заголовка либо
         некорректную схему.
-    change_password_use_case : ChangePasswordUseCase
-        Use Case смены пароля, полученный через DI-зависимость
+    change_password_command_handler : ChangePasswordCommandHandler
+        Обработчик команды смены пароля, полученный через DI-зависимость
         FastAPI из контейнера приложения.
 
     Raises
@@ -402,8 +402,8 @@ async def change_password(
             + "Provide it in the Authorization: Bearer <token> header."
         )
 
-    await change_password_use_case.execute(
-        ChangePasswordInput(
+    await change_password_command_handler.execute(
+        ChangePasswordCommand(
             access_token=access_token,
             current_password=Password(body.current_password),
             new_password=Password(body.new_password),
