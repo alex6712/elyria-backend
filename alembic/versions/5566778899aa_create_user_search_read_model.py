@@ -48,10 +48,16 @@ def upgrade() -> None:
     op.create_index(
         "ix_user_search_read_model_username_trgm",
         "user_search_read_model",
-        ["username"],
+        [sa.text("lower(username) gin_trgm_ops")],
         unique=False,
         postgresql_using="gin",
-        postgresql_ops={"username": "gin_trgm_ops"},
+    )
+
+    op.create_index(
+        "ix_user_search_read_model_username_prefix",
+        "user_search_read_model",
+        [sa.text("lower(username) text_pattern_ops")],
+        unique=False,
     )
 
     op.execute(
@@ -82,9 +88,14 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema: удалить read model поиска пользователей."""
     op.drop_index(
+        "ix_user_search_read_model_username_prefix",
+        table_name="user_search_read_model",
+    )
+
+    op.drop_index(
         "ix_user_search_read_model_username_trgm",
         table_name="user_search_read_model",
         postgresql_using="gin",
-        postgresql_ops={"username": "gin_trgm_ops"},
     )
+
     op.drop_table("user_search_read_model")

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Index, Table
+from sqlalchemy import Column, ForeignKey, Index, Table, text
 from sqlalchemy.types import String, Uuid
 
 from src.shared.infrastructure import metadata
@@ -49,9 +49,12 @@ user_search_read_model = Table(
     *audit_columns(),
     Index(
         "ix_user_search_read_model_username_trgm",
-        "username",
+        text("lower(username) gin_trgm_ops"),
         postgresql_using="gin",
-        postgresql_ops={"username": "gin_trgm_ops"},
+    ),
+    Index(
+        "ix_user_search_read_model_username_prefix",
+        text("lower(username) text_pattern_ops"),
     ),
     comment=(
         "Read model для нечёткого поиска пользователей по имени "

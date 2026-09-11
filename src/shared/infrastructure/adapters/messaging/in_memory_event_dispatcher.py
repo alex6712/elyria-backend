@@ -59,14 +59,15 @@ class InMemoryEventDispatcher:
         """
         event_type = type(event)
 
-        handlers = self._handlers.get(event_type, [])
-        if not handlers:
+        if not (handlers := self._handlers.get(event_type, [])):
             return
 
-        results = await asyncio.gather(
-            *[handler(event) for handler in handlers], return_exceptions=True
-        )
-
-        errors = [r for r in results if isinstance(r, BaseException)]
+        errors = [
+            r
+            for r in await asyncio.gather(
+                *[handler(event) for handler in handlers], return_exceptions=True
+            )
+            if isinstance(r, BaseException)
+        ]
         if errors:
             raise RuntimeError(", ".join(str(err) for err in errors))

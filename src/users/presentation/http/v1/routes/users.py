@@ -2,17 +2,19 @@ import textwrap
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
+from pydantic import StringConstraints
 
 from src.shared.presentation.http.dependencies import AccessTokenDependency
 from src.users.application.dto.queries import SearchUsersQuery
+from src.users.domain.value_objects.username import (
+    USERNAME_MAX_LENGTH,
+    USERNAME_PATTERN,
+)
 from src.users.presentation.http.dependencies import SearchUsersDependency
 from src.users.presentation.http.exceptions import AccessTokenMissingError
 from src.users.presentation.http.v1.schemas import UserSearchItem, UserSearchResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-SEARCH_USERNAME_MAX_LENGTH = 32
-"""Максимальная длина запроса поиска имени пользователя."""
 
 SEARCH_DEFAULT_LIMIT = 20
 """Количество записей в выдаче поиска по умолчанию."""
@@ -66,15 +68,21 @@ SEARCH_DEFAULT_OFFSET = 0
     response_description="Результаты нечёткого поиска пользователей",
 )
 async def search_users(
-    q: Annotated[
+    query: Annotated[
         str,
-        Query(
+        StringConstraints(
+            strip_whitespace=True,
             min_length=1,
-            max_length=SEARCH_USERNAME_MAX_LENGTH,
+            max_length=USERNAME_MAX_LENGTH,
+            pattern=USERNAME_PATTERN,
+        ),
+        Query(
+            alias="q",
             description=(
                 "Запрос поиска имени пользователя. Совпадение засчитывается "
-                + "при точном вхождении без учёта регистра либо при близком "
-                + "сходстве (допускаются опечатки и незначительные отличия)."
+                + "при точном совпадении или вхождении без учёта регистра либо "
+                + "при близком сходстве (допускаются опечатки и незначительные "
+                + "отличия)."
             ),
             examples=["john", "ale", "user"],
         ),
@@ -84,19 +92,15 @@ async def search_users(
     limit: Annotated[
         int,
         Query(
+            description="Максимальное количество записей в выдаче (страница).",
             ge=1,
             le=100,
-            description="Максимальное количество записей в выдаче (страница).",
             examples=[20],
         ),
     ] = SEARCH_DEFAULT_LIMIT,
     offset: Annotated[
         int,
-        Query(
-            ge=0,
-            description="Смещение начала выдачи для пагинации.",
-            examples=[0],
-        ),
+        Query(description="Смещение начала выдачи для пагинации.", ge=0, examples=[0]),
     ] = SEARCH_DEFAULT_OFFSET,
 ) -> UserSearchResponse:
     """Найти пользователей по запросу поиска.
@@ -107,7 +111,7 @@ async def search_users(
 
     Parameters
     ----------
-    q : str
+    query : str
         Запрос поиска имени пользователя.
     access_token : str | None
         Строка access-токена из заголовка ``Authorization``
@@ -141,7 +145,9 @@ async def search_users(
         )
 
     result = await search_users_query_handler.execute(
-        SearchUsersQuery(access_token=access_token, query=q, limit=limit, offset=offset)
+        SearchUsersQuery(
+            access_token=access_token, query=query, limit=limit, offset=offset
+        )
     )
 
     return UserSearchResponse(

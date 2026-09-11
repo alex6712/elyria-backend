@@ -123,11 +123,11 @@ class UserSearchResponse(PaginationResponse):
         examples=[
             [
                 {
-                    "identity_id": "7c4f0d2e-6a1b-4c5d-9e8f-0a1b2c3d4e5f",
-                    "profile_id": "f2a3c8e1-5b47-4d6e-9c8a-1d3f5e7a9b2c",
+                    "identityId": "7c4f0d2e-6a1b-4c5d-9e8f-0a1b2c3d4e5f",
+                    "profileId": "f2a3c8e1-5b47-4d6e-9c8a-1d3f5e7a9b2c",
                     "username": "john_doe",
-                    "display_name": "Джон Доу",
-                    "avatar_url": "https://cdn.elyria.ru/avatars/john_doe.png",
+                    "displayName": "Джон Доу",
+                    "avatarUrl": "https://cdn.elyria.ru/avatars/john_doe.png",
                 }
             ]
         ],
