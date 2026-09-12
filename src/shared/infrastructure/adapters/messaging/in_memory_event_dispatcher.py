@@ -39,7 +39,7 @@ class InMemoryEventDispatcher:
 
         self._handlers[event_type].append(handler)
 
-    async def publish(self, event: object) -> None:
+    async def publish(self, event: Any) -> None:
         """Отправляет событие всем зарегистрированным обработчикам его типа.
 
         Обработчики вызываются одновременно. Исключения от отдельных
@@ -48,7 +48,7 @@ class InMemoryEventDispatcher:
 
         Parameters
         ----------
-        event : object
+        event : Any
             Экземпляр события для рассылки.
 
         Raises
@@ -57,9 +57,7 @@ class InMemoryEventDispatcher:
             Если один или несколько обработчиков выбросили исключения.
             Сообщение содержит текстовые представления всех агрегированных ошибок.
         """
-        event_type = type(event)
-
-        if not (handlers := self._handlers.get(event_type, [])):
+        if not (handlers := self._handlers.get(type(event), [])):
             return
 
         errors = [
