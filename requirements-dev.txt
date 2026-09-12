@@ -18,7 +18,7 @@ aiosignal==1.4.0
     # via aiohttp
 aiosqlite==0.22.1
     # via elyria-backend (pyproject.toml:dev)
-alembic==1.19.2
+alembic==1.20.0
     # via elyria-backend (pyproject.toml)
 annotated-doc==0.0.5
     # via
@@ -39,7 +39,7 @@ asyncpg==0.31.0
     # via elyria-backend (pyproject.toml)
 attrs==26.1.0
     # via aiohttp
-basedpyright==1.40.0
+basedpyright==1.40.1
     # via elyria-backend (pyproject.toml:dev)
 boto3==1.40.61
     # via aiobotocore
@@ -86,7 +86,7 @@ fastapi==0.141.1
     # via elyria-backend (pyproject.toml)
 fastapi-cli==0.0.32
     # via fastapi
-fastapi-cloud-cli==0.25.0
+fastapi-cloud-cli==0.26.0
     # via fastapi-cli
 fastar==0.12.0
     # via
@@ -194,7 +194,7 @@ pygments==2.21.0
     # via
     #   pytest
     #   rich
-pyjwt==2.13.0
+pyjwt==2.14.0
     # via elyria-backend (pyproject.toml)
 pytest==9.1.1
     # via
@@ -234,7 +234,7 @@ rich-toolkit==0.20.5
     #   fastapi-cloud-cli
 rignore==0.8.1
     # via fastapi-cloud-cli
-ruff==0.16.6
+ruff==0.16.7
     # via elyria-backend (pyproject.toml:dev)
 s3transfer==0.14.0
     # via boto3

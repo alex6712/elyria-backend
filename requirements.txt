@@ -16,7 +16,7 @@ aioitertools==0.13.0
     # via aiobotocore
 aiosignal==1.4.0
     # via aiohttp
-alembic==1.19.2
+alembic==1.20.0
     # via elyria-backend (pyproject.toml)
 annotated-doc==0.0.5
     # via
@@ -73,7 +73,7 @@ fastapi==0.141.1
     # via elyria-backend (pyproject.toml)
 fastapi-cli==0.0.32
     # via fastapi
-fastapi-cloud-cli==0.25.0
+fastapi-cloud-cli==0.26.0
     # via fastapi-cli
 fastar==0.12.0
     # via
@@ -153,7 +153,7 @@ pydantic-settings==2.15.0
     #   fastapi
 pygments==2.21.0
     # via rich
-pyjwt==2.13.0
+pyjwt==2.14.0
     # via elyria-backend (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
