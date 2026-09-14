@@ -112,6 +112,7 @@ class LoginCommandHandler:
                     identity_id=identity.id,
                     session_secret=self._token_hasher.hash(refresh_token),
                     expires_at=refresh_expires_at,
+                    now=now,
                 )
             )
 

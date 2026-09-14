@@ -128,6 +128,7 @@ class RegisterUserCommandHandler:
                 identity_id=identity.id,
                 session_secret=self._token_hasher.hash(refresh_token),
                 expires_at=refresh_expires_at,
+                now=now,
             )
 
             await self._uow.profiles.add(profile)
