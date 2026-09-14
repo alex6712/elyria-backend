@@ -3,7 +3,11 @@ from typing import Self, override
 from uuid import UUID
 
 from src.shared.domain.mixins import Auditable, Identifiable, Versioned
-from src.users.domain.exceptions import SessionExpiredError, SessionRevokedError
+from src.users.domain.exceptions import (
+    InvalidSessionExpirationError,
+    SessionExpiredError,
+    SessionRevokedError,
+)
 
 
 class Session(Identifiable[UUID], Auditable, Versioned):
@@ -53,6 +57,12 @@ class Session(Identifiable[UUID], Auditable, Versioned):
     ``SessionRevokedError`` (отозванная сессия) либо
     ``SessionExpiredError`` (истёкшая). Это решение оформлено
     отдельным ADR-0005.
+
+    Сессия не может быть выпущена уже истёкшей: фабричный метод
+    ``issue()`` возбуждает ``InvalidSessionExpirationError``, если
+    ``expires_at`` не позже переданного момента выпуска ``now``,
+    а сам момент ``now`` используется как ``created_at``
+    и ``last_used_at`` (ADR-0005).
     """
 
     def __init__(
@@ -88,10 +98,18 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         identity_id: UUID,
         session_secret: str,
         expires_at: datetime,
+        *,
+        now: datetime,
         ip_address: str | None = None,
         user_agent: str | None = None,
     ) -> Self:
         """Создать новую сессию пользователя.
+
+        Проверяет, что сессия не выпускается уже истёкшей:
+        ``expires_at`` должен находиться строго в будущем относительно
+        переданного момента ``now``. Момент ``now`` используется
+        как ``created_at`` и ``last_used_at``: сущность не обращается
+        к системному времени при создании сессии (ADR-0005).
 
         Parameters
         ----------
@@ -103,6 +121,10 @@ class Session(Identifiable[UUID], Auditable, Versioned):
             Уникальный секрет сессии, выпущенный Infrastructure Layer.
         expires_at : datetime
             Момент истечения срока действия сессии.
+        now : datetime
+            Момент выпуска сессии, вычисляемый.
+            Точка отсчёта для проверки истечения, а также
+            значение ``created_at`` и ``last_used_at``.
         ip_address : str | None, optional
             IP-адрес клиента на момент создания сессии.
         user_agent : str | None, optional
@@ -112,13 +134,22 @@ class Session(Identifiable[UUID], Auditable, Versioned):
         -------
         Session
             Новая, не отозванная сессия.
+
+        Raises
+        ------
+        InvalidSessionExpirationError
+            Если ``expires_at`` не позже ``now`` (сессия была бы
+            выпущена уже истёкшей либо истекшей к моменту выпуска).
         """
+        if expires_at <= now:
+            raise InvalidSessionExpirationError(expires_at, now)
+
         return cls(
             id=id,
             identity_id=identity_id,
             session_secret=session_secret,
             expires_at=expires_at,
-            last_used_at=(now := datetime.now(UTC)),
+            last_used_at=now,
             revoked_at=None,
             ip_address=ip_address,
             user_agent=user_agent,

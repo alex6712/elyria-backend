@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 
@@ -125,12 +126,48 @@ class SessionExpiredError(Exception):
         self.session_id = session_id
 
 
+class InvalidSessionExpirationError(Exception):
+    """Попытка выпуска сессии с уже истёкшим сроком действия.
+
+    Возникает в ``Session.issue()``, если ``expires_at`` не находится
+    строго в будущем относительно момента выпуска ``now``: сессия
+    не может быть выдана уже истёкшей (ADR-0005).
+
+    Parameters
+    ----------
+    expires_at : datetime
+        Переданный момент истечения срока действия сессии.
+    now : datetime
+        Момент выпуска сессии.
+    """
+
+    def __init__(self, expires_at: datetime, now: datetime) -> None:
+        super().__init__(
+            "Session cannot be issued: expires_at must be later than now. "
+            + f"expires_at={expires_at}, now={now}"
+        )
+
+        self.expires_at = expires_at
+        self.now = now
+
+
 class UsernameAlreadyExistsError(Exception):
     """Исключение при попытке создать пользователя с существующим username.
 
     Возникает, если указанное имя пользователя уже занято
     другой учётной записью. Содержит сообщение с указанием
     конфликтующего имени пользователя.
+    """
+
+    pass
+
+
+class SessionSecretAlreadyExistsError(Exception):
+    """Исключение при попытке создать сессию с существующим секретом.
+
+    Возникает, если указанный ``session_secret`` уже занят
+    другой сессией. Уникальность секрета гарантируется
+    ограничением базы данных ``uq_sessions_session_secret``.
     """
 
     pass
