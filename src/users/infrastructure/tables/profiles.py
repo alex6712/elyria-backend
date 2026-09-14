@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Table
+from sqlalchemy import Column, ForeignKey, Table, UniqueConstraint
 from sqlalchemy.types import String, Uuid
 
 from src.shared.infrastructure import metadata
@@ -37,6 +37,7 @@ profiles_table = Table(
     ),
     *audit_columns(),
     version_column(),
+    UniqueConstraint("identity_id", name="uq_profiles_identity_id"),
     comment="Профили пользователей системы",
 )
 """Таблица профилей пользователей.
@@ -50,4 +51,7 @@ Notes
 -----
 Учётные данные для аутентификации (логин, хэш пароля) в этой
 таблице не хранятся - они находятся в таблице `identities`.
+
+Каждая учётная запись имеет не более одного профиля: уникальность
+``identity_id`` гарантируется ограничением ``uq_profiles_identity_id``.
 """

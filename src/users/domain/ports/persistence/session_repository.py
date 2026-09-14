@@ -24,6 +24,12 @@ class SessionRepository(Protocol):
         ----------
         session : Session
             Доменная сущность сессии для сохранения.
+
+        Raises
+        ------
+        SessionSecretAlreadyExistsError
+            Если сессия с таким ``session_secret`` уже существует
+            в хранилище.
         """
         ...
 

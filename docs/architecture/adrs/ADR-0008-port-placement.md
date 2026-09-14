@@ -205,7 +205,7 @@ Accepted
 
 Репозитории переносятся в Domain Layer:
 
-* `IdentityRepository`, `SessionRepository`, `ProfileRepository` — в подпакет `src/users/domain/repositories/`.
+* `IdentityRepository`, `SessionRepository`, `ProfileRepository` — в подпакет `src/users/domain/ports/persistence/`;
 
 Критерий отнесения порта к доменным: порт оперирует исключительно доменными сущностями и Value Objects и выражает возможность предметной области.
 

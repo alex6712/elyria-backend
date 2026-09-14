@@ -2,10 +2,12 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import RowMapping, insert, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from src.shared.domain.exceptions import ConcurrentModificationError
 from src.users.domain.entities import Session
+from src.users.domain.exceptions import SessionSecretAlreadyExistsError
 from src.users.infrastructure.tables import sessions_table
 
 
@@ -32,26 +34,45 @@ class SqlAlchemySessionRepository:
     async def add(self, session: Session) -> None:
         """Сохранить новую сессию в базу данных.
 
+        Выполняет вставку записи в таблицу ``sessions``. При нарушении
+        ограничения уникальности секрета сессии преобразует
+        ``IntegrityError`` в доменное исключение.
+
         Parameters
         ----------
         session : Session
             Доменная сущность сессии для сохранения.
+
+        Raises
+        ------
+        SessionSecretAlreadyExistsError
+            Если сессия с таким ``session_secret`` уже существует
+            в базе данных.
         """
-        _ = await self._connection.execute(
-            insert(sessions_table).values(
-                id=session.id,
-                identity_id=session.identity_id,
-                session_secret=session.session_secret,
-                expires_at=session.expires_at,
-                last_used_at=session.last_used_at,
-                revoked_at=session.revoked_at,
-                ip_address=session.ip_address,
-                user_agent=session.user_agent,
-                version=session.version,
-                created_at=session.created_at,
-                updated_at=session.updated_at,
+        try:
+            _ = await self._connection.execute(
+                insert(sessions_table).values(
+                    id=session.id,
+                    identity_id=session.identity_id,
+                    session_secret=session.session_secret,
+                    expires_at=session.expires_at,
+                    last_used_at=session.last_used_at,
+                    revoked_at=session.revoked_at,
+                    ip_address=session.ip_address,
+                    user_agent=session.user_agent,
+                    version=session.version,
+                    created_at=session.created_at,
+                    updated_at=session.updated_at,
+                )
             )
-        )
+        except IntegrityError as e:
+            if "uq_sessions_session_secret" in str(e):
+                raise SessionSecretAlreadyExistsError(
+                    f"Session with session_secret={session.session_secret} "
+                    + "already exists."
+                ) from e
+
+            raise
 
     async def get_by_id(self, id: UUID) -> Session | None:
         """Получить сессию по идентификатору.
