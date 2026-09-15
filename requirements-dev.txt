@@ -66,7 +66,11 @@ click==8.5.0
     #   import-linter
     #   rich-toolkit
     #   uvicorn
-coverage==7.16.0
+colorama==0.4.6
+    # via
+    #   pytest
+    #   typer
+coverage==7.16.1
     # via pytest-cov
 cryptography==50.0.1
     # via pyjwt
@@ -100,7 +104,7 @@ frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-greenlet==3.5.5
+greenlet==3.5.6
     # via sqlalchemy
 grimp==3.17
     # via import-linter
@@ -238,7 +242,7 @@ ruff==0.16.7
     # via elyria-backend (pyproject.toml:dev)
 s3transfer==0.14.0
     # via boto3
-sentry-sdk==2.69.1
+sentry-sdk==2.69.2
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
@@ -246,7 +250,7 @@ six==1.17.0
     # via python-dateutil
 slowapi==0.1.10
     # via elyria-backend (pyproject.toml)
-sqlalchemy==2.0.52
+sqlalchemy==2.0.53
     # via
     #   elyria-backend (pyproject.toml)
     #   alembic
@@ -282,13 +286,11 @@ urllib3==2.7.0
     # via
     #   botocore
     #   sentry-sdk
-uvicorn==0.52.4
+uvicorn==0.53.0
     # via
     #   fastapi
     #   fastapi-cli
     #   fastapi-cloud-cli
-uvloop==0.22.1
-    # via uvicorn
 virtualenv==21.7.9
     # via pre-commit
 watchfiles==1.2.0
