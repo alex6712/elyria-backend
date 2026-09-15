@@ -15,7 +15,7 @@ class IdentityRepository(Protocol):
     Notes
     -----
     Реализация данного порта должна гарантировать уникальность
-    имени пользователя.
+    имени пользователя и адреса электронной почты.
     """
 
     async def add(self, identity: Identity) -> None:
@@ -30,6 +30,9 @@ class IdentityRepository(Protocol):
         ------
         UsernameAlreadyExistsError
             Если пользователь с таким ``username`` уже существует
+            в базе данных.
+        EmailAlreadyExistsError
+            Если пользователь с таким ``email`` уже существует
             в базе данных.
         """
         ...
