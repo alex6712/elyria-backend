@@ -2,10 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import override
 
-from src.users.domain.exceptions import (
-    InvalidEmailFormatError,
-    InvalidEmailLengthError,
-)
+from src.users.domain.exceptions import InvalidEmailFormatError, InvalidEmailLengthError
 
 EMAIL_MIN_LENGTH = 3
 """Минимальная длина email (включительно)."""
