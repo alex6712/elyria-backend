@@ -7,6 +7,11 @@ from src.users.domain.value_objects.display_name import (
     DISPLAY_NAME_MAX_LENGTH,
     DISPLAY_NAME_MIN_LENGTH,
 )
+from src.users.domain.value_objects.email import (
+    EMAIL_MAX_LENGTH,
+    EMAIL_MIN_LENGTH,
+    EMAIL_PATTERN,
+)
 from src.users.domain.value_objects.password import (
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
@@ -145,6 +150,8 @@ class RegisterUserRequest(BaseJsonModel):
     ----------
     username : str
         Строковое представление логина пользователя.
+    email : str
+        Строковое представление адреса электронной почты пользователя.
     password : str
         Строковое представление пароля пользователя.
     display_name : str
@@ -152,8 +159,9 @@ class RegisterUserRequest(BaseJsonModel):
 
     Notes
     -----
-    Для логина пользователя (username) и отображаемого имени пользователя (display_name)
-    ведущие и завершающие пробельные символы удаляются перед обработкой.
+    Для логина пользователя (username), адреса электронной почты (email)
+    и отображаемого имени пользователя (display_name) ведущие
+    и завершающие пробельные символы удаляются перед обработкой.
 
     See Also
     --------
@@ -177,6 +185,23 @@ class RegisterUserRequest(BaseJsonModel):
             + ")."
         ),
         examples=["john_doe", "user123", "ThisIsNotAUsername"],
+    )
+    email: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True,
+            min_length=EMAIL_MIN_LENGTH,
+            max_length=EMAIL_MAX_LENGTH,
+            pattern=EMAIL_PATTERN,
+        ),
+    ] = Field(
+        description=(
+            "Адрес электронной почты ("
+            + f"{length_description(EMAIL_MIN_LENGTH, EMAIL_MAX_LENGTH)}, "
+            + "формат local-part@domain.tld; приводится к нижнему регистру"
+            + ")."
+        ),
+        examples=["john.doe@example.com", "alexei@elyria.ru"],
     )
     password: Annotated[
         str,

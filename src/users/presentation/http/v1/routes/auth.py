@@ -11,7 +11,7 @@ from src.users.application.dto.commands import (
     RefreshSessionCommand,
     RegisterUserCommand,
 )
-from src.users.domain.value_objects import DisplayName, Password, Username
+from src.users.domain.value_objects import DisplayName, Email, Password, Username
 from src.users.presentation.http.dependencies import (
     AuthCookiesProviderDependency,
     ChangePasswordDependency,
@@ -265,14 +265,16 @@ async def refresh(
 
         Для регистрации требуется передать следующие данные:
         - ``username``: уникальное имя пользователя;
+        - ``email``: адрес электронной почты;
         - ``password``: пароль пользователя (должен соответствовать требованиям политики
         безопасности);
         - ``displayName``: отображаемое имя, которое будет видно другим пользователям.
 
         При успешной регистрации система создаёт учётную запись, инициализирует
         необходимые ресурсы и возвращает ответ со статусом ``201 Created``.
-        В случае ошибки (например, при занятом ``username`` или несоответствии пароля
-        требованиям) возвращается соответствующий HTTP-код и сообщение об ошибке.
+        В случае ошибки (например, при занятом ``username`` или ``email``
+        либо несоответствии пароля требованиям) возвращается соответствующий
+        HTTP-код и сообщение об ошибке.
     """),
     response_description="Успешная регистрация",
 )
@@ -287,8 +289,8 @@ async def register(
 ) -> RegisterUserResponse:
     """Регистрация нового пользователя.
 
-    Принимает данные для регистрации (имя пользователя, пароль, отображаемое имя),
-    создает нового пользователя в системе.
+    Принимает данные для регистрации (имя пользователя, адрес электронной
+    почты, пароль, отображаемое имя), создает нового пользователя в системе.
 
     Parameters
     ----------
@@ -297,7 +299,7 @@ async def register(
         HttpOnly-cookie с refresh-токеном.
     body : RegisterUserRequest
         Валидированная схема тела запроса, содержащая данные для регистрации:
-        username (str), password (str) и display_name (str).
+        username (str), email (str), password (str) и display_name (str).
     register_user_command_handler : RegisterUserCommandHandler
         Обработчик команды регистрации пользователя, полученный через
         DI-зависимость FastAPI из контейнера приложения.
@@ -317,6 +319,7 @@ async def register(
     result = await register_user_command_handler.execute(
         RegisterUserCommand(
             username=Username(body.username),
+            email=Email(body.email),
             password=Password(body.password),
             display_name=DisplayName(body.display_name),
         )

@@ -7,6 +7,8 @@ from src.users.domain.exceptions import (
     InvalidAvatarUrlError,
     InvalidAvatarUrlLengthError,
     InvalidDisplayNameLengthError,
+    InvalidEmailFormatError,
+    InvalidEmailLengthError,
     InvalidPasswordLengthError,
     InvalidUsernameFormatError,
     InvalidUsernameLengthError,
@@ -51,6 +53,67 @@ async def _invalid_avatar_url_error_handler(
     Возвращает клиенту ответ с HTTP 422 Unprocessable Content, если
     URL изображения аватара не является корректным абсолютным URL
     либо использует схему, отличную от ``http`` и ``https``.
+
+    Parameters
+    ----------
+    _request : Request
+        Объект запроса FastAPI, содержащий информацию о входящем
+        HTTP-запросе (не используется).
+    exc : Exception
+        Экземпляр исключения, из которого получается текст сообщения
+        об ошибке.
+
+    Returns
+    -------
+    JSONResponse
+        Ответ с ошибкой 422.
+    """
+    return JSONResponse(
+        content=StandardResponse(
+            code=APICode.VALIDATION_ERROR, detail=str(exc)
+        ).model_dump(mode="json"),
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    )
+
+
+async def _invalid_email_format_error_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:
+    """Обработать исключение InvalidEmailFormatError.
+
+    Возвращает клиенту ответ с HTTP 422 Unprocessable Content, если
+    адрес электронной почты не соответствует допустимому формату
+    (``local-part@domain.tld``).
+
+    Parameters
+    ----------
+    _request : Request
+        Объект запроса FastAPI, содержащий информацию о входящем
+        HTTP-запросе (не используется).
+    exc : Exception
+        Экземпляр исключения, из которого получается текст сообщения
+        об ошибке.
+
+    Returns
+    -------
+    JSONResponse
+        Ответ с ошибкой 422.
+    """
+    return JSONResponse(
+        content=StandardResponse(
+            code=APICode.VALIDATION_ERROR, detail=str(exc)
+        ).model_dump(mode="json"),
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    )
+
+
+async def _invalid_email_length_error_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:
+    """Обработать исключение InvalidEmailLengthError.
+
+    Возвращает клиенту ответ с HTTP 422 Unprocessable Content, если
+    длина адреса электронной почты выходит за допустимые пределы.
 
     Parameters
     ----------
@@ -210,6 +273,12 @@ def register(app: FastAPI) -> None:
     app.add_exception_handler(InvalidAvatarUrlError, _invalid_avatar_url_error_handler)
     app.add_exception_handler(
         InvalidDisplayNameLengthError, _invalid_display_name_length_error_handler
+    )
+    app.add_exception_handler(
+        InvalidEmailFormatError, _invalid_email_format_error_handler
+    )
+    app.add_exception_handler(
+        InvalidEmailLengthError, _invalid_email_length_error_handler
     )
     app.add_exception_handler(
         InvalidPasswordLengthError, _invalid_password_length_error_handler

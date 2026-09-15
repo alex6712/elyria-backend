@@ -6,8 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from src.shared.domain.exceptions import ConcurrentModificationError
 from src.users.domain.entities import Identity
-from src.users.domain.exceptions import UsernameAlreadyExistsError
-from src.users.domain.value_objects import Username
+from src.users.domain.exceptions import (
+    EmailAlreadyExistsError,
+    UsernameAlreadyExistsError,
+)
+from src.users.domain.value_objects import Email, Username
 from src.users.infrastructure.tables import identities_table
 
 
@@ -16,8 +19,9 @@ class SqlAlchemyIdentityRepository:
 
     Реализует полный набор операций CRUD для доменной сущности
     ``Identity`` над таблицей ``identities``. Обрабатывает нарушение
-    уникальности имени пользователя и транслирует его в доменное
-    исключение ``UsernameAlreadyExistsError``.
+    уникальности имени пользователя и адреса электронной почты
+    и транслирует их в доменные исключения
+    ``UsernameAlreadyExistsError`` и ``EmailAlreadyExistsError``.
 
     Parameters
     ----------
@@ -37,8 +41,9 @@ class SqlAlchemyIdentityRepository:
         """Сохранить новую учётную запись в базу данных.
 
         Выполняет вставку записи в таблицу ``identities``. При нарушении
-        ограничения уникальности имени пользователя преобразует
-        ``IntegrityError`` в доменное исключение.
+        ограничений уникальности имени пользователя или адреса
+        электронной почты преобразует ``IntegrityError`` в доменное
+        исключение.
 
         Parameters
         ----------
@@ -50,12 +55,17 @@ class SqlAlchemyIdentityRepository:
         UsernameAlreadyExistsError
             Если пользователь с таким ``username`` уже существует
             в базе данных.
+        EmailAlreadyExistsError
+            Если пользователь с таким ``email`` уже существует
+            в базе данных.
         """
         try:
             _ = await self._connection.execute(
                 insert(identities_table).values(
                     id=identity.id,
                     username=identity.username.value,
+                    email=identity.email.value,
+                    email_verified=identity.email_verified,
                     password_hash=identity.password_hash,
                     is_active=identity.is_active,
                     version=identity.version,
@@ -67,6 +77,11 @@ class SqlAlchemyIdentityRepository:
             if "uq_identities_username" in str(e):
                 raise UsernameAlreadyExistsError(
                     f"User with username={identity.username} already exists."
+                ) from e
+
+            if "uq_identities_email_lower" in str(e):
+                raise EmailAlreadyExistsError(
+                    f"User with email={identity.email} already exists."
                 ) from e
 
             raise
@@ -175,6 +190,8 @@ class SqlAlchemyIdentityRepository:
         return Identity(
             id=row["id"],
             username=Username(row["username"]),
+            email=Email(row["email"]),
+            email_verified=row["email_verified"],
             password_hash=row["password_hash"],
             is_active=row["is_active"],
             version=row["version"],

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from src.users.domain.value_objects import DisplayName, Password, Username
+from src.users.domain.value_objects import DisplayName, Email, Password, Username
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +14,8 @@ class RegisterUserCommand:
     ----------
     username : Username
         Имя пользователя (логин).
+    email : Email
+        Адрес электронной почты пользователя.
     password : Password
         Пароль пользователя в открытом виде.
     display_name : DisplayName
@@ -21,5 +23,6 @@ class RegisterUserCommand:
     """
 
     username: Username
+    email: Email
     password: Password
     display_name: DisplayName

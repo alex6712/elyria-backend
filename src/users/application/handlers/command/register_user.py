@@ -95,6 +95,9 @@ class RegisterUserCommandHandler:
             Если пароль встречается в известных утечках данных.
         UsernameAlreadyExistsError
             Если пользователь с указанным именем уже существует.
+        EmailAlreadyExistsError
+            Если пользователь с указанным адресом электронной почты
+            уже существует.
         """
         if await self._compromised_password_checker.is_compromised(command.password):
             raise CompromisedPasswordError(
@@ -102,7 +105,9 @@ class RegisterUserCommandHandler:
             )
 
         identity = Identity.register(
-            command.username, self._password_hasher.hash(command.password)
+            command.username,
+            self._password_hasher.hash(command.password),
+            command.email,
         )
 
         async with self._uow:
