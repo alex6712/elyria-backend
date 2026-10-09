@@ -1,5 +1,27 @@
 Set-Location -Path "$(Split-Path -Parent $MyInvocation.MyCommand.Path)\.."
 
-Get-ChildItem -Path ".\src" -Directory -Recurse | Where-Object { $_.Name -eq "__pycache__" } | Remove-Item -Force -Recurse
+# Виртуальные окружения и каталог Git исключаются: скомпилированные
+# байткоды в .venv создаются и удаляются менеджером пакетов, а обход
+# по ним заметно замедляет выполнение.
+$excludedDirectories = @(".git", ".venv", "venv")
+
+function Remove-Pycache {
+    param([string]$Path)
+
+    foreach ($entry in Get-ChildItem -Path $Path -Directory -Force) {
+        if ($excludedDirectories -contains $entry.Name) {
+            continue
+        }
+
+        if ($entry.Name -eq "__pycache__") {
+            Remove-Item -Path $entry.FullName -Force -Recurse
+            continue
+        }
+
+        Remove-Pycache -Path $entry.FullName
+    }
+}
+
+Remove-Pycache -Path "."
 
 Write-Output "All __pycache__ directories have been removed."

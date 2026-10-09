@@ -22,7 +22,7 @@ requirements: ## Сгенерировать requirements.txt и requirements-dev
 upgrade: ## Обновить зависимости
 	uv sync -U && ./scripts/compile_pip.sh
 
-clean: ## Удалить все каталоги __pycache__ в src/
+clean: ## Удалить все каталоги __pycache__ в проекте, кроме виртуальных окружений
 	./scripts/clear_pycache.sh
 
 install-hooks: ## Установить git-хуки pre-commit
