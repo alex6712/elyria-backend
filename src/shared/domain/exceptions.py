@@ -20,10 +20,10 @@ class ConcurrentModificationError(Exception):
     """
 
     def __init__(self, entity_id: UUID, entity_type: str) -> None:
-        self.entity_id = entity_id
-        self.entity_type = entity_type
-
         super().__init__(
             f"{entity_type} with id={entity_id} was modified concurrently. "
             + "Reload the entity and retry the operation."
         )
+
+        self.entity_id = entity_id
+        self.entity_type = entity_type
