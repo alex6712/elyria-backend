@@ -13,7 +13,6 @@ dependencies = [
     "pydantic-settings>=2.14.2",
     "pyjwt[crypto]>=2.13.0",
     "redis>=8.0.1",
-    "slowapi>=0.1.10",
     "sqlalchemy[asyncio]>=2.1.3",
 ]
 
