@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 
 
 @runtime_checkable
@@ -17,12 +17,12 @@ class TokenIssuer(Protocol):
     Эти детали относятся к Infrastructure Layer.
     """
 
-    def issue(self, claims: TokenClaimsDTO) -> str:
+    def issue(self, claims: TokenClaims) -> str:
         """Выпустить подписанный токен.
 
         Parameters
         ----------
-        claims : TokenClaimsDTO
+        claims : TokenClaims
             Утверждения, которые необходимо включить в токен.
 
         Returns

@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 from src.users.application.dto.commands import RegisterUserCommand
 from src.users.application.exceptions import CompromisedPasswordError
 from src.users.application.handlers.command.register_user import (
@@ -129,7 +129,7 @@ class TestRegisterUserUseCaseSuccess:
         _ = await handler.execute(make_command())
 
         assert len(token_issuer.issued) == 2
-        assert all(isinstance(c, TokenClaimsDTO) for c in token_issuer.issued)
+        assert all(isinstance(c, TokenClaims) for c in token_issuer.issued)
 
     async def test_commits_unit_of_work(self) -> None:
         uow = FakeUsersUnitOfWork()

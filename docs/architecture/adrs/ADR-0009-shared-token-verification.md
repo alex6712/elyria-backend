@@ -12,7 +12,7 @@ Accepted
 
 До принятия данного ADR проверка токенов была полностью локализована в контексте Users:
 
-- порт `TokenVerifier` и DTO `TokenClaimsDTO` — в `src/users/application/`;
+- порт `TokenVerifier` и DTO `TokenClaims` — в `src/users/application/`;
 - реализация `JwtTokenVerifier`, провайдер ключей `SignatureKeysProvider` — в `src/users/infrastructure/`;
 - хранилище отозванных токенов `TokenBlacklist` (Redis) — тоже в Users;
 - исключения токенных ошибок и их 401-обработчики — в Users;
@@ -93,7 +93,7 @@ Accepted
 #### Недостатки
 
 - `src/shared/` получает первые security-адаптеры: риск «god package» при отсутствии дисциплины.
-- `TokenClaimsDTO` становится общим контрактом: изменения утверждений затрагивают все BC.
+- `TokenClaims` становится общим контрактом: изменения утверждений затрагивают все BC.
 - Необходим перенос существующего кода Users и обновление контрактов import-linter.
 
 #### Влияние на безопасность
@@ -133,7 +133,7 @@ Accepted
 
 В `src/shared/` размещаются:
 
-- `src/shared/application/dto/token_claims.py` — `TokenClaimsDTO`;
+- `src/shared/application/dto/token_claims.py` — `TokenClaims`;
 - `src/shared/application/ports/security/token_verifier.py` — порт `TokenVerifier` (синхронный, криптографическая проверка);
 - `src/shared/application/ports/persistence/token_blacklist.py` — порт `TokenBlacklist`;
 - `src/shared/application/exceptions.py` — `TokenExpiredError`, `TokenSignatureInvalidError`, `TokenInvalidError`, `TokenRevokedError`;

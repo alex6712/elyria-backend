@@ -2,7 +2,7 @@ import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from pydantic import ValidationError
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 from src.shared.application.exceptions import (
     TokenExpiredError,
     TokenInvalidError,
@@ -17,7 +17,7 @@ class JwtTokenVerifier:
     с использованием алгоритма асимметричной подписи Ed25519 (EdDSA).
 
     Извлекает утверждения из валидного токена и возвращает их
-    в виде ``TokenClaimsDTO``.
+    в виде ``TokenClaims``.
 
     Parameters
     ----------
@@ -36,7 +36,7 @@ class JwtTokenVerifier:
         self._public_key = public_key
         self._algorithm = algorithm
 
-    def verify(self, token: str) -> TokenClaimsDTO:
+    def verify(self, token: str) -> TokenClaims:
         """Проверить подписанный JWT-токен и извлечь утверждения.
 
         Выполняет проверку подписи токена с использованием публичного
@@ -51,7 +51,7 @@ class JwtTokenVerifier:
 
         Returns
         -------
-        TokenClaimsDTO
+        TokenClaims
             Проверенные утверждения, содержащиеся в токене.
 
         Raises
@@ -82,7 +82,7 @@ class JwtTokenVerifier:
             raise TokenInvalidError(e) from e
 
         try:
-            return TokenClaimsDTO.model_validate(
+            return TokenClaims.model_validate(
                 {
                     "user_id": payload["sub"],
                     "expires_at": payload["exp"],

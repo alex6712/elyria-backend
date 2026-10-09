@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-class TokenClaimsDTO(BaseModel):
+class TokenClaims(BaseModel):
     """Утверждения, содержащиеся в токене аутентификации.
 
     Представляет сведения, необходимые для идентификации пользователя,

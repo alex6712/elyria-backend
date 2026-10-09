@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 from src.shared.domain.ports.messaging import EventDispatcher
 from src.users.application.dto.commands import RegisterUserCommand
 from src.users.application.dto.results import RegisterUserResult
@@ -119,7 +119,7 @@ class RegisterUserCommandHandler:
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)
 
             refresh_token = self._token_issuer.issue(
-                TokenClaimsDTO(
+                TokenClaims(
                     user_id=identity.id,
                     expires_at=refresh_expires_at,
                     issued_at=now,
@@ -140,7 +140,7 @@ class RegisterUserCommandHandler:
             await self._uow.sessions.add(session)
 
             access_token = self._token_issuer.issue(
-                TokenClaimsDTO(
+                TokenClaims(
                     user_id=identity.id,
                     expires_at=now + timedelta(minutes=self._at_lifetime_minutes),
                     issued_at=now,

@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 
 
 @runtime_checkable
@@ -16,7 +16,7 @@ class TokenVerifier(Protocol):
     корректности токена, включая проверку подписи и срока действия.
     """
 
-    def verify(self, token: str) -> TokenClaimsDTO:
+    def verify(self, token: str) -> TokenClaims:
         """Проверить токен и извлечь содержащиеся в нём утверждения.
 
         Parameters
@@ -26,7 +26,7 @@ class TokenVerifier(Protocol):
 
         Returns
         -------
-        TokenClaimsDTO
+        TokenClaims
             Проверенные утверждения, содержащиеся в токене.
 
         Raises

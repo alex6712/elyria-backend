@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 from src.shared.application.ports.security import TokenVerifier
 from src.users.application.dto.commands import RefreshSessionCommand
 from src.users.application.dto.results import RefreshSessionResult
@@ -135,7 +135,7 @@ class RefreshSessionCommandHandler:
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)
 
             new_refresh_token = self._token_issuer.issue(
-                TokenClaimsDTO(
+                TokenClaims(
                     user_id=claims.user_id,
                     expires_at=refresh_expires_at,
                     issued_at=now,
@@ -150,7 +150,7 @@ class RefreshSessionCommandHandler:
             await self._uow.sessions.save_refresh(session)
 
             access_token = self._token_issuer.issue(
-                TokenClaimsDTO(
+                TokenClaims(
                     user_id=claims.user_id,
                     expires_at=now + timedelta(minutes=self._at_lifetime_minutes),
                     issued_at=now,

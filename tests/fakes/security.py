@@ -1,6 +1,6 @@
 """Фейки портов безопасности для unit-тестов."""
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 from src.users.domain.value_objects import Password
 
 
@@ -35,9 +35,9 @@ class FakeTokenIssuer:
     """
 
     def __init__(self) -> None:
-        self.issued: list[TokenClaimsDTO] = []
+        self.issued: list[TokenClaims] = []
 
-    def issue(self, claims: TokenClaimsDTO) -> str:
+    def issue(self, claims: TokenClaims) -> str:
         self.issued.append(claims)
         return f"token:{claims.token_id}"
 

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 from src.users.application.dto.commands import LoginCommand
 from src.users.application.dto.results import LoginResult
 from src.users.application.exceptions import IncorrectUsernameOrPasswordError
@@ -97,7 +97,7 @@ class LoginCommandHandler:
             refresh_expires_at = now + timedelta(days=self._rt_lifetime_days)
 
             refresh_token = self._token_issuer.issue(
-                TokenClaimsDTO(
+                TokenClaims(
                     user_id=identity.id,
                     expires_at=refresh_expires_at,
                     issued_at=now,
@@ -117,7 +117,7 @@ class LoginCommandHandler:
             )
 
             access_token = self._token_issuer.issue(
-                TokenClaimsDTO(
+                TokenClaims(
                     user_id=identity.id,
                     expires_at=now + timedelta(minutes=self._at_lifetime_minutes),
                     issued_at=now,

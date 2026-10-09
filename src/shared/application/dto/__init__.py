@@ -1,3 +1,3 @@
-from .token_claims import TokenClaimsDTO
+from .token_claims import TokenClaims
 
-__all__ = ["TokenClaimsDTO"]
+__all__ = ["TokenClaims"]

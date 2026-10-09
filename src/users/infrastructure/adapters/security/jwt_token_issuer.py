@@ -1,7 +1,7 @@
 import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from src.shared.application.dto import TokenClaimsDTO
+from src.shared.application.dto import TokenClaims
 
 
 class JwtTokenIssuer:
@@ -11,7 +11,7 @@ class JwtTokenIssuer:
     асимметричной подписи Ed25519 (EdDSA).
 
     Формирует стандартные JWT-утверждения на основе переданного DTO
-    ``TokenClaimsDTO`` и подписывает их переданным приватным ключом.
+    ``TokenClaims`` и подписывает их переданным приватным ключом.
 
     Parameters
     ----------
@@ -28,16 +28,16 @@ class JwtTokenIssuer:
         self._private_key = private_key
         self._algorithm = algorithm
 
-    def issue(self, claims: TokenClaimsDTO) -> str:
+    def issue(self, claims: TokenClaims) -> str:
         """Выпустить подписанный JWT-токен.
 
-        Преобразует ``TokenClaimsDTO`` в набор стандартных и
+        Преобразует ``TokenClaims`` в набор стандартных и
         пользовательских JWT-утверждений, после чего подписывает
         их с использованием алгоритма, указанного при инициализации.
 
         Parameters
         ----------
-        claims : TokenClaimsDTO
+        claims : TokenClaims
             Утверждения для включения в токен.
 
         Returns
