@@ -202,3 +202,70 @@ class SessionSecretAlreadyExistsError(Exception):
     """
 
     pass
+
+
+class InvalidVerificationTokenExpirationError(Exception):
+    """Попытка выпуска токена подтверждения с уже истёкшим сроком действия.
+
+    Возникает в ``VerificationToken.issue()``, если ``expires_at``
+    не находится строго в будущем относительно момента выпуска
+    ``now``: токен не может быть выдан уже истёкшим (симметрично
+    решению ADR-0005 для сессии).
+
+    Parameters
+    ----------
+    expires_at : datetime
+        Переданный момент истечения срока действия токена.
+    now : datetime
+        Момент выпуска токена.
+    """
+
+    def __init__(self, expires_at: datetime, now: datetime) -> None:
+        super().__init__(
+            "Verification token cannot be issued: expires_at must be later "
+            + f"than now. expires_at={expires_at}, now={now}"
+        )
+
+        self.expires_at = expires_at
+        self.now = now
+
+
+class VerificationTokenExpiredError(Exception):
+    """Непригодность токена подтверждения из-за истечения срока действия.
+
+    Описывает доменный инвариант: токен подтверждения нельзя применить
+    после наступления момента ``expires_at``. Истёкший токен утрачивает
+    силу независимо от того, был ли он ранее применён или аннулирован,
+    поэтому истёкший срок действия непригоден сам по себе.
+
+    Parameters
+    ----------
+    token_id : UUID
+        Идентификатор истёкшего токена подтверждения.
+    """
+
+    def __init__(self, token_id: UUID) -> None:
+        super().__init__(f"Verification token {token_id} has expired")
+
+        self.token_id = token_id
+
+
+class VerificationTokenAlreadyUsedError(Exception):
+    """Непригодность токена подтверждения из-за перехода в непригодное состояние.
+
+    Описывает доменный инвариант: токен подтверждения одноразов,
+    поэтому повторное применение недопустимо. Переход в непригодное
+    состояние происходит при применении (``mark_used``) и при
+    аннулировании (``invalidate``); оба исхода равнозначны для
+    повторного применения.
+
+    Parameters
+    ----------
+    token_id : UUID
+        Идентификатор непригодного токена подтверждения.
+    """
+
+    def __init__(self, token_id: UUID) -> None:
+        super().__init__(f"Verification token {token_id} is no longer usable")
+
+        self.token_id = token_id
