@@ -1,12 +1,12 @@
 from sqlalchemy import Column, ForeignKey, Index, Table, UniqueConstraint, text
 from sqlalchemy.types import DateTime, String, Uuid
 
-from src.shared.infrastructure import metadata
 from src.shared.infrastructure.columns import (
     audit_columns,
     identifier_column,
     version_column,
 )
+from src.shared.infrastructure.metadata import metadata
 
 sessions_table = Table(
     "sessions",

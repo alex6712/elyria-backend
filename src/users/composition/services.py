@@ -3,7 +3,7 @@ from typing import Literal
 
 from httpx import AsyncClient
 
-from src.shared.infrastructure import SignatureKeys
+from src.shared.infrastructure.signature_keys_provider import SignatureKeys
 from src.users.infrastructure.adapters.security import (
     Argon2idPasswordHasher,
     HibpCompromisedPasswordChecker,

@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from src.shared.application.ports.persistence import TokenBlacklist
 from src.shared.application.ports.security import TokenVerifier
-from src.shared.infrastructure import SignatureKeys
 from src.shared.infrastructure.adapters.messaging import InMemoryEventDispatcher
+from src.shared.infrastructure.signature_keys_provider import SignatureKeys
 from src.users.application.handlers.command import (
     ChangePasswordCommandHandler,
     ChangeProfileCommandHandler,

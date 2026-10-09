@@ -1,12 +1,12 @@
 from sqlalchemy import Column, Index, Table, UniqueConstraint, text
 from sqlalchemy.types import Boolean, String
 
-from src.shared.infrastructure import metadata
 from src.shared.infrastructure.columns import (
     audit_columns,
     identifier_column,
     version_column,
 )
+from src.shared.infrastructure.metadata import metadata
 from src.users.domain.value_objects.email import EMAIL_MAX_LENGTH
 from src.users.domain.value_objects.username import USERNAME_MAX_LENGTH
 

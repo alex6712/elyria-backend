@@ -1,8 +1,8 @@
 from sqlalchemy import Column, ForeignKey, Index, Table, text
 from sqlalchemy.types import String, Uuid
 
-from src.shared.infrastructure import metadata
 from src.shared.infrastructure.columns import audit_columns
+from src.shared.infrastructure.metadata import metadata
 from src.users.domain.value_objects.avatar_url import AVATAR_URL_MAX_LENGTH
 from src.users.domain.value_objects.display_name import DISPLAY_NAME_MAX_LENGTH
 from src.users.domain.value_objects.username import USERNAME_MAX_LENGTH
