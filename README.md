@@ -155,7 +155,8 @@ docker compose --env-file .env up elyria-postgres elyria-redis elyria-minio -d -
 | `make sync` | Установить зависимости (`uv sync --group dev`) |
 | `make requirements` | Сгенерировать `requirements.txt` и `requirements-dev.txt` |
 | `make upgrade` | Обновить зависимости |
-| `make clean` | Удалить все каталоги `__pycache__` |
+| `make clean` | Удалить кэш Python, линтеров, тестов и файл покрытия |
+| `make clean-dry-run` | Показать, что удалит `make clean`, ничего не удаляя |
 | `make install-hooks` | Установить git-хуки pre-commit |
 | `make dev` | Запустить сервер разработки |
 | `make migrate` | Применить миграции Alembic |
@@ -167,7 +168,9 @@ docker compose --env-file .env up elyria-postgres elyria-redis elyria-minio -d -
 | `make services` | Запустить PostgreSQL, Redis и MinIO в Docker |
 | `make services-down` | Остановить сервисы Docker |
 
-Make доступен в Linux, macOS, а также в Windows через WSL или Git Bash. Для Windows PowerShell используйте скрипты `scripts/*.ps1` напрямую (доступны для `clear_pycache` и `compile_pip`), `gen_keys.sh` запускайте через WSL/Git Bash.
+Make доступен в Linux, macOS, а также в Windows через WSL или Git Bash. Для Windows PowerShell используйте скрипты `scripts/*.ps1` напрямую (доступны для `clean` и `compile_pip`), `gen_keys.sh` запускайте через WSL/Git Bash.
+
+`clean` удаляет только кэш и артефакты тестов (`.coverage`, каталоги `__pycache__`, `.pytest_cache`, `.ruff_cache`, `.grimp_cache`, `.import_linter_cache`). Виртуальные окружения, каталоги `keys/` и `scripts/private/` не затрагиваются. Список очищаемого расширяется по мере подключения новых инструментов. Предварительный просмотр: `make clean-dry-run` (в PowerShell — `./scripts/clean.ps1 -WhatIf`).
 
 ## 📁 Структура проекта
 

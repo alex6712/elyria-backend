@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help keys keys-force sync requirements upgrade clean install-hooks dev migrate test test-integration lint format typecheck import-lint services services-down
+.PHONY: help keys keys-force sync requirements upgrade clean clean-dry-run install-hooks dev migrate test test-integration lint format typecheck import-lint services services-down
 
 help: ## Показать список доступных целей
 	@echo "Доступные цели:"
@@ -22,8 +22,11 @@ requirements: ## Сгенерировать requirements.txt и requirements-dev
 upgrade: ## Обновить зависимости
 	uv sync -U && ./scripts/compile_pip.sh
 
-clean: ## Удалить все каталоги __pycache__ в проекте, кроме виртуальных окружений
-	./scripts/clear_pycache.sh
+clean: ## Удалить кэш Python, линтеров, тестов и файл покрытия
+	./scripts/clean.sh
+
+clean-dry-run: ## Показать, что удалит make clean, ничего не удаляя
+	./scripts/clean.sh --dry-run
 
 install-hooks: ## Установить git-хуки pre-commit
 	uv run pre-commit install
