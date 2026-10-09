@@ -3,6 +3,9 @@ from fastapi import FastAPI
 from src.shared.presentation.http.handlers.client.conflict import (
     register as _register_conflict_handlers,
 )
+from src.shared.presentation.http.handlers.client.too_many_requests import (
+    register as _register_too_many_requests_handlers,
+)
 from src.shared.presentation.http.handlers.client.unauthorized import (
     register as _register_unauthorized_handlers,
 )
@@ -18,9 +21,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     """Зарегистрировать обработчики общих исключений на приложении.
 
     Регистрирует обработчики исключений, общих для всех bounded
-    contexts: конфликт оптимистичной блокировки (409), ошибки
-    проверки токенов (401), ошибки валидации запроса (422)
-    и непредвиденные ошибки сервера (500).
+    contexts: конфликт оптимистичной блокировки (409), превышение
+    лимита частоты запросов (429), ошибки проверки токенов (401),
+    ошибки валидации запроса (422) и непредвиденные ошибки
+    сервера (500).
 
     Parameters
     ----------
@@ -29,6 +33,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         обработчики.
     """
     _register_conflict_handlers(app)
+    _register_too_many_requests_handlers(app)
     _register_unauthorized_handlers(app)
     _register_unprocessable_content_handlers(app)
     _register_internal_server_error_handlers(app)

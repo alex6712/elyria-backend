@@ -2,7 +2,10 @@ from pathlib import Path
 
 from redis.asyncio import Redis as AsyncRedis
 
-from src.shared.infrastructure.adapters.persistence import RedisTokenBlacklist
+from src.shared.infrastructure.adapters.persistence import (
+    RedisRateLimiter,
+    RedisTokenBlacklist,
+)
 from src.shared.infrastructure.adapters.security import JwtTokenVerifier
 from src.shared.infrastructure.signature_keys_provider import (
     SignatureKeys,
@@ -89,3 +92,29 @@ def build_token_blacklist(*, redis_client: AsyncRedis) -> RedisTokenBlacklist:
         Хранилище отозванных access-токенов.
     """
     return RedisTokenBlacklist(client=redis_client)
+
+
+def build_rate_limiter(
+    *, redis_client: AsyncRedis, key_secret: str
+) -> RedisRateLimiter:
+    """Создать ограничитель частоты запросов на основе Redis.
+
+    Общий для всех bounded contexts компонент, подсчитывающий
+    количество обращений к ограничиваемым операциям в пределах
+    временного окна.
+
+    Parameters
+    ----------
+    redis_client : AsyncRedis
+        Асинхронный клиент Redis.
+    key_secret : str
+        Секретный ключ подписи идентификаторов счётчиков. Используется
+        как ключ HMAC-SHA256, поэтому передаётся отдельным параметром,
+        а не берётся из настроек внутри фабрики.
+
+    Returns
+    -------
+    RedisRateLimiter
+        Ограничитель частоты запросов с неподвижным окном.
+    """
+    return RedisRateLimiter(client=redis_client, key_secret=key_secret.encode("utf-8"))

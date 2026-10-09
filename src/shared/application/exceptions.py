@@ -51,3 +51,43 @@ class TokenRevokedError(Exception):
     """
 
     pass
+
+
+class InvalidRateLimitParametersError(Exception):
+    """Некорректные параметры ограничения частоты запросов.
+
+    Возникает при попытке применить ограничение с неположительным
+    значением лимита или продолжительности окна, а также с пустым
+    ключом ограничения. Такая конфигурация не имеет интерпретации
+    и, вероятнее всего, является ошибкой развёртывания, а не
+    намерением запретить запросы.
+    """
+
+    pass
+
+
+class RateLimitExceededError(Exception):
+    """Превышено допустимое количество запросов.
+
+    Возникает, когда счётчик запросов по ключу ограничения исчерпал
+    выделенный лимит.
+
+    Attributes
+    ----------
+    retry_after : int
+        Количество секунд до сброса текущего окна ограничения.
+    limit : int
+        Максимальное количество запросов, разрешённое в окне.
+    remaining : int
+        Количество запросов, доступных в текущем окне.
+    """
+
+    def __init__(self, *, retry_after: int, limit: int, remaining: int) -> None:
+        super().__init__(
+            "Rate limit exceeded: "
+            + f"limit={limit}, remaining={remaining}, retry_after={retry_after}s"
+        )
+
+        self.retry_after = retry_after
+        self.limit = limit
+        self.remaining = remaining
