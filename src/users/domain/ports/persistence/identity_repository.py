@@ -2,7 +2,7 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from src.users.domain.entities import Identity
-from src.users.domain.value_objects import Username
+from src.users.domain.value_objects import Email, Username
 
 
 @runtime_checkable
@@ -67,6 +67,23 @@ class IdentityRepository(Protocol):
         """
         ...
 
+    async def get_by_email(self, email: Email) -> Identity | None:
+        """Получить учётную запись по адресу электронной почты.
+
+        Поиск выполняется без учёта регистра адреса.
+
+        Parameters
+        ----------
+        email : Email
+            Адрес электронной почты для поиска.
+
+        Returns
+        -------
+        Identity | None
+            Найденная учётная запись или None.
+        """
+        ...
+
     async def save_password_hash(self, identity: Identity) -> None:
         """Сохранить изменённый хэш пароля учётной записи.
 
@@ -82,6 +99,30 @@ class IdentityRepository(Protocol):
         identity : Identity
             Доменная сущность учётной записи с уже изменённым
             хэшем пароля и актуальной версией.
+
+        Raises
+        ------
+        ConcurrentModificationError
+            Если версия ``identity`` не совпадает с версией
+            в хранилище.
+        """
+        ...
+
+    async def save_verification(self, identity: Identity) -> None:
+        """Сохранить результат подтверждения адреса электронной почты.
+
+        Выполняет атомарное обновление признака подтверждения email
+        с проверкой версии агрегата. Перед вызовом этого метода
+        необходимо подтвердить адрес через метод доменной сущности.
+
+        После успешного обновления репозиторий увеличивает версию
+        переданной сущности через ``identity.upgrade()``.
+
+        Parameters
+        ----------
+        identity : Identity
+            Доменная сущность учётной записи с уже подтверждённым
+            адресом электронной почты и актуальной версией.
 
         Raises
         ------

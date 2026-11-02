@@ -6,6 +6,7 @@ from src.users.domain.ports.persistence import (
     IdentityRepository,
     ProfileRepository,
     SessionRepository,
+    VerificationTokenRepository,
 )
 
 
@@ -70,6 +71,24 @@ class UsersUnitOfWork(Protocol):
         -------
         SessionRepository
             Репозиторий для работы с сущностями ``Session``.
+
+        Raises
+        ------
+        UnitOfWorkNotEnteredError
+            Если единица работы ещё не была открыта через
+            ``async with``.
+        """
+        ...
+
+    @property
+    def verification_tokens(self) -> VerificationTokenRepository:
+        """Репозиторий токенов подтверждения.
+
+        Returns
+        -------
+        VerificationTokenRepository
+            Репозиторий для работы с сущностями
+            ``VerificationToken``.
 
         Raises
         ------

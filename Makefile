@@ -1,7 +1,8 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
+STEPS ?= 1
 
-.PHONY: help keys keys-force sync requirements upgrade clean clean-dry-run install-hooks dev migrate test test-integration lint format typecheck import-lint services services-down
+.PHONY: help keys keys-force sync requirements upgrade clean clean-dry-run install-hooks dev migrate migrate-down test test-integration lint format typecheck import-lint services services-down
 
 help: ## Показать список доступных целей
 	@echo "Доступные цели:"
@@ -36,6 +37,9 @@ dev: ## Запустить сервер разработки
 
 migrate: ## Применить миграции Alembic
 	uv run alembic upgrade head
+
+migrate-down: ## Откатить миграции Alembic (STEPS=1 по умолчанию)
+	uv run alembic downgrade -$(STEPS)
 
 test: ## Запустить unit-тесты
 	uv run pytest -m "not integration"

@@ -8,11 +8,13 @@ from src.users.domain.ports.persistence import (
     IdentityRepository,
     ProfileRepository,
     SessionRepository,
+    VerificationTokenRepository,
 )
 from src.users.infrastructure.adapters.persistence import (
     SqlAlchemyIdentityRepository,
     SqlAlchemyProfileRepository,
     SqlAlchemySessionRepository,
+    SqlAlchemyVerificationTokenRepository,
 )
 from src.users.infrastructure.adapters.readers import SqlAlchemyUserSearchReader
 
@@ -23,9 +25,9 @@ class SqlAlchemyUsersUnitOfWork:
     Инкапсулирует управление соединением и транзакцией СУБД для одной
     единицы работы (Unit of Work) в ограниченном контексте Users.
     Гарантирует, что все репозитории (``identities``, ``profiles``,
-    ``sessions``), созданные в рамках одного использования этого объекта,
-    работают через одно и то же соединение и одну транзакцию, что
-    обеспечивает атомарность операций записи.
+    ``sessions``, ``verification_tokens``), созданные в рамках одного
+    использования этого объекта, работают через одно и то же соединение
+    и одну транзакцию, что обеспечивает атомарность операций записи.
 
     Parameters
     ----------
@@ -41,6 +43,8 @@ class SqlAlchemyUsersUnitOfWork:
         Репозиторий профилей пользователей.
     sessions : SessionRepository
         Репозиторий пользовательских сессий.
+    verification_tokens : VerificationTokenRepository
+        Репозиторий токенов подтверждения.
     user_search : UserSearchReader
         Источник данных поиска пользователей по имени пользователя.
 
@@ -59,6 +63,7 @@ class SqlAlchemyUsersUnitOfWork:
         self._identities: IdentityRepository | None = None
         self._profiles: ProfileRepository | None = None
         self._sessions: SessionRepository | None = None
+        self._verification_tokens: VerificationTokenRepository | None = None
 
         self._user_search: UserSearchReader | None = None
 
@@ -139,6 +144,33 @@ class SqlAlchemyUsersUnitOfWork:
             )
 
         return self._sessions
+
+    @property
+    def verification_tokens(self) -> VerificationTokenRepository:
+        """Репозиторий токенов подтверждения.
+
+        При первом обращении создаёт
+        ``SqlAlchemyVerificationTokenRepository``, используя текущее
+        активное соединение, и кэширует его на всё время жизни
+        единицы работы.
+
+        Returns
+        -------
+        VerificationTokenRepository
+            Репозиторий, работающий в рамках текущей транзакции.
+
+        Raises
+        ------
+        UnitOfWorkNotEnteredError
+            Если единица работы ещё не была открыта через
+            ``async with`` (соединение отсутствует).
+        """
+        if self._verification_tokens is None:
+            self._verification_tokens = SqlAlchemyVerificationTokenRepository(
+                self._ensure_active_connection()
+            )
+
+        return self._verification_tokens
 
     @property
     def user_search(self) -> UserSearchReader:
@@ -330,6 +362,7 @@ class SqlAlchemyUsersUnitOfWork:
             self._identities = None
             self._profiles = None
             self._sessions = None
+            self._verification_tokens = None
 
             self._user_search = None
 

@@ -9,17 +9,22 @@
 """
 
 from copy import deepcopy
+from datetime import datetime
 from types import TracebackType
 from uuid import UUID
 
 from src.shared.domain.exceptions import ConcurrentModificationError
 from src.users.application.dto.read_models import UserSearchReadModel
-from src.users.domain.entities import Identity, Profile, Session
+from src.users.domain.entities import Identity, Profile, Session, VerificationToken
 from src.users.domain.exceptions import (
     EmailAlreadyExistsError,
     UsernameAlreadyExistsError,
 )
-from src.users.domain.value_objects import Username
+from src.users.domain.value_objects import (
+    Email,
+    Username,
+    VerificationTokenPurpose,
+)
 
 
 class FakeIdentityRepository:
@@ -54,7 +59,24 @@ class FakeIdentityRepository:
                 return deepcopy(row)
         return None
 
+    async def get_by_email(self, email: Email) -> Identity | None:
+        for row in self._rows.values():
+            if row.email.value == email.value:
+                return deepcopy(row)
+        return None
+
     async def save_password_hash(self, identity: Identity) -> None:
+        existing = self._rows.get(identity.id)
+
+        if existing is None or existing.version != identity.version:
+            raise ConcurrentModificationError(identity.id, "Identity")
+
+        updated = deepcopy(identity)
+        updated.version += 1
+        self._rows[identity.id] = updated
+        identity.upgrade()
+
+    async def save_verification(self, identity: Identity) -> None:
         existing = self._rows.get(identity.id)
 
         if existing is None or existing.version != identity.version:
@@ -168,6 +190,40 @@ class FakeSessionRepository:
         return count
 
 
+class FakeVerificationTokenRepository:
+    """In-memory репозиторий ``VerificationToken``."""
+
+    def __init__(self) -> None:
+        self._rows: dict[UUID, VerificationToken] = {}
+        self.added: list[VerificationToken] = []
+
+    async def add(self, token: VerificationToken) -> None:
+        self.added.append(deepcopy(token))
+        self._rows[token.id] = deepcopy(token)
+
+    async def get_by_token_hash(self, token_hash: str) -> VerificationToken | None:
+        for row in self._rows.values():
+            if row.token_hash == token_hash:
+                return deepcopy(row)
+        return None
+
+    async def invalidate_active_by_identity_id(
+        self,
+        identity_id: UUID,
+        purpose: VerificationTokenPurpose,
+        *,
+        at: datetime,
+    ) -> None:
+        for row in self._rows.values():
+            if (
+                row.identity_id == identity_id
+                and row.purpose == purpose
+                and row.used_at is None
+            ):
+                row.used_at = at
+                row.updated_at = at
+
+
 class FakeUserSearchReader:
     """Фейк reader поиска пользователей (не используется в этих тестах)."""
 
@@ -203,6 +259,7 @@ class FakeUsersUnitOfWork:
         self._identities = FakeIdentityRepository()
         self._profiles = FakeProfileRepository()
         self._sessions = FakeSessionRepository()
+        self._verification_tokens = FakeVerificationTokenRepository()
         self._user_search = FakeUserSearchReader()
 
     @property
@@ -216,6 +273,10 @@ class FakeUsersUnitOfWork:
     @property
     def sessions(self) -> FakeSessionRepository:
         return self._sessions
+
+    @property
+    def verification_tokens(self) -> FakeVerificationTokenRepository:
+        return self._verification_tokens
 
     @property
     def user_search(self) -> FakeUserSearchReader:

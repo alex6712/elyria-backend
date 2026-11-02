@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import RowMapping, insert, select, update
+from sqlalchemy import RowMapping, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -134,6 +134,33 @@ class SqlAlchemyIdentityRepository:
 
         return self._row_to_identity(row)
 
+    async def get_by_email(self, email: Email) -> Identity | None:
+        """Получить учётную запись по адресу электронной почты.
+
+        Поиск выполняется без учёта регистра адреса.
+
+        Parameters
+        ----------
+        email : Email
+            Адрес электронной почты для поиска.
+
+        Returns
+        -------
+        Identity | None
+            Найденная учётная запись либо ``None``, если запись
+            с указанным адресом электронной почты не существует.
+        """
+        result = await self._connection.execute(
+            select(identities_table).where(
+                func.lower(identities_table.c.email) == email.value
+            )
+        )
+
+        if not (row := result.mappings().first()):
+            return None
+
+        return self._row_to_identity(row)
+
     async def save_password_hash(self, identity: Identity) -> None:
         """Сохранить изменённый хэш пароля учётной записи.
 
@@ -159,6 +186,45 @@ class SqlAlchemyIdentityRepository:
             update(identities_table)
             .values(
                 password_hash=identity.password_hash,
+                version=identities_table.c.version + 1,
+                updated_at=identity.updated_at,
+            )
+            .where(
+                identities_table.c.id == identity.id,
+                identities_table.c.version == identity.version,
+            )
+        )
+
+        if result.rowcount != 1:
+            raise ConcurrentModificationError(identity.id, "Identity")
+
+        identity.upgrade()
+
+    async def save_verification(self, identity: Identity) -> None:
+        """Сохранить результат подтверждения адреса электронной почты.
+
+        Обновляет признак подтверждения email в базе данных
+        с проверкой версии агрегата.
+
+        После успешного обновления вызывает ``identity.upgrade()``
+        для синхронизации версии объекта Python с базой данных.
+
+        Parameters
+        ----------
+        identity : Identity
+            Доменная сущность учётной записи с подтверждённым
+            адресом электронной почты и актуальной версией.
+
+        Raises
+        ------
+        ConcurrentModificationError
+            Если версия ``identity`` не совпадает с версией
+            в базе данных.
+        """
+        result = await self._connection.execute(
+            update(identities_table)
+            .values(
+                email_verified=identity.email_verified,
                 version=identities_table.c.version + 1,
                 updated_at=identity.updated_at,
             )
