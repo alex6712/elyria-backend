@@ -1,11 +1,27 @@
 {
-    "[python]": {
-        "editor.codeActionsOnSave": {
-            "source.fixAll": "explicit",
-            "source.organizeImports": "explicit"
-        },
-        "editor.defaultFormatter": "charliermarsh.ruff"
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+        88
+    ],
+    "files.exclude": {
+        "**/.venv": true,
+        "**/__pycache__/": true,
+        ".grimp_cache": true,
+        ".import_linter_cache": true,
+        ".pytest_cache": true,
+        ".ruff_cache": true
     },
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    "search.exclude": {
+        "**/.venv": true,
+        "**/__pycache__/": true,
+        ".grimp_cache": true,
+        ".import_linter_cache": true,
+        ".pytest_cache": true,
+        ".ruff_cache": true
+    },
+    "git.autofetch": true,
     "cSpell.language": "en,ru",
     "cSpell.words": [
         "атомарность",
@@ -57,21 +73,13 @@
         "Pydantic",
         "slowapi"
     ],
-    "editor.formatOnSave": true,
-    "editor.rulers": [
-        88
-    ],
-    "files.exclude": {
-        "**/.venv": true,
-        "**/__pycache__/": true,
-        ".grimp_cache": true,
-        ".import_linter_cache": true,
-        ".pytest_cache": true,
-        ".ruff_cache": true
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        },
+        "editor.defaultFormatter": "charliermarsh.ruff"
     },
-    "files.insertFinalNewline": true,
-    "files.trimTrailingWhitespace": true,
-    "git.autofetch": true,
     "python-envs.pythonProjects": [
         {
             "path": ".",
@@ -84,14 +92,6 @@
         "tests"
     ],
     "python.testing.pytestEnabled": true,
-    "search.exclude": {
-        "**/.venv": true,
-        "**/__pycache__/": true,
-        ".grimp_cache": true,
-        ".import_linter_cache": true,
-        ".pytest_cache": true,
-        ".ruff_cache": true
-    },
     "python.analysis.languageServerMode": "full",
     "python.analysis.autoImportCompletions": true
 }
