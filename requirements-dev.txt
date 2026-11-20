@@ -20,7 +20,7 @@ aiosqlite==0.22.1
     # via elyria-backend (pyproject.toml:dev)
 alembic==1.20.1
     # via elyria-backend (pyproject.toml)
-annotated-doc==0.0.5
+annotated-doc==0.0.7
     # via
     #   fastapi
     #   typer
@@ -28,13 +28,14 @@ annotated-types==0.8.0
     # via pydantic
 anyio==4.16.0
     # via
+    #   fastapi
     #   httpx
     #   httpx2
     #   starlette
     #   watchfiles
 argon2-cffi==25.1.0
     # via pwdlib
-argon2-cffi-bindings==26.1.0
+argon2-cffi-bindings==26.2.0
     # via argon2-cffi
 asyncpg==0.32.0
     # via elyria-backend (pyproject.toml)
@@ -49,7 +50,7 @@ botocore==1.40.61
     #   aiobotocore
     #   boto3
     #   s3transfer
-botocore-stubs==1.43.123
+botocore-stubs==1.43.126
     # via types-aiobotocore
 certifi==2026.10.23
     # via
@@ -65,12 +66,12 @@ cfgv==3.5.0
     # via pre-commit
 charset-normalizer==3.5.2
     # via requests
-click==8.5.0
+click==8.5.1
     # via
     #   import-linter
     #   rich-toolkit
     #   uvicorn
-coverage==7.17.0
+coverage==7.17.3
     # via pytest-cov
 cryptography==50.0.2
     # via pyjwt
@@ -78,23 +79,23 @@ detect-installer==0.2.1
     # via fastapi-cloud-cli
 distlib==0.4.4
     # via virtualenv
-dnspython==2.9.1
+dnspython==2.9.2
     # via email-validator
-email-validator==2.3.0
+email-validator==2.4.0
     # via
     #   fastapi
     #   pydantic
-fastapi==0.162.0
+fastapi==0.165.0
     # via elyria-backend (pyproject.toml)
-fastapi-cli==0.0.32
+fastapi-cli==0.0.34
     # via fastapi
-fastapi-cloud-cli==0.26.0
+fastapi-cloud-cli==0.28.0
     # via fastapi-cli
 fastar==0.12.0
     # via
     #   fastapi
     #   fastapi-cloud-cli
-filelock==4.2.6
+filelock==4.2.12
     # via
     #   python-discovery
     #   virtualenv
@@ -106,7 +107,7 @@ googleapis-common-protos==1.76.0
     # via opentelemetry-exporter-otlp-proto-http
 greenlet==3.5.6
     # via sqlalchemy
-grimp==3.18
+grimp==3.20
     # via import-linter
 h11==0.16.0
     # via
@@ -115,7 +116,7 @@ h11==0.16.0
     #   uvicorn
 httpcore==1.0.9
     # via httpx
-httpcore2==2.16.0
+httpcore2==2.16.2
     # via httpx2
 httptools==0.9.0
     # via uvicorn
@@ -123,7 +124,7 @@ httpx==0.28.1
     # via
     #   fastapi
     #   fastapi-cloud-cli
-httpx2==2.16.0
+httpx2==2.16.2
     # via fastapi
 identify==2.6.20
     # via pre-commit
@@ -135,7 +136,7 @@ idna==3.20
     #   httpx2
     #   requests
     #   yarl
-import-linter==2.15
+import-linter==2.17
     # via elyria-backend (pyproject.toml:dev)
 iniconfig==2.3.1
     # via pytest
@@ -148,7 +149,7 @@ jmespath==1.1.0
     #   botocore
 mako==1.4.3
     # via alembic
-markdown-it-py==4.2.0
+markdown-it-py==4.3.0
     # via rich
 markupsafe==3.0.4
     # via
@@ -195,7 +196,7 @@ packaging==26.3
     # via
     #   pytest
     #   virtualenv
-platformdirs==4.14.3
+platformdirs==4.14.8
     # via virtualenv
 pluggy==1.7.0
     # via
@@ -211,21 +212,22 @@ protobuf==7.36.2
     # via
     #   googleapis-common-protos
     #   opentelemetry-proto
-pwdlib==0.3.1
+pwdlib==0.4.2
     # via elyria-backend (pyproject.toml)
 pycparser==3.12
     # via cffi
-pydantic==2.14.2
+pydantic==2.14.4
     # via
     #   fastapi
     #   fastapi-cloud-cli
     #   pydantic-extra-types
     #   pydantic-settings
-pydantic-core==2.50.2
+    #   typer
+pydantic-core==2.50.5
     # via pydantic
 pydantic-extra-types==2.11.1
     # via fastapi
-pydantic-settings==2.16.2
+pydantic-settings==2.16.3
     # via
     #   elyria-backend (pyproject.toml)
     #   fastapi
@@ -240,7 +242,7 @@ pytest==9.2.0
     #   elyria-backend (pyproject.toml:dev)
     #   pytest-asyncio
     #   pytest-cov
-pytest-asyncio==1.4.1.post1
+pytest-asyncio==1.5.0
     # via elyria-backend (pyproject.toml:dev)
 pytest-cov==7.1.0
     # via elyria-backend (pyproject.toml:dev)
@@ -248,13 +250,13 @@ python-dateutil==2.9.0.post0
     # via
     #   aiobotocore
     #   botocore
-python-discovery==1.9.0
+python-discovery==1.9.6
     # via virtualenv
 python-dotenv==1.2.4
     # via
     #   pydantic-settings
     #   uvicorn
-python-multipart==0.0.33
+python-multipart==0.0.34
     # via fastapi
 pyyaml==6.0.3
     # via
@@ -277,17 +279,17 @@ rich-toolkit==0.20.6
     #   fastapi-cloud-cli
 rignore==0.8.1
     # via fastapi-cloud-cli
-ruff==0.17.3
+ruff==0.17.6
     # via elyria-backend (pyproject.toml:dev)
 s3transfer==0.14.0
     # via boto3
-sentry-sdk==2.73.0
+sentry-sdk==2.75.0
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
 six==1.17.0
     # via python-dateutil
-sqlalchemy==2.1.6
+sqlalchemy==2.1.9
     # via
     #   elyria-backend (pyproject.toml)
     #   alembic
@@ -297,7 +299,7 @@ truststore==0.10.5
     # via
     #   httpcore2
     #   httpx2
-typer==0.27.3
+typer==0.29.2
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
@@ -310,7 +312,6 @@ typing-extensions==4.16.0
     #   alembic
     #   anyio
     #   fastapi
-    #   import-linter
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
@@ -322,7 +323,7 @@ typing-extensions==4.16.0
     #   rich-toolkit
     #   sqlalchemy
     #   typing-inspection
-typing-inspection==0.4.4
+typing-inspection==0.4.5
     # via
     #   fastapi
     #   pydantic
@@ -339,7 +340,7 @@ uvicorn==0.54.0
     #   fastapi-cloud-cli
 uvloop==0.23.0
     # via uvicorn
-virtualenv==21.15.2
+virtualenv==21.15.9
     # via pre-commit
 watchfiles==1.3.0
     # via uvicorn
